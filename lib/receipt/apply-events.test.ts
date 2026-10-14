@@ -98,6 +98,23 @@ describe("applyEvents", () => {
     expect(origins.slice(0, 6).every((o) => o === "typed")).toBe(true);
   });
 
+  it("tags paste on a quote line as quoted", () => {
+    const events: EditEvent[] = [
+      { t: 0, type: "insert", pos: 0, len: 2, text: "> " },
+      { t: 10, type: "paste", pos: 2, len: 4, text: "said" },
+    ];
+    const rebuilt = applyEvents(events);
+    expect(rebuilt.text).toBe("> said");
+    expect(rebuilt.origins).toEqual([
+      "typed",
+      "typed",
+      "quoted",
+      "quoted",
+      "quoted",
+      "quoted",
+    ]);
+  });
+
   it("rebuilds paste then delete part of it", () => {
     const { events, final, origins } = captureSession([
       {

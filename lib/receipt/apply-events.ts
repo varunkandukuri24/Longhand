@@ -5,9 +5,15 @@ export type ApplyResult = {
   origins: CharOrigin[];
 };
 
-function originForEvent(event: EditEvent): CharOrigin {
+/** True when `pos` sits on a markdown quote line (`> `…). */
+export function isQuoteLineAt(text: string, pos: number): boolean {
+  const lineStart = text.lastIndexOf("\n", pos - 1) + 1;
+  return text.slice(lineStart, lineStart + 2) === "> ";
+}
+
+function originForEvent(event: EditEvent, textBefore: string): CharOrigin {
   if (event.type === "paste") {
-    return "pasted";
+    return isQuoteLineAt(textBefore, event.pos) ? "quoted" : "pasted";
   }
   return "typed";
 }
@@ -27,7 +33,7 @@ export function applyEvents(events: readonly EditEvent[]): ApplyResult {
       continue;
     }
 
-    const origin = originForEvent(event);
+    const origin = originForEvent(event, text);
     const tags: CharOrigin[] = Array.from(
       { length: event.text.length },
       () => origin,

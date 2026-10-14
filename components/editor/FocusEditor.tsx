@@ -77,6 +77,8 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootAttempt, setBootAttempt] = useState(0);
   const [superseded, setSuperseded] = useState(false);
+  const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  const [storedDelayedCount, setStoredDelayedCount] = useState(0);
 
   useEffect(() => {
     noBackspaceRef.current = noBackspace;
@@ -122,6 +124,7 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
         originsRef.current = state.origins.slice();
         eventsRef.current = state.events.slice();
         setValue(state.text);
+        setStoredDelayedCount(state.flags?.delayedCount ?? 0);
         exposeEvents();
         syncDebugSnapshot();
 
@@ -131,7 +134,9 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
 
         await sync.startSession();
         if (cancelled) return;
-        sessionStartRef.current = Date.now();
+        const started = Date.now();
+        sessionStartRef.current = started;
+        setSessionStartedAt(started);
         lastLocalEventAtRef.current = null;
         readyRef.current = true;
         setBootError(null);
@@ -217,10 +222,14 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
         now - lastLocal >= IDLE_NEW_SESSION_MS
       ) {
         sessionStartRef.current = now;
+        setSessionStartedAt(now);
       }
 
       const start = sessionStartRef.current ?? now;
       sessionStartRef.current = start;
+      if (sessionStartedAt === null) {
+        setSessionStartedAt(start);
+      }
       const t = now - start;
       const newEvents = eventsFromDiff(diff, inputType, t);
       eventsRef.current = [...eventsRef.current, ...newEvents];
@@ -235,7 +244,7 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
       exposeEvents();
       syncDebugSnapshot();
     },
-    [exposeEvents, syncDebugSnapshot],
+    [exposeEvents, sessionStartedAt, syncDebugSnapshot],
   );
 
   useEffect(() => {
@@ -248,9 +257,12 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
       if (timerEndsAtRef.current !== null) {
         setTimerRemainingMs(timerEndsAtRef.current - Date.now());
       }
+      if (IS_DEV && debugOpen) {
+        syncDebugSnapshot();
+      }
     }, 250);
     return () => window.clearInterval(id);
-  }, [exposeEvents]);
+  }, [debugOpen, exposeEvents, syncDebugSnapshot]);
 
   useEffect(() => {
     return () => {
@@ -507,6 +519,10 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
           events={debugSnapshot.events}
           origins={debugSnapshot.origins}
           value={value}
+          sessionStartedAt={sessionStartedAt}
+          delayedBatchCount={
+            storedDelayedCount + (syncStatus?.delayedQueued ?? 0)
+          }
           syncStatus={syncStatus}
           loadError={bootError}
         />

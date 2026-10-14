@@ -1,6 +1,10 @@
 "use client";
 
 import { applyEvents } from "@/lib/receipt/apply-events";
+import {
+  computeReceipt,
+  liveBatchesFromEvents,
+} from "@/lib/receipt/compute-receipt";
 import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
 import type { SyncStatus } from "@/lib/sync/types";
 
@@ -8,6 +12,8 @@ type EditorDebugPanelProps = {
   events: readonly EditEvent[];
   origins: readonly CharOrigin[];
   value: string;
+  sessionStartedAt: number | null;
+  delayedBatchCount: number;
   syncStatus: SyncStatus | null;
   loadError?: string | null;
 };
@@ -28,10 +34,23 @@ function previewText(text: string): string {
   return text.length <= 20 ? text : `${text.slice(0, 20)}…`;
 }
 
+function formatMs(ms: number): string {
+  if (ms < 1_000) return `${ms}ms`;
+  if (ms < 60_000) return `${(ms / 1_000).toFixed(1)}s`;
+  if (ms < 3_600_000) return `${(ms / 60_000).toFixed(1)}m`;
+  return `${(ms / 3_600_000).toFixed(1)}h`;
+}
+
+function formatShare(share: number): string {
+  return `${(share * 100).toFixed(0)}%`;
+}
+
 export function EditorDebugPanel({
   events,
   origins,
   value,
+  sessionStartedAt,
+  delayedBatchCount,
   syncStatus,
   loadError = null,
 }: EditorDebugPanelProps) {
@@ -39,6 +58,14 @@ export function EditorDebugPanel({
   const counts = countOrigins(origins);
   const rebuild = applyEvents(events).text;
   const match = rebuild === value;
+
+  const now = Date.now();
+  const batches = liveBatchesFromEvents(events, {
+    sessionStartedAt: sessionStartedAt ?? now,
+    now,
+    delayedBatchCount,
+  });
+  const receipt = computeReceipt(batches, value);
 
   return (
     <aside
@@ -55,6 +82,24 @@ export function EditorDebugPanel({
       <p className={match ? "mt-1 text-ink/70" : "mt-1 text-cursor"}>
         {match ? "rebuild OK" : "rebuild MISMATCH"}
       </p>
+      <div className="mt-2 space-y-1 border-t border-ink/10 pt-2 text-ink/70">
+        <p className="text-ink/50">receipt v{receipt.version}</p>
+        <p>active {formatMs(receipt.activeWritingTimeMs)}</p>
+        <p>elapsed {formatMs(receipt.elapsedSpanMs)}</p>
+        <p>sessions {receipt.sessionCount}</p>
+        <p>
+          typed {formatShare(receipt.typedShare)} · pasted{" "}
+          {formatShare(receipt.pastedShare)} · quoted{" "}
+          {formatShare(receipt.quotedShare)}
+        </p>
+        <p>revision {receipt.revisionRatio.toFixed(2)}x</p>
+        <p>words {receipt.wordCount}</p>
+        <p>
+          fast stretches {receipt.fastStretchCount} · uniform runs{" "}
+          {receipt.uniformTypingRunCount}
+        </p>
+        <p>delayed batches {receipt.delayedBatchCount}</p>
+      </div>
       {syncStatus ? (
         <div className="mt-2 space-y-1 border-t border-ink/10 pt-2 text-ink/70">
           <p>sync {syncStatus.online ? "online" : "offline"}</p>
