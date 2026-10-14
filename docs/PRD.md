@@ -1,6 +1,6 @@
 # Longhand — PRD
 
-Oct 13, 2026 · @Varun
+Oct 13, 2026 · Varun
 
 ## Summary
 
@@ -111,7 +111,7 @@ Seven features ship in the MVP; P0 items block launch.
 | F2 | Focus editor | Immersive by default, like Freewrite: the lamp-lit page fills the view inside the ambient room (F7) and enters browser fullscreen on the first click or keystroke (browsers require a user gesture), with Esc to exit. One serif font, no toolbar, and any controls fade out while typing. Optional timer (10, 15, 25 min). Optional no-backspace mode. Autosaves continuously. | P0 |
 | F3 | Live event capture | Every edit is recorded with a timestamp and streamed to the server every 5 seconds in hash-chained batches. Works offline and syncs on reconnect, flagged as delayed. | P0 |
 | F4 | Response mode | Paste a URL; the server fetches its title and site name. The source shows as a card above the editor, with an "open source" link. Text quoted from the source counts as quoted, not pasted. | P0 |
-| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/\[slug\]. Owner chooses whether the replay is public. | P0 |
+| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public. | P0 |
 | F6 | Replay | Plays the piece being written at 1x, 4x, 16x, with a timeline scrubber. Long idle gaps compress to 1 second. | P1 |
 | F7 | Ambient room | The room around the page reflects the local time of day (light) and current weather (condition), per the Design language section. Location is coarse: a city from IP or typed once at onboarding, never a browser location prompt. Weather is checked about once an hour. Writers can choose Auto or pin a scene. The receipt may note conditions ("2 of 3 sessions in the rain"), never the place. | P1 |
 
@@ -134,7 +134,7 @@ The receipt shows facts derived from the event log, never a verdict.
 | Sessions | Count of sessions with at least 1 event | "3 sessions" |
 | Typed share | Characters in the final text that came from typed input ÷ final length | "94% typed" |
 | Pasted share | Final characters from paste events, excluding quoted source text | "4% pasted" |
-| Quoted share | Final characters pasted inside a quote block (` >  `) in response mode | "2% quoted from source" |
+| Quoted share | Final characters pasted inside a quote block (`> `) in response mode | "2% quoted from source" |
 | Revision ratio | Total characters typed ÷ final characters | "1.6x written for every word kept" |
 | Word count | Final words | "812 words" |
 | Timing flags | Sustained speed over 150 wpm for 60 s+, or unnaturally uniform keystroke intervals | Neutral note, e.g. "2 unusually fast stretches" |
@@ -150,7 +150,7 @@ The receipt is credible because time is witnessed by the server as it passes, no
 
 **Integrity**
 
-- **Live streaming.** Batches arrive every \~5 s and the server stamps each with its own receive time. A 50-minute session can't be fabricated in 5 minutes.
+- **Live streaming.** Batches arrive every ~5 s and the server stamps each with its own receive time. A 50-minute session can't be fabricated in 5 minutes.
 - **Hash chain.** Each batch carries `hash = sha256(prevHash + seq + JSON(events))`. The server rejects gaps in `seq` or a broken chain.
 - **Rebuild check.** On publish, the server replays all events and requires the result to match the submitted final text byte for byte.
 - **Clock sanity.** Client timestamps within a batch must be increasing, and the batch's span must roughly match the server gap since the last batch (±20%).
@@ -182,7 +182,14 @@ The bars are starting guesses to revise after the first cohort. If writers only 
 
 A single Next.js app on a DigitalOcean droplet, backed by Postgres, handles everything in the MVP.
 
-&#91;embedded content: Longhand architecture · 6 parts\]
+Six parts:
+
+- **Focus editor (browser):** captures every edit and tags typed vs pasted text.
+- **Batch API:** receives batches every 5 s, checks seq and the hash chain, stamps server receive time.
+- **Postgres:** stores pieces, sessions, batches and receipts.
+- **Publish service:** on publish, rebuilds the text from events and computes the receipt only on a byte-exact match.
+- **Public receipt page:** text, metrics and replay; anyone can open it without signing in.
+- **Source fetcher:** fetches a response source's title and site only; no article text stored.
 
 Edits stream from the browser every 5 seconds; the server checks the chain and timestamps each batch. Publishing replays the stored events, and only a byte-exact match produces a public receipt.
 
@@ -190,22 +197,22 @@ Edits stream from the browser every 5 seconds; the server checks the chain and t
 
 | Table | Key fields |
 | --- | --- |
-| users | id, email, display\_name, created\_at |
-| pieces | id, user\_id, title, mode (freewrite / response), source\_url, source\_title, source\_site, status (draft / published), slug, final\_text, final\_text\_hash, replay\_public, published\_at |
-| sessions | id, piece\_id, started\_at, ended\_at |
-| event\_batches | id, session\_id, seq, events (jsonb), prev\_hash, hash, client\_t\_start, client\_t\_end, server\_received\_at, delayed |
-| receipts | piece\_id, metrics (jsonb), chain\_head\_hash, version, computed\_at |
+| users | id, email, display_name, created_at |
+| pieces | id, user_id, title, mode (freewrite / response), source_url, source_title, source_site, status (draft / published), slug, final_text, final_text_hash, replay_public, published_at |
+| sessions | id, piece_id, started_at, ended_at |
+| event_batches | id, session_id, seq, events (jsonb), prev_hash, hash, client_t_start, client_t_end, server_received_at, delayed |
+| receipts | piece_id, metrics (jsonb), chain_head_hash, version, computed_at |
 
 Each event in a batch is `{t, type, pos, len, text}`, where `t` is ms since session start and `type` is insert, delete or paste. Receipts store a `version` so the metric definitions can change later without breaking old receipts.
 
 ## Cursor build instructions
 
-Build in seven phases, one Cursor Agent conversation per phase, and don't start a phase until the previous one passes its checks.
+Build in phases, one Cursor Agent conversation per phase, and don't start a phase until the previous one passes its checks.
 
 **Setup**
 
-1. Export this doc as Markdown and save it in the repo as `docs/PRD.md`.
-2. Create `.cursor/rules/longhand.mdc` with the rules below, and .cursor/rules/design.mdc with the design rules after it.
+1. Save this file in the repo as `docs/PRD.md`.
+2. Have Cursor create `.cursor/rules/longhand.mdc` and `.cursor/rules/design.mdc` from the two blocks below.
 3. Start each phase in a new Agent chat with `@docs/PRD.md` attached, then paste the phase prompt.
 4. Commit after every phase that passes. If a phase goes sideways, revert and re-prompt rather than patching on top.
 
@@ -254,7 +261,7 @@ Done when: `docker compose up` + `npm run dev` works, sign-in by email works, mi
 **Phase 1: Editor and event capture**
 
 ```text
-Build the focus editor at /write/[pieceId]: a plain white immersive page that enters browser fullscreen (Fullscreen API) by default on the first click or keystroke, Esc exits; one serif font, no toolbar, controls fade out while typing; optional timer (10/15/25 min) and optional no-backspace mode. Capture every edit with the textarea's beforeinput/input events as events {t, type: insert|delete|paste, pos, len, text}. t is ms since session start. Keep a per-character origin array (typed|pasted|quoted) in sync with the text. Write a pure applyEvents(events) function in lib/receipt/ that rebuilds text, with unit tests covering typing, deleting, selection-replace, paste, and undo.
+Build the focus editor at /write/[pieceId] per the Design language section of @docs/PRD.md: the lamp-lit page on a plain room background for now (the weather room comes in Phase 5b). It enters browser fullscreen (Fullscreen API) by default on the first click or keystroke, Esc exits; Literata, no toolbar, controls fade out while typing; optional timer (10/15/25 min) and optional no-backspace mode. Capture every edit with the textarea's beforeinput/input events as events {t, type: insert|delete|paste, pos, len, text}. t is ms since session start. Keep a per-character origin array (typed|pasted|quoted) in sync with the text. Write a pure applyEvents(events) function in lib/receipt/ that rebuilds text, with unit tests covering typing, deleting, selection-replace, paste, and undo.
 ```
 
 Done when: applyEvents rebuilds the exact textarea contents after a scripted 2-minute editing session, including paste and undo.
@@ -316,8 +323,7 @@ Done when: the app runs on your domain over HTTPS and a restore from backup work
 - [ ] Should pasting be blocked entirely in a strict mode, or always allowed and just counted?
 - [ ] Is replay public by default? It's the most persuasive proof, and also the most exposing.
 - [ ] Free forever, or charge for custom domains, embeds and verified badges later?
-
-* [ ] Receipt and stopping-moment style: the library card from Rain on the window, or the save slots and progress card from Save point?
+- [ ] Receipt and stopping-moment style: the library card from Rain on the window, or the save slots and progress card from Save point?
 
 **Later, if the validation test passes**
 

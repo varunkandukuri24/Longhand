@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --page: #fffbf2;
+  --ink: #2b2722;
+  --cursor: #c9772e;
+  --lamp: #e2a45a;
+  --room: #eef0ec;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-cursor: var(--cursor);
+  --color-lamp: var(--lamp);
+  --color-room: var(--room);
+  --font-writing: var(--font-literata);
+  --font-ui: var(--font-dm-mono);
+}
+
+body {
+  background: var(--room);
+  color: var(--ink);
+  font-family: var(--font-ui), monospace;
+}

@@ -1,0 +1,13 @@
+---
+description: Longhand project rules
+alwaysApply: true
+---
+- Product spec lives in docs/PRD.md. Read it before changing behavior.
+- Stack: Next.js (App Router) + TypeScript strict, Tailwind, Postgres with Drizzle ORM, Auth.js email magic links, Vitest for tests.
+- The event log is the source of truth. Never add a code path that changes a piece's text without recording an event.
+- All receipt math lives in lib/receipt/ as pure functions with unit tests. No receipt logic in components or route handlers.
+- Hashing uses SHA-256 via Web Crypto on the client and node:crypto on the server; both must produce identical output (shared test vectors).
+- The editor UI stays minimal: no toolbars, no formatting, no AI features.
+- Never log or send event text to third-party services (analytics, error tracking).
+- Prefer small files and server components; client components only where input is handled.
+- When unsure about product behavior, stop and ask instead of guessing.

@@ -1,0 +1,11 @@
+---
+description: Longhand design rules
+alwaysApply: true
+---
+- Follow the Design language section of docs/PRD.md exactly. Its tokens are the only colors.
+- Page #FFFBF2, ink #2B2722, cursor #C9772E, lamp #E2A45A. Fonts: Literata for writing, DM Mono for small labels. No other fonts.
+- The page never changes with the scene. Only the room behind it does.
+- Banned: gradient washes, glassmorphism, emoji, sparkle icons, Inter or Roboto, default shadcn styling, toasts or modals while writing.
+- Motion: slow drift only. Nothing moves under prefers-reduced-motion. Scene changes crossfade over minutes.
+- Copy is plain and dry, with no exclamation marks.
+- When a design choice isn't covered here or in the PRD, ask instead of inventing one.
