@@ -8,6 +8,20 @@
       "when": 1791938608774,
       "tag": "0000_nifty_mentallo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791940803382,
+      "tag": "0001_jazzy_black_bird",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791942131661,
+      "tag": "0002_dry_frank_castle",
+      "breakpoints": true
     }
   ]
 }

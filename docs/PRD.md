@@ -153,7 +153,8 @@ The receipt is credible because time is witnessed by the server as it passes, no
 - **Live streaming.** Batches arrive every ~5 s and the server stamps each with its own receive time. A 50-minute session can't be fabricated in 5 minutes.
 - **Hash chain.** Each batch carries `hash = sha256(prevHash + seq + JSON(events))`. The server rejects gaps in `seq` or a broken chain.
 - **Rebuild check.** On publish, the server replays all events and requires the result to match the submitted final text byte for byte.
-- **Clock sanity.** Client timestamps within a batch must be increasing, and the batch's span must roughly match the server gap since the last batch (±20%).
+- **Clock sanity.** Client timestamps within a batch must be increasing, and the batch's span must roughly match the server gap since the last batch (±20%). Suspect batches are flagged, never rejected, so no writing is lost.
+- **One writer at a time.** A piece can be written from only one session at a time: opening it in a new tab or on another device takes over, and the newest session always wins. The server rejects batches from a superseded session (409, "superseded"), and the old tab becomes read-only with a note to refresh. Without this, edits made against stale text in two places would scramble the piece on replay.
 - **What it doesn't stop.** Someone retyping AI text by hand, or a script that types slowly in real time. We accept this: retyping still costs the time shown, which is why we claim effort, not humanity.
 
 **Privacy**
@@ -198,7 +199,7 @@ Edits stream from the browser every 5 seconds; the server checks the chain and t
 | Table | Key fields |
 | --- | --- |
 | users | id, email, display_name, created_at |
-| pieces | id, user_id, title, mode (freewrite / response), source_url, source_title, source_site, status (draft / published), slug, final_text, final_text_hash, replay_public, published_at |
+| pieces | id, user_id, title, mode (freewrite / response), source_url, source_title, source_site, status (draft / published), slug, final_text, final_text_hash, replay_public, active_session_id, published_at |
 | sessions | id, piece_id, started_at, ended_at |
 | event_batches | id, session_id, seq, events (jsonb), prev_hash, hash, client_t_start, client_t_end, server_received_at, delayed |
 | receipts | piece_id, metrics (jsonb), chain_head_hash, version, computed_at |

@@ -11,6 +11,8 @@ import {
   shouldBlockKeydown,
 } from "@/lib/editor/no-backspace";
 import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
+import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
+import type { SyncStatus } from "@/lib/sync/types";
 import {
   useCallback,
   useEffect,
@@ -53,6 +55,9 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
   const enteredFullscreenRef = useRef(false);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noBackspaceRef = useRef(false);
+  const syncRef = useRef<EventSync | null>(null);
+  const readyRef = useRef(false);
+  const lastLocalEventAtRef = useRef<number | null>(null);
 
   const [value, setValue] = useState("");
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -68,16 +73,14 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
     events: EditEvent[];
     origins: CharOrigin[];
   }>({ events: [], origins: [] });
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootAttempt, setBootAttempt] = useState(0);
+  const [superseded, setSuperseded] = useState(false);
 
   useEffect(() => {
     noBackspaceRef.current = noBackspace;
   }, [noBackspace]);
-
-  useEffect(() => {
-    if (sessionStartRef.current === null) {
-      sessionStartRef.current = Date.now();
-    }
-  }, []);
 
   const exposeEvents = useCallback(() => {
     if (IS_DEV) {
@@ -94,6 +97,63 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
       origins: originsRef.current.slice(),
     });
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    readyRef.current = false;
+    setBootError(null);
+    setSuperseded(false);
+
+    const sync = new EventSync(pieceId);
+    syncRef.current = sync;
+    const unsubscribe = sync.subscribe(setSyncStatus);
+    const unsubSuperseded = sync.onSuperseded(() => {
+      setSuperseded(true);
+      readyRef.current = false;
+    });
+    sync.start();
+
+    void (async () => {
+      try {
+        const state = await sync.loadState();
+        if (cancelled) return;
+
+        prevValueRef.current = state.text;
+        originsRef.current = state.origins.slice();
+        eventsRef.current = state.events.slice();
+        setValue(state.text);
+        exposeEvents();
+        syncDebugSnapshot();
+
+        // Flush any batches left in IndexedDB from a prior visit.
+        await sync.flush();
+        if (cancelled) return;
+
+        await sync.startSession();
+        if (cancelled) return;
+        sessionStartRef.current = Date.now();
+        lastLocalEventAtRef.current = null;
+        readyRef.current = true;
+        setBootError(null);
+      } catch (err) {
+        if (!cancelled) {
+          const message =
+            err instanceof Error ? err.message : "Could not load this piece.";
+          setBootError(message);
+          readyRef.current = false;
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      readyRef.current = false;
+      unsubscribe();
+      unsubSuperseded();
+      sync.stop();
+      syncRef.current = null;
+    };
+  }, [pieceId, bootAttempt, exposeEvents, syncDebugSnapshot]);
 
   const showControls = useCallback(() => {
     setControlsVisible(true);
@@ -135,6 +195,10 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
 
   const commitDiff = useCallback(
     (next: string, inputType: string | undefined) => {
+      if (!readyRef.current || syncRef.current?.isSuperseded()) {
+        return;
+      }
+
       const prev = prevValueRef.current;
       if (prev === next) {
         return;
@@ -146,9 +210,18 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
         return;
       }
 
-      const start = sessionStartRef.current ?? Date.now();
+      const now = Date.now();
+      const lastLocal = lastLocalEventAtRef.current;
+      if (
+        lastLocal !== null &&
+        now - lastLocal >= IDLE_NEW_SESSION_MS
+      ) {
+        sessionStartRef.current = now;
+      }
+
+      const start = sessionStartRef.current ?? now;
       sessionStartRef.current = start;
-      const t = Date.now() - start;
+      const t = now - start;
       const newEvents = eventsFromDiff(diff, inputType, t);
       eventsRef.current = [...eventsRef.current, ...newEvents];
       originsRef.current = applyDiffToOrigins(
@@ -157,6 +230,8 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
         inputType,
       );
       prevValueRef.current = next;
+      lastLocalEventAtRef.current = now;
+      syncRef.current?.pushEvents(newEvents);
       exposeEvents();
       syncDebugSnapshot();
     },
@@ -373,7 +448,9 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
         <div className="pointer-events-none font-ui text-[12px] text-page/70">
           <span>{formatElapsed(elapsedMs)}</span>
           <span className="mx-2 text-page/40">·</span>
-          <span>saved</span>
+          <span>
+            {syncStatus && syncStatus.queuedCount > 0 ? "saving" : "saved"}
+          </span>
         </div>
       </div>
 
@@ -381,21 +458,48 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
         className="relative h-[min(620px,calc(100vh-4rem))] w-full max-w-[820px] rounded-[6px] bg-page shadow-page"
         onClick={onPageClick}
       >
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onCompositionStart={onCompositionStart}
-          onCompositionEnd={onCompositionEnd}
-          onInput={onInput}
-          onChange={onChange}
-          onKeyDown={onKeyDown}
-          onMouseDown={onMouseDown}
-          spellCheck
-          autoCapitalize="off"
-          autoCorrect="off"
-          className="h-full w-full resize-none rounded-[6px] bg-transparent px-12 py-10 font-writing text-[21px] leading-[1.75] text-ink caret-cursor outline-none"
-          aria-label="Writing page"
-        />
+        {superseded ? (
+          <p className="pointer-events-none absolute inset-x-0 top-3 z-10 text-center font-ui text-[12px] text-ink/55">
+            Open in another window. Refresh to continue here.
+          </p>
+        ) : null}
+        {bootError ? (
+          <div className="flex h-full flex-col justify-center gap-4 px-12 py-10">
+            <p className="font-ui text-[13px] text-ink/80">
+              Could not load this piece.
+            </p>
+            <p className="font-ui text-[12px] text-ink/60 break-words">
+              {bootError}
+            </p>
+            <button
+              type="button"
+              className="w-fit font-ui text-[12px] text-lamp underline-offset-2 hover:underline"
+              onClick={() => setBootAttempt((n) => n + 1)}
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <textarea
+            ref={textareaRef}
+            value={value}
+            readOnly={superseded}
+            onCompositionStart={onCompositionStart}
+            onCompositionEnd={onCompositionEnd}
+            onInput={onInput}
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+            onMouseDown={onMouseDown}
+            spellCheck
+            autoCapitalize="off"
+            autoCorrect="off"
+            className={[
+              "h-full w-full resize-none rounded-[6px] bg-transparent px-12 py-10 font-writing text-[21px] leading-[1.75] text-ink caret-cursor outline-none",
+              superseded ? "pt-12" : "",
+            ].join(" ")}
+            aria-label="Writing page"
+          />
+        )}
       </div>
 
       {IS_DEV && debugOpen ? (
@@ -403,6 +507,8 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
           events={debugSnapshot.events}
           origins={debugSnapshot.origins}
           value={value}
+          syncStatus={syncStatus}
+          loadError={bootError}
         />
       ) : null}
     </div>

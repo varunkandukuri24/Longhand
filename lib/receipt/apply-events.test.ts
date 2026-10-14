@@ -45,8 +45,8 @@ describe("applyEvents", () => {
       { next: "Hello", t: 160 },
     ]);
 
-    expect(applyEvents(events)).toBe("Hello");
-    expect(applyEvents(events)).toBe(final);
+    expect(applyEvents(events).text).toBe("Hello");
+    expect(applyEvents(events).text).toBe(final);
   });
 
   it("rebuilds after backspace", () => {
@@ -57,8 +57,8 @@ describe("applyEvents", () => {
       { next: "Ok", t: 150 },
     ]);
 
-    expect(applyEvents(events)).toBe("Ok");
-    expect(applyEvents(events)).toBe(final);
+    expect(applyEvents(events).text).toBe("Ok");
+    expect(applyEvents(events).text).toBe(final);
   });
 
   it("rebuilds select-and-replace", () => {
@@ -73,8 +73,8 @@ describe("applyEvents", () => {
       { t: 100, type: "delete", pos: 2, len: 2, text: "cd" },
       { t: 100, type: "insert", pos: 2, len: 2, text: "XY" },
     ]);
-    expect(applyEvents(events)).toBe("abXYef");
-    expect(applyEvents(events)).toBe(final);
+    expect(applyEvents(events).text).toBe("abXYef");
+    expect(applyEvents(events).text).toBe(final);
   });
 
   it("rebuilds paste as type paste", () => {
@@ -91,7 +91,9 @@ describe("applyEvents", () => {
       type: "paste",
       text: "world from elsewhere",
     });
-    expect(applyEvents(events)).toBe(final);
+    const rebuilt = applyEvents(events);
+    expect(rebuilt.text).toBe(final);
+    expect(rebuilt.origins).toEqual(origins);
     expect(origins.slice(6).every((o) => o === "pasted")).toBe(true);
     expect(origins.slice(0, 6).every((o) => o === "typed")).toBe(true);
   });
@@ -107,8 +109,10 @@ describe("applyEvents", () => {
       { next: "alpha gamma", t: 300 },
     ]);
 
-    expect(applyEvents(events)).toBe("alpha gamma");
-    expect(applyEvents(events)).toBe(final);
+    const rebuilt = applyEvents(events);
+    expect(rebuilt.text).toBe("alpha gamma");
+    expect(rebuilt.text).toBe(final);
+    expect(rebuilt.origins).toEqual(origins);
     expect(origins).toEqual(Array.from({ length: final.length }, () => "pasted"));
   });
 
@@ -124,8 +128,8 @@ describe("applyEvents", () => {
       { next: "keep ", t: 200 },
     ]);
 
-    expect(applyEvents(events)).toBe("keep ");
-    expect(applyEvents(events)).toBe(final);
+    expect(applyEvents(events).text).toBe("keep ");
+    expect(applyEvents(events).text).toBe(final);
   });
 
   it("rebuilds a scripted session with paste and undo", () => {
@@ -151,7 +155,7 @@ describe("applyEvents", () => {
     ]);
 
     expect(final).toBe("I wrote this by hand. Done.");
-    expect(applyEvents(events)).toBe(final);
+    expect(applyEvents(events).text).toBe(final);
   });
 
   it("matches the final value after a long random edit sequence", () => {
@@ -203,8 +207,10 @@ describe("applyEvents", () => {
       text = edits[edits.length - 1].next;
     }
 
-    const { events, final } = captureSession(edits);
+    const { events, final, origins } = captureSession(edits);
     expect(final).toBe(text);
-    expect(applyEvents(events)).toBe(final);
+    const rebuilt = applyEvents(events);
+    expect(rebuilt.text).toBe(final);
+    expect(rebuilt.origins).toEqual(origins);
   });
 });

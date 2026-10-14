@@ -1,0 +1,2 @@
+ALTER TABLE "event_batches" ADD COLUMN "clock_suspect" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "event_batches_session_seq_uidx" ON "event_batches" USING btree ("session_id","seq");

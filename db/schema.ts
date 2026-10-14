@@ -1,6 +1,7 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
 import { relations } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   integer,
   jsonb,
@@ -9,8 +10,10 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { EditEvent } from "@/lib/receipt/types";
 
 export const pieceModeEnum = pgEnum("piece_mode", ["freewrite", "response"]);
 export const pieceStatusEnum = pgEnum("piece_status", ["draft", "published"]);
@@ -84,6 +87,11 @@ export const pieces = pgTable("pieces", {
   finalText: text("final_text"),
   finalTextHash: text("final_text_hash"),
   replayPublic: boolean("replay_public").notNull().default(false),
+  /** Newest writing session that owns this piece; only its batches are accepted. */
+  activeSessionId: uuid("active_session_id").references(
+    (): AnyPgColumn => sessions.id,
+    { onDelete: "set null" },
+  ),
   publishedAt: timestamp("published_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
@@ -98,22 +106,29 @@ export const sessions = pgTable("sessions", {
   endedAt: timestamp("ended_at", { mode: "date" }),
 });
 
-export const eventBatches = pgTable("event_batches", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  sessionId: uuid("session_id")
-    .notNull()
-    .references(() => sessions.id, { onDelete: "cascade" }),
-  seq: integer("seq").notNull(),
-  events: jsonb("events").notNull().$type<unknown[]>(),
-  prevHash: text("prev_hash").notNull(),
-  hash: text("hash").notNull(),
-  clientTStart: integer("client_t_start").notNull(),
-  clientTEnd: integer("client_t_end").notNull(),
-  serverReceivedAt: timestamp("server_received_at", { mode: "date" })
-    .notNull()
-    .defaultNow(),
-  delayed: boolean("delayed").notNull().default(false),
-});
+export const eventBatches = pgTable(
+  "event_batches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+    events: jsonb("events").notNull().$type<EditEvent[]>(),
+    prevHash: text("prev_hash").notNull(),
+    hash: text("hash").notNull(),
+    clientTStart: integer("client_t_start").notNull(),
+    clientTEnd: integer("client_t_end").notNull(),
+    serverReceivedAt: timestamp("server_received_at", { mode: "date" })
+      .notNull()
+      .defaultNow(),
+    delayed: boolean("delayed").notNull().default(false),
+    clockSuspect: boolean("clock_suspect").notNull().default(false),
+  },
+  (table) => [
+    uniqueIndex("event_batches_session_seq_uidx").on(table.sessionId, table.seq),
+  ],
+);
 
 export const receipts = pgTable("receipts", {
   pieceId: uuid("piece_id")
