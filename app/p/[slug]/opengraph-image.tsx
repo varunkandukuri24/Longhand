@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { pieces, receipts } from "@/db/schema";
+import { pieces, receipts, users } from "@/db/schema";
 import {
   formatDuration,
   sharesToPercents,
@@ -22,14 +22,17 @@ export default async function Image({ params }: ImageProps) {
   const [row] = await db
     .select({
       title: pieces.title,
+      authorName: users.name,
       metrics: receipts.metrics,
     })
     .from(pieces)
     .innerJoin(receipts, eq(receipts.pieceId, pieces.id))
+    .innerJoin(users, eq(users.id, pieces.userId))
     .where(eq(pieces.slug, slug))
     .limit(1);
 
   const title = row?.title ?? "Untitled";
+  const author = row?.authorName?.trim() || "Anonymous";
   const metrics = row?.metrics;
   const active = metrics
     ? formatDuration(metrics.activeWritingTimeMs)
@@ -90,7 +93,18 @@ export default async function Image({ params }: ImageProps) {
         <div
           style={{
             display: "flex",
-            marginTop: 48,
+            marginTop: 16,
+            fontFamily: "DM Mono",
+            fontSize: 24,
+            color: "rgba(43,39,34,0.55)",
+          }}
+        >
+          {author}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 40,
             gap: 40,
             fontFamily: "DM Mono",
             fontSize: 28,

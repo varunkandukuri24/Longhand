@@ -63,16 +63,21 @@ export function PublishSheet({
         />
       </label>
 
-      <label className="mt-4 flex cursor-pointer items-center gap-2 font-ui text-[12px] text-ink/70">
-        <input
-          type="checkbox"
-          checked={replayPublic}
-          onChange={(e) => setReplayPublic(e.target.checked)}
-          disabled={busy}
-          className="accent-lamp"
-        />
-        <span>Show replay</span>
-      </label>
+      <div className="mt-4">
+        <label className="flex cursor-pointer items-center gap-2 font-ui text-[12px] text-ink/70">
+          <input
+            type="checkbox"
+            checked={replayPublic}
+            onChange={(e) => setReplayPublic(e.target.checked)}
+            disabled={busy}
+            className="accent-lamp"
+          />
+          <span>Show replay</span>
+        </label>
+        <p className="mt-1.5 pl-6 font-ui text-[12px] text-ink/50">
+          Shows everything you typed, including what you deleted.
+        </p>
+      </div>
 
       {error ? (
         <p className="mt-3 font-ui text-[12px] text-ink/70">{error}</p>

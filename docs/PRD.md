@@ -107,12 +107,12 @@ Seven features ship in the MVP; P0 items block launch.
 
 | # | Feature | Requirement | Priority |
 | --- | --- | --- | --- |
-| F1 | Accounts | Email magic-link sign-in. A dashboard lists your pieces with draft or published status. | P0 |
-| F2 | Focus editor | Immersive by default, like Freewrite: the lamp-lit page fills the view inside the ambient room (F7) and enters browser fullscreen on the first click or keystroke (browsers require a user gesture), with Esc to exit. One serif font, no toolbar, and any controls fade out while typing. Optional timer (10, 15, 25 min). Optional no-backspace mode. Autosaves continuously. | P0 |
-| F3 | Live event capture | Every edit is recorded with a timestamp and streamed to the server every 5 seconds in hash-chained batches. Works offline and syncs on reconnect, flagged as delayed. | P0 |
-| F4 | Response mode | Paste a URL; the server fetches its title and site name. The source shows as a card above the editor, with an "open source" link. Text quoted from the source counts as quoted, not pasted. | P0 |
-| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public (off by default). Publishing freezes the piece: no editing after publish in the MVP. The receipt uses the library card design from Rain on the window, and shows times as minutes and hours ("52 min", "1 hr 12 min"), never decimals. | P0 |
-| F6 | Replay | Plays the piece being written at 1x, 4x, 16x, with a timeline scrubber. Long idle gaps compress to 1 second. | P1 |
+| F1 | Accounts | Email magic-link sign-in. A dashboard lists your pieces with draft or published status. Writers choose a display name at first sign-in; public pages show only that name, never any part of the email address. | P0 |
+| F2 | Focus editor | Immersive by default, like Freewrite: the lamp-lit page fills the view inside the ambient room (F7) and enters browser fullscreen on the first click or keystroke (browsers require a user gesture), with Esc to exit. One serif font, no toolbar, and any controls fade out while typing. Optional timer (10, 15, 25 min). Optional no-backspace mode, which blocks every kind of deletion, including cut and undo. Autosaves continuously. | P0 |
+| F3 | Live event capture | Every edit is recorded with a timestamp and streamed to the server every 5 seconds in hash-chained batches. Works offline and syncs on reconnect, flagged as delayed. Resending a batch is harmless (idempotent), and a writer can close the tab and resume exactly where they left off. | P0 |
+| F4 | Response mode | A new piece starts as "Blank page" or "Respond to something" (paste a URL). The server fetches only the page's title and site name, safely (see Privacy). If the fetch fails, the piece is still created with the hostname as an editable title. A line above the text reads "In response to [title] · [site]", linking to the source, and the receipt shows "Response to [title]". Text pasted onto a line starting with "> " counts as quoted, not pasted. | P0 |
+| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public (off by default). Publishing freezes the piece: no editing after publish in the MVP. The receipt uses the library card design from Rain on the window, and shows times as minutes and hours ("52 min", "1 hr 12 min"), never decimals. On the public page the title sits above the text, the card is compact (about 440 px wide) with its stamp below the session table, never over it, and zero shares (0% pasted, 0% quoted) are left off the stamp | P0 |
+| F6 | Replay | Plays the piece being written at 1x, 4x, 16x, with a timeline scrubber. Idle gaps over 5 seconds compress to 1 second. Events are served only when the writer made the replay public, and the replay ends with a line confirming it matches the published text. | P1 |
 | F7 | Ambient room | The room around the page reflects the local time of day (light) and current weather (condition), per the Design language section. Location is coarse: a city from IP or typed once at onboarding, never a browser location prompt. Weather is checked about once an hour. Writers can choose Auto or pin a scene. The receipt may note conditions ("2 of 3 sessions in the rain"), never the place. | P1 |
 
 **User stories**
@@ -130,14 +130,14 @@ The receipt shows facts derived from the event log, never a verdict.
 | Metric | Definition | Shown as |
 | --- | --- | --- |
 | Active writing time | Sum of gaps between consecutive events, counting only gaps under 60 s | "52 min active" |
-| Elapsed span | First event to last event, across all sessions | "over 3 days" |
+| Elapsed span | First session start to the last batch's server receive time (server time, not client time) | "over 3 days" |
 | Sessions | Count of sessions with at least 1 event | "3 sessions" |
 | Typed share | Characters in the final text that came from typed input ÷ final length | "94% typed" |
 | Pasted share | Final characters from paste events, excluding quoted source text | "4% pasted" |
 | Quoted share | Final characters pasted inside a quote block (`> `) in response mode | "2% quoted from source" |
 | Revision ratio | Total characters typed ÷ final characters | "1.6x written for every word kept" |
 | Word count | Final words | "812 words" |
-| Timing flags | Sustained speed over 150 wpm for 60 s+, or unnaturally uniform keystroke intervals | Neutral note, e.g. "2 unusually fast stretches" |
+| Timing flags | A fast stretch is any rolling 60-second window above 150 wpm (5 characters = 1 word); uniform typing is 50+ consecutive keystrokes whose intervals vary by less than 15% (coefficient of variation) | Neutral note, e.g. "2 unusually fast stretches" |
 | Delayed sync | Batches that reached the server more than 2 minutes late (offline) | "1 offline stretch" |
 
 Character attribution works by tracking origin per character: each character in the live document is tagged typed, pasted or quoted, and deletions remove tags. The final shares come from those tags, so deleting a pasted block removes it from the pasted share.
@@ -160,9 +160,10 @@ The receipt is credible because time is witnessed by the server as it passes, no
 **Privacy**
 
 - Drafts and event logs are private to the owner. Nothing is public until they publish.
-- Replay is opt-in per piece. Without it, only the text and metrics are public.
+- Replay is opt-in per piece and off by default. The toggle warns that replay shows everything typed, including deleted text. Without it, only the text and metrics are public.
 - Keystroke timing is treated as sensitive. It is never sold, shared or used for training, and it's deleted with the piece.
 - Response mode stores only the source URL, title and site name, never the article's text.
+- Fetching a pasted URL is locked down: http and https only, no localhost, private or internal addresses (including after redirects), at most 3 redirects, a 5-second timeout and 1 MB read limit.
 
 ## Success metrics
 

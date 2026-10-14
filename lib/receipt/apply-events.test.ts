@@ -27,8 +27,8 @@ function captureSession(
     if (diff.removed.length === 0 && diff.inserted.length === 0) {
       continue;
     }
-    events.push(...eventsFromDiff(diff, edit.inputType, edit.t));
-    origins = applyDiffToOrigins(origins, diff, edit.inputType);
+    events.push(...eventsFromDiff(diff, edit.inputType, edit.t, text));
+    origins = applyDiffToOrigins(origins, diff, edit.inputType, text);
     text = edit.next;
   }
 
@@ -113,6 +113,30 @@ describe("applyEvents", () => {
       "quoted",
       "quoted",
     ]);
+  });
+
+  it("tags quoted vs pasted origin through the editor pipeline", () => {
+    const quoted = captureSession([
+      { next: "> ", t: 0 },
+      {
+        next: "> quoted block",
+        inputType: "insertFromPaste",
+        t: 50,
+      },
+    ]);
+    expect(applyEvents(quoted.events).origins).toEqual(quoted.origins);
+    expect(quoted.origins.slice(2).every((o) => o === "quoted")).toBe(true);
+
+    const pasted = captureSession([
+      { next: "Hi ", t: 0 },
+      {
+        next: "Hi pasted block",
+        inputType: "insertFromPaste",
+        t: 50,
+      },
+    ]);
+    expect(applyEvents(pasted.events).origins).toEqual(pasted.origins);
+    expect(pasted.origins.slice(3).every((o) => o === "pasted")).toBe(true);
   });
 
   it("rebuilds paste then delete part of it", () => {

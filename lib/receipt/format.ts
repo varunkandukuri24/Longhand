@@ -25,6 +25,27 @@ export type SharePercents = {
 };
 
 /**
+ * Second stamp line: only non-zero pasted/quoted shares.
+ * Returns null when both are zero (line omitted).
+ */
+export function formatStampSecondaryLine(
+  pasted: number,
+  quoted: number,
+): string | null {
+  const parts: string[] = [];
+  if (pasted > 0) {
+    parts.push(`${pasted}% PASTED`);
+  }
+  if (quoted > 0) {
+    parts.push(`${quoted}% QUOTED`);
+  }
+  if (parts.length === 0) {
+    return null;
+  }
+  return parts.join(" · ");
+}
+
+/**
  * Convert fractional shares (0–1) to whole percents that always sum to 100.
  * Uses largest-remainder rounding. Empty/zero input yields 0/0/0.
  */

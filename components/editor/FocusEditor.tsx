@@ -2,6 +2,7 @@
 
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
 import { PublishSheet } from "@/components/editor/PublishSheet";
+import { ResponseLine } from "@/components/source/ResponseLine";
 import {
   applyDiffToOrigins,
   diffText,
@@ -37,10 +38,17 @@ type PublishedView = {
   finalText: string;
 };
 
+type ResponseSource = {
+  url: string;
+  title: string;
+  site: string;
+};
+
 type FocusEditorProps = {
   pieceId: string;
   initialTitle?: string;
   published?: PublishedView;
+  source?: ResponseSource | null;
 };
 
 function formatElapsed(ms: number): string {
@@ -59,6 +67,7 @@ export function FocusEditor({
   pieceId,
   initialTitle = "",
   published,
+  source = null,
 }: FocusEditorProps) {
   const router = useRouter();
   const isPublished = Boolean(published);
@@ -297,12 +306,13 @@ export function FocusEditor({
         setSessionStartedAt(start);
       }
       const t = now - start;
-      const newEvents = eventsFromDiff(diff, inputType, t);
+      const newEvents = eventsFromDiff(diff, inputType, t, prev);
       eventsRef.current = [...eventsRef.current, ...newEvents];
       originsRef.current = applyDiffToOrigins(
         originsRef.current,
         diff,
         inputType,
+        prev,
       );
       prevValueRef.current = next;
       lastLocalEventAtRef.current = now;
@@ -608,26 +618,38 @@ export function FocusEditor({
             </button>
           </div>
         ) : (
-          <textarea
-            ref={textareaRef}
-            value={value}
-            readOnly={isPublished || superseded}
-            onCompositionStart={onCompositionStart}
-            onCompositionEnd={onCompositionEnd}
-            onInput={onInput}
-            onChange={onChange}
-            onKeyDown={onKeyDown}
-            onMouseDown={onMouseDown}
-            spellCheck
-            autoCapitalize="off"
-            autoCorrect="off"
-            className={[
-              "h-full w-full resize-none rounded-[6px] bg-transparent px-12 py-10 font-writing text-[21px] leading-[1.75] text-ink caret-cursor outline-none",
-              superseded ? "pt-12" : "",
-              isPublished ? "cursor-default" : "",
-            ].join(" ")}
-            aria-label="Writing page"
-          />
+          <div className="flex h-full flex-col">
+            {source ? (
+              <div className="shrink-0 px-12 pt-8">
+                <ResponseLine
+                  title={source.title}
+                  site={source.site}
+                  url={source.url}
+                />
+              </div>
+            ) : null}
+            <textarea
+              ref={textareaRef}
+              value={value}
+              readOnly={isPublished || superseded}
+              onCompositionStart={onCompositionStart}
+              onCompositionEnd={onCompositionEnd}
+              onInput={onInput}
+              onChange={onChange}
+              onKeyDown={onKeyDown}
+              onMouseDown={onMouseDown}
+              spellCheck
+              autoCapitalize="off"
+              autoCorrect="off"
+              className={[
+                "min-h-0 w-full flex-1 resize-none rounded-[6px] bg-transparent px-12 font-writing text-[21px] leading-[1.75] text-ink caret-cursor outline-none",
+                source ? "pt-3 pb-10" : "py-10",
+                superseded ? "pt-12" : "",
+                isPublished ? "cursor-default" : "",
+              ].join(" ")}
+              aria-label="Writing page"
+            />
+          </div>
         )}
       </div>
 

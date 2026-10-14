@@ -1,3 +1,4 @@
+import { isQuoteLineAt } from "@/lib/receipt/apply-events";
 import type { CharOrigin, EditEvent, EventType } from "@/lib/receipt/types";
 
 export type TextDiff = {
@@ -37,8 +38,24 @@ export function originForInputType(inputType: string | undefined): CharOrigin {
   return "typed";
 }
 
+/**
+ * Origin for an insert at `pos` in `textBefore`. Paste on a `> ` line is quoted.
+ */
+export function originForInsert(
+  inputType: string | undefined,
+  textBefore: string,
+  pos: number,
+): CharOrigin {
+  const base = originForInputType(inputType);
+  if (base === "pasted" && isQuoteLineAt(textBefore, pos)) {
+    return "quoted";
+  }
+  return base;
+}
+
 export function eventTypeForOrigin(origin: CharOrigin): EventType {
-  return origin === "pasted" ? "paste" : "insert";
+  // Quoted text is still a paste event; rebuild tags it via the quote line.
+  return origin === "pasted" || origin === "quoted" ? "paste" : "insert";
 }
 
 /** Emit delete and/or insert|paste events from a text diff. */
@@ -46,6 +63,7 @@ export function eventsFromDiff(
   diff: TextDiff,
   inputType: string | undefined,
   t: number,
+  textBefore = "",
 ): EditEvent[] {
   const events: EditEvent[] = [];
 
@@ -60,7 +78,7 @@ export function eventsFromDiff(
   }
 
   if (diff.inserted.length > 0) {
-    const origin = originForInputType(inputType);
+    const origin = originForInsert(inputType, textBefore, diff.pos);
     events.push({
       t,
       type: eventTypeForOrigin(origin),
@@ -78,11 +96,13 @@ export function applyDiffToOrigins(
   origins: readonly CharOrigin[],
   diff: TextDiff,
   inputType: string | undefined,
+  textBefore = "",
 ): CharOrigin[] {
   const next = origins.slice();
+  const origin = originForInsert(inputType, textBefore, diff.pos);
   const tags: CharOrigin[] = Array.from(
     { length: diff.inserted.length },
-    () => originForInputType(inputType),
+    () => origin,
   );
   next.splice(diff.pos, diff.removed.length, ...tags);
   return next;

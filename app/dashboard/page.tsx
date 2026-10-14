@@ -1,16 +1,14 @@
-import { createPiece } from "@/app/actions/pieces";
-import { auth, signOut } from "@/auth";
+import { NewPieceActions } from "@/components/dashboard/NewPieceActions";
+import { DisplayNameForm } from "@/components/dashboard/DisplayNameForm";
+import { signOut } from "@/auth";
 import { db } from "@/db";
 import { pieces } from "@/db/schema";
+import { requireUserWithDisplayName } from "@/lib/auth/display-name";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/signin");
-  }
+  const user = await requireUserWithDisplayName();
 
   const userPieces = await db
     .select({
@@ -22,7 +20,7 @@ export default async function DashboardPage() {
       updatedAt: pieces.updatedAt,
     })
     .from(pieces)
-    .where(eq(pieces.userId, session.user.id))
+    .where(eq(pieces.userId, user.id))
     .orderBy(desc(pieces.updatedAt));
 
   return (
@@ -32,9 +30,10 @@ export default async function DashboardPage() {
           <h1 className="font-writing text-[28px] leading-tight text-ink">
             Longhand
           </h1>
-          <p className="mt-2 font-ui text-[13px] text-ink/70">
-            {session.user.email}
-          </p>
+          <DisplayNameForm initialName={user.name} />
+          {user.email ? (
+            <p className="mt-1 font-ui text-[12px] text-ink/45">{user.email}</p>
+          ) : null}
         </div>
         <form
           action={async () => {
@@ -52,18 +51,11 @@ export default async function DashboardPage() {
       </header>
 
       <section className="mt-10">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <h2 className="font-ui text-[12px] uppercase tracking-wide text-ink/60">
             Pieces
           </h2>
-          <form action={createPiece}>
-            <button
-              type="submit"
-              className="rounded-[6px] bg-lamp px-3 py-1.5 font-ui text-[12px] text-ink"
-            >
-              New piece
-            </button>
-          </form>
+          <NewPieceActions />
         </div>
 
         {userPieces.length === 0 ? (

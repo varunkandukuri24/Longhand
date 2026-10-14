@@ -1,10 +1,14 @@
 import { auth } from "@/auth";
+import { userHasDisplayName } from "@/lib/auth/display-name";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function HomePage() {
   const session = await auth();
-  if (session?.user) {
+  if (session?.user?.id) {
+    if (!(await userHasDisplayName(session.user.id))) {
+      redirect("/onboarding/name");
+    }
     redirect("/dashboard");
   }
 

@@ -22,12 +22,23 @@ export {
   formatDuration,
   formatReceiptDate,
   formatReceiptNotes,
+  formatStampSecondaryLine,
   pieceCardNumber,
   sharesToPercents,
   shortenHash,
 } from "./format";
 export type { SharePercents } from "./format";
 export { makePieceSlug, randomSlugSuffix } from "./slug";
+export {
+  COMPRESSED_IDLE_MS,
+  REPLAY_IDLE_GAP_MS,
+  REPLAY_SNAPSHOT_EVERY,
+  buildReplayTimeline,
+  eventIndexAtPlaybackTime,
+  replayMatchesPublished,
+  textAtEventIndex,
+} from "./replay-timeline";
+export type { ReplaySnapshot, ReplayTimeline } from "./replay-timeline";
 export type {
   CharOrigin,
   EditEvent,

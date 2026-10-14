@@ -3,6 +3,7 @@ import {
   formatDuration,
   formatReceiptDate,
   formatReceiptNotes,
+  formatStampSecondaryLine,
   pieceCardNumber,
   sharesToPercents,
   shortenHash,
@@ -24,6 +25,18 @@ describe("formatDuration", () => {
     expect(formatDuration(60 * 60_000)).toBe("1 hr");
     expect(formatDuration((60 + 12) * 60_000)).toBe("1 hr 12 min");
     expect(formatDuration((2 * 60 + 5) * 60_000 + 999)).toBe("2 hr 5 min");
+  });
+});
+
+describe("formatStampSecondaryLine", () => {
+  it("omits the line when both shares are zero", () => {
+    expect(formatStampSecondaryLine(0, 0)).toBeNull();
+  });
+
+  it("lists only non-zero shares", () => {
+    expect(formatStampSecondaryLine(4, 2)).toBe("4% PASTED · 2% QUOTED");
+    expect(formatStampSecondaryLine(4, 0)).toBe("4% PASTED");
+    expect(formatStampSecondaryLine(0, 2)).toBe("2% QUOTED");
   });
 });
 
