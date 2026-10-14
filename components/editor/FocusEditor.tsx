@@ -1,6 +1,7 @@
 "use client";
 
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
+import { PublishSheet } from "@/components/editor/PublishSheet";
 import {
   applyDiffToOrigins,
   diffText,
@@ -13,6 +14,8 @@ import {
 import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
 import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
 import type { SyncStatus } from "@/lib/sync/types";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -28,8 +31,16 @@ import {
 const TIMER_OPTIONS = [10, 15, 25] as const;
 const IS_DEV = process.env.NODE_ENV === "development";
 
+type PublishedView = {
+  slug: string;
+  title: string;
+  finalText: string;
+};
+
 type FocusEditorProps = {
   pieceId: string;
+  initialTitle?: string;
+  published?: PublishedView;
 };
 
 function formatElapsed(ms: number): string {
@@ -44,7 +55,13 @@ function formatCountdown(ms: number): string {
   return formatElapsed(clamped);
 }
 
-export function FocusEditor({ pieceId }: FocusEditorProps) {
+export function FocusEditor({
+  pieceId,
+  initialTitle = "",
+  published,
+}: FocusEditorProps) {
+  const router = useRouter();
+  const isPublished = Boolean(published);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevValueRef = useRef("");
   const originsRef = useRef<CharOrigin[]>([]);
@@ -59,7 +76,7 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
   const readyRef = useRef(false);
   const lastLocalEventAtRef = useRef<number | null>(null);
 
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(published?.finalText ?? "");
   const [controlsVisible, setControlsVisible] = useState(true);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [noBackspace, setNoBackspace] = useState(false);
@@ -79,6 +96,9 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
   const [superseded, setSuperseded] = useState(false);
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
   const [storedDelayedCount, setStoredDelayedCount] = useState(0);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   useEffect(() => {
     noBackspaceRef.current = noBackspace;
@@ -101,6 +121,11 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
   }, []);
 
   useEffect(() => {
+    if (isPublished) {
+      readyRef.current = false;
+      return;
+    }
+
     let cancelled = false;
     readyRef.current = false;
     setBootError(null);
@@ -158,7 +183,48 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
       sync.stop();
       syncRef.current = null;
     };
-  }, [pieceId, bootAttempt, exposeEvents, syncDebugSnapshot]);
+  }, [pieceId, bootAttempt, exposeEvents, isPublished, syncDebugSnapshot]);
+
+  const onPublish = useCallback(
+    async (args: { title: string; replayPublic: boolean }) => {
+      setPublishBusy(true);
+      setPublishError(null);
+      try {
+        await syncRef.current?.flush();
+        const res = await fetch(`/api/pieces/${pieceId}/publish`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            title: args.title,
+            finalText: prevValueRef.current,
+            replayPublic: args.replayPublic,
+          }),
+        });
+        const body = (await res.json().catch(() => null)) as {
+          reason?: string;
+        } | null;
+
+        if (!res.ok) {
+          if (res.status === 409 && body?.reason === "text_mismatch") {
+            setPublishError(
+              "The stored event log does not match this text. Try again after saving.",
+            );
+          } else {
+            setPublishError("Could not publish this piece.");
+          }
+          return;
+        }
+
+        setPublishOpen(false);
+        router.refresh();
+      } catch {
+        setPublishError("Could not publish this piece.");
+      } finally {
+        setPublishBusy(false);
+      }
+    },
+    [pieceId, router],
+  );
 
   const showControls = useCallback(() => {
     setControlsVisible(true);
@@ -395,76 +461,126 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
       <div
         className={[
           "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between px-5 py-4 transition-opacity duration-500",
-          controlsVisible ? "opacity-100" : "opacity-0",
+          controlsVisible || isPublished || publishOpen
+            ? "opacity-100"
+            : "opacity-0",
         ].join(" ")}
       >
         <div className="pointer-events-auto flex flex-col gap-2 font-ui text-[12px] text-page/70">
-          <div className="flex items-center gap-3">
-            <span>Timer</span>
-            <div className="flex gap-2">
-              {TIMER_OPTIONS.map((minutes) => (
-                <button
-                  key={minutes}
-                  type="button"
-                  className={[
-                    "underline-offset-2 hover:underline",
-                    timerMinutes === minutes ? "text-lamp" : "",
-                  ].join(" ")}
-                  onClick={() => {
-                    setTimerMinutes(minutes);
-                    timerEndsAtRef.current = Date.now() + minutes * 60 * 1000;
-                    setTimerRemainingMs(minutes * 60 * 1000);
+          {isPublished && published ? (
+            <>
+              <span>Published</span>
+              <Link
+                href={`/p/${published.slug}`}
+                className="text-lamp underline-offset-2 hover:underline"
+              >
+                Open public page
+              </Link>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <span>Timer</span>
+                <div className="flex gap-2">
+                  {TIMER_OPTIONS.map((minutes) => (
+                    <button
+                      key={minutes}
+                      type="button"
+                      className={[
+                        "underline-offset-2 hover:underline",
+                        timerMinutes === minutes ? "text-lamp" : "",
+                      ].join(" ")}
+                      onClick={() => {
+                        setTimerMinutes(minutes);
+                        timerEndsAtRef.current =
+                          Date.now() + minutes * 60 * 1000;
+                        setTimerRemainingMs(minutes * 60 * 1000);
+                        showControls();
+                      }}
+                    >
+                      {minutes}m
+                    </button>
+                  ))}
+                  {timerMinutes !== null ? (
+                    <button
+                      type="button"
+                      className="underline-offset-2 hover:underline"
+                      onClick={() => {
+                        setTimerMinutes(null);
+                        timerEndsAtRef.current = null;
+                        setTimerRemainingMs(null);
+                        showControls();
+                      }}
+                    >
+                      off
+                    </button>
+                  ) : null}
+                  {timerMinutes !== null && timerRemainingMs !== null ? (
+                    <span className="text-lamp">
+                      {formatCountdown(timerRemainingMs)}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={noBackspace}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    noBackspaceRef.current = checked;
+                    setNoBackspace(checked);
                     showControls();
                   }}
-                >
-                  {minutes}m
-                </button>
-              ))}
-              {timerMinutes !== null ? (
-                <button
-                  type="button"
-                  className="underline-offset-2 hover:underline"
-                  onClick={() => {
-                    setTimerMinutes(null);
-                    timerEndsAtRef.current = null;
-                    setTimerRemainingMs(null);
-                    showControls();
-                  }}
-                >
-                  off
-                </button>
-              ) : null}
-              {timerMinutes !== null && timerRemainingMs !== null ? (
-                <span className="text-lamp">
-                  {formatCountdown(timerRemainingMs)}
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              checked={noBackspace}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                noBackspaceRef.current = checked;
-                setNoBackspace(checked);
-                showControls();
-              }}
-              className="accent-lamp"
-            />
-            <span>No backspace</span>
-          </label>
+                  className="accent-lamp"
+                />
+                <span>No backspace</span>
+              </label>
+              <button
+                type="button"
+                className="w-fit text-left underline-offset-2 hover:underline"
+                onClick={() => {
+                  setPublishError(null);
+                  setPublishOpen(true);
+                  showControls();
+                }}
+              >
+                Publish
+              </button>
+            </>
+          )}
         </div>
 
         <div className="pointer-events-none font-ui text-[12px] text-page/70">
-          <span>{formatElapsed(elapsedMs)}</span>
-          <span className="mx-2 text-page/40">·</span>
-          <span>
-            {syncStatus && syncStatus.queuedCount > 0 ? "saving" : "saved"}
-          </span>
+          {isPublished ? (
+            <span>Read only</span>
+          ) : (
+            <>
+              <span>{formatElapsed(elapsedMs)}</span>
+              <span className="mx-2 text-page/40">·</span>
+              <span>
+                {syncStatus && syncStatus.queuedCount > 0 ? "saving" : "saved"}
+              </span>
+            </>
+          )}
         </div>
       </div>
+
+      <PublishSheet
+        open={publishOpen && !isPublished}
+        initialTitle={initialTitle}
+        busy={publishBusy}
+        error={publishError}
+        onClose={() => {
+          if (!publishBusy) {
+            setPublishOpen(false);
+            setPublishError(null);
+          }
+        }}
+        onPublish={(args) => {
+          void onPublish(args);
+        }}
+      />
 
       <div
         className="relative h-[min(620px,calc(100vh-4rem))] w-full max-w-[820px] rounded-[6px] bg-page shadow-page"
@@ -495,7 +611,7 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
           <textarea
             ref={textareaRef}
             value={value}
-            readOnly={superseded}
+            readOnly={isPublished || superseded}
             onCompositionStart={onCompositionStart}
             onCompositionEnd={onCompositionEnd}
             onInput={onInput}
@@ -508,13 +624,14 @@ export function FocusEditor({ pieceId }: FocusEditorProps) {
             className={[
               "h-full w-full resize-none rounded-[6px] bg-transparent px-12 py-10 font-writing text-[21px] leading-[1.75] text-ink caret-cursor outline-none",
               superseded ? "pt-12" : "",
+              isPublished ? "cursor-default" : "",
             ].join(" ")}
             aria-label="Writing page"
           />
         )}
       </div>
 
-      {IS_DEV && debugOpen ? (
+      {IS_DEV && debugOpen && !isPublished ? (
         <EditorDebugPanel
           events={debugSnapshot.events}
           origins={debugSnapshot.origins}

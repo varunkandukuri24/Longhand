@@ -16,7 +16,13 @@ export default async function WritePage({
   const { pieceId } = await params;
 
   const [piece] = await db
-    .select({ id: pieces.id })
+    .select({
+      id: pieces.id,
+      status: pieces.status,
+      slug: pieces.slug,
+      title: pieces.title,
+      finalText: pieces.finalText,
+    })
     .from(pieces)
     .where(and(eq(pieces.id, pieceId), eq(pieces.userId, session.user.id)))
     .limit(1);
@@ -25,5 +31,18 @@ export default async function WritePage({
     notFound();
   }
 
-  return <FocusEditor pieceId={piece.id} />;
+  if (piece.status === "published" && piece.slug) {
+    return (
+      <FocusEditor
+        pieceId={piece.id}
+        published={{
+          slug: piece.slug,
+          title: piece.title,
+          finalText: piece.finalText ?? "",
+        }}
+      />
+    );
+  }
+
+  return <FocusEditor pieceId={piece.id} initialTitle={piece.title} />;
 }

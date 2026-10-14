@@ -17,6 +17,7 @@ export default async function DashboardPage() {
       id: pieces.id,
       title: pieces.title,
       status: pieces.status,
+      slug: pieces.slug,
       mode: pieces.mode,
       updatedAt: pieces.updatedAt,
     })
@@ -85,6 +86,17 @@ export default async function DashboardPage() {
                   </Link>
                   <p className="mt-1 font-ui text-[12px] text-ink/60">
                     {piece.status} · {piece.mode}
+                    {piece.status === "published" && piece.slug ? (
+                      <>
+                        {" · "}
+                        <Link
+                          href={`/p/${piece.slug}`}
+                          className="underline-offset-2 hover:underline"
+                        >
+                          receipt
+                        </Link>
+                      </>
+                    ) : null}
                   </p>
                 </div>
               </li>

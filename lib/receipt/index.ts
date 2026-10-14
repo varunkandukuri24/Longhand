@@ -15,12 +15,24 @@ export {
 export {
   RECEIPT_VERSION,
   computeReceipt,
+  computeSessionRows,
   liveBatchesFromEvents,
 } from "./compute-receipt";
+export {
+  formatDuration,
+  formatReceiptDate,
+  formatReceiptNotes,
+  pieceCardNumber,
+  sharesToPercents,
+  shortenHash,
+} from "./format";
+export type { SharePercents } from "./format";
+export { makePieceSlug, randomSlugSuffix } from "./slug";
 export type {
   CharOrigin,
   EditEvent,
   EventType,
   ReceiptBatchInput,
   ReceiptMetrics,
+  ReceiptSessionRow,
 } from "./types";

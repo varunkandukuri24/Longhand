@@ -111,7 +111,7 @@ Seven features ship in the MVP; P0 items block launch.
 | F2 | Focus editor | Immersive by default, like Freewrite: the lamp-lit page fills the view inside the ambient room (F7) and enters browser fullscreen on the first click or keystroke (browsers require a user gesture), with Esc to exit. One serif font, no toolbar, and any controls fade out while typing. Optional timer (10, 15, 25 min). Optional no-backspace mode. Autosaves continuously. | P0 |
 | F3 | Live event capture | Every edit is recorded with a timestamp and streamed to the server every 5 seconds in hash-chained batches. Works offline and syncs on reconnect, flagged as delayed. | P0 |
 | F4 | Response mode | Paste a URL; the server fetches its title and site name. The source shows as a card above the editor, with an "open source" link. Text quoted from the source counts as quoted, not pasted. | P0 |
-| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public. | P0 |
+| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public (off by default). Publishing freezes the piece: no editing after publish in the MVP. The receipt uses the library card design from Rain on the window, and shows times as minutes and hours ("52 min", "1 hr 12 min"), never decimals. | P0 |
 | F6 | Replay | Plays the piece being written at 1x, 4x, 16x, with a timeline scrubber. Long idle gaps compress to 1 second. | P1 |
 | F7 | Ambient room | The room around the page reflects the local time of day (light) and current weather (condition), per the Design language section. Location is coarse: a city from IP or typed once at onboarding, never a browser location prompt. Weather is checked about once an hour. Writers can choose Auto or pin a scene. The receipt may note conditions ("2 of 3 sessions in the rain"), never the place. | P1 |
 
@@ -324,7 +324,7 @@ Done when: the app runs on your domain over HTTPS and a restore from backup work
 - [ ] Should pasting be blocked entirely in a strict mode, or always allowed and just counted?
 - [ ] Is replay public by default? It's the most persuasive proof, and also the most exposing.
 - [ ] Free forever, or charge for custom domains, embeds and verified badges later?
-- [ ] Receipt and stopping-moment style: the library card from Rain on the window, or the save slots and progress card from Save point?
+- [ ] Stopping-moment style: the "Your page is safe" card from Rain on the window, or the save slots from Save point? (The public receipt uses the library card.)
 
 **Later, if the validation test passes**
 

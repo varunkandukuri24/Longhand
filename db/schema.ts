@@ -13,7 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { EditEvent } from "@/lib/receipt/types";
+import type { EditEvent, ReceiptMetrics } from "@/lib/receipt/types";
 
 export const pieceModeEnum = pgEnum("piece_mode", ["freewrite", "response"]);
 export const pieceStatusEnum = pgEnum("piece_status", ["draft", "published"]);
@@ -134,7 +134,7 @@ export const receipts = pgTable("receipts", {
   pieceId: uuid("piece_id")
     .primaryKey()
     .references(() => pieces.id, { onDelete: "cascade" }),
-  metrics: jsonb("metrics").notNull().$type<Record<string, unknown>>(),
+  metrics: jsonb("metrics").notNull().$type<ReceiptMetrics>(),
   chainHeadHash: text("chain_head_hash").notNull(),
   version: integer("version").notNull().default(1),
   computedAt: timestamp("computed_at", { mode: "date" }).notNull().defaultNow(),

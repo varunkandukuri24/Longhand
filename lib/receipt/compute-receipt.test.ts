@@ -304,6 +304,13 @@ describe("computeReceipt", () => {
     expect(receipt.typedShare).toBe(1);
     expect(receipt.activeWritingTimeMs).toBe(700);
     expect(receipt.elapsedSpanMs).toBe(800);
+    expect(receipt.sessionRows).toEqual([
+      {
+        startedAt: 1_000,
+        activeWritingTimeMs: 700,
+        wordsAdded: 2,
+      },
+    ]);
   });
 });
 

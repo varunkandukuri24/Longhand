@@ -22,6 +22,15 @@ export type ReceiptBatchInput = {
   events: EditEvent[];
 };
 
+/** One session row for the library-card receipt table. */
+export type ReceiptSessionRow = {
+  /** Session wall-clock start, epoch ms. */
+  startedAt: number;
+  activeWritingTimeMs: number;
+  /** Net word-count increase during this session (never negative). */
+  wordsAdded: number;
+};
+
 /** Versioned effort receipt metrics (definitions may change in later versions). */
 export type ReceiptMetrics = {
   version: 1;
@@ -47,4 +56,6 @@ export type ReceiptMetrics = {
   uniformTypingRunCount: number;
   /** Batches flagged delayed (offline sync). */
   delayedBatchCount: number;
+  /** Per-session rows for the library card (sessions with ≥1 event). */
+  sessionRows: ReceiptSessionRow[];
 };

@@ -3,6 +3,7 @@ import type {
   EditEvent,
   ReceiptBatchInput,
   ReceiptMetrics,
+  ReceiptSessionRow,
 } from "./types";
 
 export const RECEIPT_VERSION = 1 as const;
@@ -419,6 +420,39 @@ export function liveBatchesFromEvents(
   });
 }
 
+/**
+ * Per-session active time and net words added, in first-seen session order.
+ * Words added is max(0, wordCount after − wordCount before).
+ */
+export function computeSessionRows(
+  batches: readonly ReceiptBatchInput[],
+): ReceiptSessionRow[] {
+  const rows: ReceiptSessionRow[] = [];
+  let prefixEvents: EditEvent[] = [];
+
+  for (const sessionId of sessionsWithEvents(batches)) {
+    const sessionEvents = eventsForSession(batches, sessionId);
+    const beforeWords = wordCount(applyEvents(prefixEvents).text);
+    prefixEvents = [...prefixEvents, ...sessionEvents];
+    const afterWords = wordCount(applyEvents(prefixEvents).text);
+
+    let startedAt = Number.POSITIVE_INFINITY;
+    for (const batch of batches) {
+      if (batch.sessionId === sessionId && batch.sessionStartedAt < startedAt) {
+        startedAt = batch.sessionStartedAt;
+      }
+    }
+
+    rows.push({
+      startedAt: Number.isFinite(startedAt) ? startedAt : 0,
+      activeWritingTimeMs: activeWritingTimeMsForEvents(sessionEvents),
+      wordsAdded: Math.max(0, afterWords - beforeWords),
+    });
+  }
+
+  return rows;
+}
+
 /** Compute versioned effort receipt metrics from stored/live batches. */
 export function computeReceipt(
   batches: readonly ReceiptBatchInput[],
@@ -444,5 +478,6 @@ export function computeReceipt(
     fastStretchCount: fastStretchCount(batches),
     uniformTypingRunCount: uniformTypingRunCountForBatches(batches),
     delayedBatchCount: delayedBatchCount(batches),
+    sessionRows: computeSessionRows(batches),
   };
 }

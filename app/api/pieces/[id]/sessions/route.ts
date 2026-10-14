@@ -24,6 +24,13 @@ export async function POST(_request: Request, context: RouteContext) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 
+  if (piece.status === "published") {
+    return Response.json(
+      { error: "conflict", reason: "published" },
+      { status: 409 },
+    );
+  }
+
   const now = new Date();
 
   const created = await db.transaction(async (tx) => {

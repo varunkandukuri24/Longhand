@@ -50,6 +50,13 @@ export async function POST(request: Request, context: RouteContext) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 
+  if (piece.status === "published") {
+    return Response.json(
+      { error: "conflict", reason: "published" },
+      { status: 409 },
+    );
+  }
+
   let body: BatchBody;
   try {
     body = (await request.json()) as BatchBody;
