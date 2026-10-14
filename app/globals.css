@@ -6,6 +6,7 @@
   --cursor: #c9772e;
   --lamp: #e2a45a;
   --room: #eef0ec;
+  --room-night: #1d2430;
 }
 
 @theme inline {
@@ -14,12 +15,23 @@
   --color-cursor: var(--cursor);
   --color-lamp: var(--lamp);
   --color-room: var(--room);
+  --color-room-night: var(--room-night);
   --font-writing: var(--font-literata);
   --font-ui: var(--font-dm-mono);
+  --shadow-page: 0 18px 48px rgba(0, 0, 0, 0.32), 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 body {
   background: var(--room);
   color: var(--ink);
   font-family: var(--font-ui), monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

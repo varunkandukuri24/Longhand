@@ -1,3 +1,4 @@
+import { createPiece } from "@/app/actions/pieces";
 import { auth, signOut } from "@/auth";
 import { db } from "@/db";
 import { pieces } from "@/db/schema";
@@ -50,9 +51,19 @@ export default async function DashboardPage() {
       </header>
 
       <section className="mt-10">
-        <h2 className="font-ui text-[12px] uppercase tracking-wide text-ink/60">
-          Pieces
-        </h2>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="font-ui text-[12px] uppercase tracking-wide text-ink/60">
+            Pieces
+          </h2>
+          <form action={createPiece}>
+            <button
+              type="submit"
+              className="rounded-[6px] bg-lamp px-3 py-1.5 font-ui text-[12px] text-ink"
+            >
+              New piece
+            </button>
+          </form>
+        </div>
 
         {userPieces.length === 0 ? (
           <p className="mt-6 font-ui text-[13px] text-ink/70">
@@ -66,9 +77,12 @@ export default async function DashboardPage() {
                 className="flex items-baseline justify-between gap-4 border-b border-ink/10 pb-3"
               >
                 <div>
-                  <p className="font-writing text-[18px] text-ink">
+                  <Link
+                    href={`/write/${piece.id}`}
+                    className="font-writing text-[18px] text-ink underline-offset-2 hover:underline"
+                  >
                     {piece.title || "Untitled"}
-                  </p>
+                  </Link>
                   <p className="mt-1 font-ui text-[12px] text-ink/60">
                     {piece.status} · {piece.mode}
                   </p>
