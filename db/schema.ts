@@ -3,6 +3,7 @@ import { relations } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
+  doublePrecision,
   integer,
   jsonb,
   pgEnum,
@@ -17,6 +18,13 @@ import type { EditEvent, ReceiptMetrics } from "@/lib/receipt/types";
 
 export const pieceModeEnum = pgEnum("piece_mode", ["freewrite", "response"]);
 export const pieceStatusEnum = pgEnum("piece_status", ["draft", "published"]);
+export const sceneConditionEnum = pgEnum("scene_condition", [
+  "clear",
+  "cloudy",
+  "rain",
+  "snow",
+]);
+export const windowSideEnum = pgEnum("window_side", ["left", "right"]);
 
 export const users = pgTable("users", {
   id: text("id")
@@ -27,6 +35,14 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
+  /** Optional coarse writing location (city name only; never on public pages). */
+  cityName: text("city_name"),
+  /** Latitude rounded to 1 decimal place. */
+  latitude: doublePrecision("latitude"),
+  /** Longitude rounded to 1 decimal place. */
+  longitude: doublePrecision("longitude"),
+  /** Side window edge preference (DESIGN.md). */
+  windowSide: windowSideEnum("window_side").notNull().default("left"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -104,6 +120,8 @@ export const sessions = pgTable("sessions", {
     .references(() => pieces.id, { onDelete: "cascade" }),
   startedAt: timestamp("started_at", { mode: "date" }).notNull().defaultNow(),
   endedAt: timestamp("ended_at", { mode: "date" }),
+  /** Ambient condition when the session started (for the receipt note). */
+  condition: sceneConditionEnum("condition"),
 });
 
 export const eventBatches = pgTable(

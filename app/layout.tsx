@@ -24,7 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${literata.variable} ${dmMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-room text-ink">
+      <body className="flex min-h-full flex-col bg-paper text-ink">
         {children}
       </body>
     </html>

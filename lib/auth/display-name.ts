@@ -16,6 +16,8 @@ export async function requireUserWithDisplayName(): Promise<{
   id: string;
   name: string;
   email: string | null | undefined;
+  cityName: string | null;
+  windowSide: "left" | "right";
 }> {
   const session = await auth();
   if (!session?.user?.id) {
@@ -23,7 +25,12 @@ export async function requireUserWithDisplayName(): Promise<{
   }
 
   const [row] = await db
-    .select({ name: users.name, email: users.email })
+    .select({
+      name: users.name,
+      email: users.email,
+      cityName: users.cityName,
+      windowSide: users.windowSide,
+    })
     .from(users)
     .where(eq(users.id, session.user.id))
     .limit(1);
@@ -37,6 +44,8 @@ export async function requireUserWithDisplayName(): Promise<{
     id: session.user.id,
     name,
     email: row?.email ?? session.user.email,
+    cityName: row?.cityName?.trim() || null,
+    windowSide: row?.windowSide === "right" ? "right" : "left",
   };
 }
 

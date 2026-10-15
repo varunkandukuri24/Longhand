@@ -64,9 +64,15 @@ export class EventSync {
   private supersededListeners = new Set<SupersededListener>();
   private online = typeof navigator === "undefined" ? true : navigator.onLine;
   private channel: BroadcastChannel | null = null;
+  /** Ambient condition to store when a session starts. */
+  private sessionCondition: string | null = null;
 
   constructor(pieceId: string) {
     this.pieceId = pieceId;
+  }
+
+  setSessionCondition(condition: string | null): void {
+    this.sessionCondition = condition;
   }
 
   subscribe(listener: StatusListener): () => void {
@@ -144,12 +150,15 @@ export class EventSync {
     return data;
   }
 
-  async startSession(): Promise<string> {
+  async startSession(condition?: string): Promise<string> {
     if (this.superseded) {
       throw new Error("session superseded");
     }
+    const stored = condition ?? this.sessionCondition ?? undefined;
     const res = await fetch(`/api/pieces/${this.pieceId}/sessions`, {
       method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(stored ? { condition: stored } : {}),
     });
     if (!res.ok) {
       throw new Error(`session ${res.status}`);

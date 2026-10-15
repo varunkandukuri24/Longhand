@@ -60,8 +60,8 @@ export default async function Image({ params }: ImageProps) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          background: "#FFFBF2",
-          color: "#2B2722",
+          background: "#FFFFFF",
+          color: "#1C1A16",
           padding: "72px 80px",
         }}
       >
@@ -71,7 +71,7 @@ export default async function Image({ params }: ImageProps) {
             fontFamily: "DM Mono",
             fontSize: 22,
             letterSpacing: "0.08em",
-            color: "rgba(43,39,34,0.55)",
+            color: "rgba(28,26,22,0.55)",
           }}
         >
           LONGHAND
@@ -96,7 +96,7 @@ export default async function Image({ params }: ImageProps) {
             marginTop: 16,
             fontFamily: "DM Mono",
             fontSize: 24,
-            color: "rgba(43,39,34,0.55)",
+            color: "rgba(28,26,22,0.55)",
           }}
         >
           {author}
@@ -108,7 +108,7 @@ export default async function Image({ params }: ImageProps) {
             gap: 40,
             fontFamily: "DM Mono",
             fontSize: 28,
-            color: "rgba(43,39,34,0.75)",
+            color: "rgba(28,26,22,0.75)",
           }}
         >
           <span>{active} active</span>

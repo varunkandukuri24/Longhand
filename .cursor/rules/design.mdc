@@ -2,10 +2,10 @@
 description: Longhand design rules
 alwaysApply: true
 ---
-- Follow the Design language section of docs/PRD.md exactly. Its tokens are the only colors.
-- Page #FFFBF2, ink #2B2722, cursor #C9772E, lamp #E2A45A. Fonts: Literata for writing, DM Mono for small labels. No other fonts.
-- The page never changes with the scene. Only the room behind it does.
-- Banned: gradient washes, glassmorphism, emoji, sparkle icons, Inter or Roboto, default shadcn styling, toasts or modals while writing.
-- Motion: slow drift only. Nothing moves under prefers-reduced-motion. Scene changes crossfade over minutes.
+- docs/DESIGN.md is the visual source of truth. Follow it exactly, including its reference implementation for the side window. Its tokens are the only colors.
+- Paper #FFFFFF (soft pure white, very faint neutral grain, never beige) fills the whole screen; ink #1C1A16; caret #C9772E; labels #736C61. Fonts: Literata for writing and headings, DM Mono for labels. No other fonts.
+- The page never changes with the scene. Only the side window does.
+- Banned: gradient washes, glassmorphism, emoji, sparkle icons, Inter or Roboto, default shadcn styling, cards or shadows on the writing screen, toasts or modals while writing.
+- Motion only inside the side window, and slow. Nothing moves under prefers-reduced-motion. Scene changes crossfade over minutes.
 - Copy is plain and dry, with no exclamation marks.
-- When a design choice isn't covered here or in the PRD, ask instead of inventing one.
+- When a design choice isn't covered by DESIGN.md or the PRD, ask instead of inventing one.

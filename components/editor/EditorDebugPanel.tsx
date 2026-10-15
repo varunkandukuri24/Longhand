@@ -6,6 +6,13 @@ import {
   liveBatchesFromEvents,
 } from "@/lib/receipt/compute-receipt";
 import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
+import {
+  CONDITIONS,
+  LIGHTS,
+  type Condition,
+  type Light,
+  type WindowSide,
+} from "@/lib/scene";
 import type { SyncStatus } from "@/lib/sync/types";
 
 type EditorDebugPanelProps = {
@@ -16,6 +23,15 @@ type EditorDebugPanelProps = {
   delayedBatchCount: number;
   syncStatus: SyncStatus | null;
   loadError?: string | null;
+  sceneLight: Light;
+  sceneCondition: Condition;
+  sceneSourceLabel: string;
+  windowSide: WindowSide;
+  debugOverride: { light: Light; condition: Condition } | null;
+  onDebugOverride: (
+    override: { light: Light; condition: Condition } | null,
+  ) => void;
+  onWindowSideChange: (side: WindowSide) => void;
 };
 
 function countOrigins(origins: readonly CharOrigin[]) {
@@ -53,6 +69,13 @@ export function EditorDebugPanel({
   delayedBatchCount,
   syncStatus,
   loadError = null,
+  sceneLight,
+  sceneCondition,
+  sceneSourceLabel,
+  windowSide,
+  debugOverride,
+  onDebugOverride,
+  onWindowSideChange,
 }: EditorDebugPanelProps) {
   const recent = events.slice(-10);
   const counts = countOrigins(origins);
@@ -69,21 +92,80 @@ export function EditorDebugPanel({
 
   return (
     <aside
-      className="pointer-events-none absolute bottom-4 left-4 z-20 max-h-[40vh] w-[min(360px,calc(100vw-2rem))] overflow-auto rounded-[6px] bg-page/95 p-3 font-ui text-[11px] leading-relaxed text-ink shadow-page"
+      className="pointer-events-auto fixed bottom-16 left-4 z-20 max-h-[40vh] w-[min(360px,calc(100vw-2rem))] overflow-auto rounded-[6px] border border-[var(--popover-border)] bg-white p-3 font-ui text-[11px] leading-relaxed text-ink shadow-[var(--shadow-popover)]"
       aria-label="Event debug"
     >
       {loadError ? (
-        <p className="mb-2 break-words text-cursor">load error: {loadError}</p>
+        <p className="mb-2 break-words text-caret">load error: {loadError}</p>
       ) : null}
-      <p className="text-ink/60">events {events.length}</p>
+      <p className="text-label">events {events.length}</p>
       <p className="mt-1">
         typed {counts.typed} · pasted {counts.pasted} · quoted {counts.quoted}
       </p>
-      <p className={match ? "mt-1 text-ink/70" : "mt-1 text-cursor"}>
+      <p className={match ? "mt-1 text-label" : "mt-1 text-caret"}>
         {match ? "rebuild OK" : "rebuild MISMATCH"}
       </p>
-      <div className="mt-2 space-y-1 border-t border-ink/10 pt-2 text-ink/70">
-        <p className="text-ink/50">receipt v{receipt.version}</p>
+
+      <div className="mt-2 space-y-1 border-t border-[var(--popover-border)] pt-2 text-label">
+        <p>scene</p>
+        <p className="text-ink">
+          light {sceneLight} · condition {sceneCondition}
+        </p>
+        <p className="text-ink">source {sceneSourceLabel}</p>
+        {debugOverride ? (
+          <p>debug preview (this tab only, not saved)</p>
+        ) : null}
+        <p>
+          window{" "}
+          <button
+            type="button"
+            className={windowSide === "left" ? "text-ink underline" : ""}
+            onClick={() => onWindowSideChange("left")}
+          >
+            left
+          </button>{" "}
+          /{" "}
+          <button
+            type="button"
+            className={windowSide === "right" ? "text-ink underline" : ""}
+            onClick={() => onWindowSideChange("right")}
+          >
+            right
+          </button>
+        </p>
+        <p>scene picker (preview only)</p>
+        <div className="flex flex-wrap gap-1 text-ink">
+          <button
+            type="button"
+            className={
+              debugOverride === null ? "underline underline-offset-2" : ""
+            }
+            onClick={() => onDebugOverride(null)}
+          >
+            live
+          </button>
+          {LIGHTS.map((light) =>
+            CONDITIONS.map((condition) => {
+              const active =
+                debugOverride?.light === light &&
+                debugOverride?.condition === condition;
+              return (
+                <button
+                  key={`${light}-${condition}`}
+                  type="button"
+                  className={active ? "underline underline-offset-2" : ""}
+                  onClick={() => onDebugOverride({ light, condition })}
+                >
+                  {light}/{condition}
+                </button>
+              );
+            }),
+          )}
+        </div>
+      </div>
+
+      <div className="mt-2 space-y-1 border-t border-[var(--popover-border)] pt-2 text-label">
+        <p>receipt v{receipt.version}</p>
         <p>active {formatMs(receipt.activeWritingTimeMs)}</p>
         <p>elapsed {formatMs(receipt.elapsedSpanMs)}</p>
         <p>sessions {receipt.sessionCount}</p>
@@ -94,39 +176,22 @@ export function EditorDebugPanel({
         </p>
         <p>revision {receipt.revisionRatio.toFixed(2)}x</p>
         <p>words {receipt.wordCount}</p>
-        <p>
-          fast stretches {receipt.fastStretchCount} · uniform runs{" "}
-          {receipt.uniformTypingRunCount}
-        </p>
         <p>delayed batches {receipt.delayedBatchCount}</p>
       </div>
       {syncStatus ? (
-        <div className="mt-2 space-y-1 border-t border-ink/10 pt-2 text-ink/70">
+        <div className="mt-2 space-y-1 border-t border-[var(--popover-border)] pt-2 text-label">
           <p>sync {syncStatus.online ? "online" : "offline"}</p>
           <p>queued {syncStatus.queuedCount}</p>
           <p>
             last ack seq{" "}
             {syncStatus.lastAckSeq === null ? "—" : syncStatus.lastAckSeq}
           </p>
-          <p>
-            delayed{" "}
-            {syncStatus.lastDelayed || syncStatus.delayedQueued > 0
-              ? `yes (${syncStatus.delayedQueued} queued)`
-              : "no"}
-          </p>
-          <p>
-            clock_suspect{" "}
-            {syncStatus.lastClockSuspect || syncStatus.clockSuspectCount > 0
-              ? `yes (${syncStatus.clockSuspectCount})`
-              : "no"}
-          </p>
           <p>superseded {syncStatus.superseded ? "yes" : "no"}</p>
-          <p>discarded batches {syncStatus.discardedBatches}</p>
         </div>
       ) : null}
-      <ul className="mt-2 space-y-1 border-t border-ink/10 pt-2">
+      <ul className="mt-2 space-y-1 border-t border-[var(--popover-border)] pt-2">
         {recent.length === 0 ? (
-          <li className="text-ink/50">no events</li>
+          <li className="text-label">no events</li>
         ) : (
           recent.map((event, index) => (
             <li key={`${event.t}-${event.type}-${event.pos}-${index}`}>

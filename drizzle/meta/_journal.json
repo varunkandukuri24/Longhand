@@ -22,6 +22,27 @@
       "when": 1791942131661,
       "tag": "0002_dry_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791954506891,
+      "tag": "0003_dark_ben_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792026386664,
+      "tag": "0004_curious_kronos",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792035000000,
+      "tag": "0005_window_side_default_left",
+      "breakpoints": true
     }
   ]
 }

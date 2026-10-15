@@ -50,7 +50,7 @@ export function DisplayNameForm({ initialName }: DisplayNameFormProps) {
       />
       <button
         type="submit"
-        className="font-ui text-[12px] text-lamp underline-offset-2 hover:underline"
+        className="editor-bar-btn min-h-0"
       >
         Save
       </button>

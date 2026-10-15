@@ -18,6 +18,8 @@ type LibraryCardProps = {
   locale?: string;
   responseTitle?: string | null;
   responseUrl?: string | null;
+  /** Plain weather line, e.g. "2 of 3 sessions in the rain". Never a city. */
+  weatherNote?: string | null;
 };
 
 export function LibraryCard({
@@ -29,6 +31,7 @@ export function LibraryCard({
   locale,
   responseTitle = null,
   responseUrl = null,
+  weatherNote = null,
 }: LibraryCardProps) {
   const percents = sharesToPercents(
     metrics.typedShare,
@@ -45,8 +48,8 @@ export function LibraryCard({
   const totalWords = metrics.wordCount;
 
   return (
-    <article className="rounded-[6px] bg-page px-6 py-5 text-ink shadow-page">
-      <header className="flex items-baseline justify-between gap-4 font-ui text-[12px] tracking-wide text-ink/70">
+    <article className="max-w-[440px] rounded-[6px] border border-[var(--receipt-border)] bg-[var(--receipt-card)] px-6 py-5 text-ink">
+      <header className="flex items-baseline justify-between gap-4 font-ui text-[12px] tracking-wide text-label">
         <span>LONGHAND</span>
         <span>No. {String(cardNo).padStart(3, "0")}</span>
       </header>
@@ -110,10 +113,13 @@ export function LibraryCard({
       {notes ? (
         <p className="mt-3 font-ui text-[12px] text-ink/55">{notes}</p>
       ) : null}
+      {weatherNote ? (
+        <p className="mt-2 font-ui text-[12px] text-ink/55">{weatherNote}</p>
+      ) : null}
 
       <div className="mt-8">
         <div
-          className="inline-flex origin-bottom-left -rotate-[4deg] flex-col items-start border-2 border-[#3D5A8A] px-2 py-2 text-[#3D5A8A]"
+          className="inline-flex origin-bottom-left -rotate-[4deg] flex-col items-start border-2 border-[var(--stamp)] px-2 py-2 text-[var(--stamp)]"
           aria-hidden
         >
           <span className="font-ui text-[13px] font-medium leading-tight tracking-wide whitespace-nowrap">

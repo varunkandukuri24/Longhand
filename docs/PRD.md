@@ -58,48 +58,24 @@ The rule that makes it trustworthy: the published text must be exactly what the 
 
 ## Design language
 
-The writing screen is a lamp-lit page in a room whose light follows the time of day and whose weather follows the writer's real weather. The page never changes; the room around it does. That constant page is the safe corner, and the changing world outside is what makes it feel warm.
-
 **The feeling to protect:** coffee on a rainy evening at sunset; focused flow; uncluttered; your own happy corner; the safety of a saved game you know will be waiting tomorrow.
 
-**The page (constant in every scene)**
+The whole screen is paper, with a tall, narrow window along one edge showing the real time of day and weather where the writer is. The page never changes; only the view through the window does. The full spec, with every color, measurement and a reference implementation, lives in docs/DESIGN.md (v2: paper and a side window), which replaces the v1 room design.
 
-| Token | Value |
+**At a glance**
+
+| | Spec |
 | --- | --- |
-| Page | #FFFBF2, about 820 × 620 px on desktop, 6 px corners, a soft shadow lifting it off the room |
-| Ink | #2B2722 |
-| Cursor | #C9772E |
-| Writing font | Literata, 21 px, 1.75 line height, about 65 characters per line |
-| Interface font | DM Mono, 12–13 px, used only for small labels |
-| Lamp accent | #E2A45A, for the saved dot and buttons |
+| Paper | Soft pure white, like Freewrite: #FFFFFF across the whole viewport with a very faint neutral grain, never beige. |
+| Writing | Literata 22 px / 1.7 on `#1C1A16`, caret `#C9772E`; labels DM Mono 13 px `#736C61` |
+| Side window | 112 px wide, inset 36 px; left by default, draggable to the right, saved per user |
+| Scenes | 16 light × condition skies and elements from DESIGN.md; light boundaries unchanged (sunrise→11:00 morning, 11:00→hour before sunset afternoon, golden hour until 20 min after sunset, else night) |
+| Motion | Only inside the window, and slow; still under reduced motion or "Still window"; scene changes crossfade over 3 minutes |
+| Controls | Bottom bar: scene caption · date · elapsed · saved on the left; Timer, No backspace, Scene, Publish on the right |
+| Phones | Under 768 px the window is hidden; under 1024 px it shrinks to 72 px |
 
-**Light (time of day) sets the room's base color**
-
-| Light | Room base | Daytime extra |
-| --- | --- | --- |
-| Morning | #EEF0EC, near-white | Pale gold sun beams |
-| Afternoon | #DCE5E9, airy daylight | Warm sun beams |
-| Golden hour | #D4956A, amber | Deep amber beams |
-| Night | #1D2430, dusk slate | None |
-
-**Condition (weather) tints the room and adds one ambient element**
-
-| Condition | Tint and strength | Ambient element |
-| --- | --- | --- |
-| Clear | None | Window beams by day, a few warm stars at night |
-| Cloudy | #8C929B, 38% by day, 15% at night | Solid cloud shapes (a flat base and three puffs), lighter than the sky by day, slate at night |
-| Rain | #3E4A5B, 50% | Thin slanted streaks |
-| Snow | #E9EEF2, 55% by day, 22% at night | Small soft flecks |
-
-Whenever a scene comes out dark, a warm lamp glow (#E2A45A at about 18%) sits behind the page. That glow keeps rain and night cozy rather than gloomy. Storms map to rain: no lightning, nothing harsh.
-
-**Rules**
-
-- Motion is almost still: slow drift only, and none when the device asks for reduced motion.
-- Scenes never jump mid-session. A change in weather crossfades over a few minutes.
 - Banned: gradient washes, glassy panels, emoji, sparkle icons, Inter or Roboto, default component-library styling, exclamation marks in copy.
 - Copy is plain and dry: "52 minutes. 3 sessions. 94% typed."
-- Reference mockups live on the Longhand design directions canvas (the Rain on the window direction and the weather room).
 
 ## MVP requirements
 
@@ -108,12 +84,12 @@ Seven features ship in the MVP; P0 items block launch.
 | # | Feature | Requirement | Priority |
 | --- | --- | --- | --- |
 | F1 | Accounts | Email magic-link sign-in. A dashboard lists your pieces with draft or published status. Writers choose a display name at first sign-in; public pages show only that name, never any part of the email address. | P0 |
-| F2 | Focus editor | Immersive by default, like Freewrite: the lamp-lit page fills the view inside the ambient room (F7) and enters browser fullscreen on the first click or keystroke (browsers require a user gesture), with Esc to exit. One serif font, no toolbar, and any controls fade out while typing. Optional timer (10, 15, 25 min). Optional no-backspace mode, which blocks every kind of deletion, including cut and undo. Autosaves continuously. | P0 |
+| F2 | Focus editor | Immersive by default, like Freewrite: the whole screen is paper, with the side window (F7) along one edge, and enters browser fullscreen on the first click or keystroke (browsers require a user gesture), with Esc to exit. One serif font, no toolbar, and any controls fade out while typing. A "Pages" back button at the start of the bottom bar returns to the dashboard from any piece. Optional timer (10, 15, 25 min). Optional no-backspace mode, which blocks every kind of deletion, including cut and undo. Autosaves continuously. Opening a piece puts a blinking caret at the end of the text, ready to type with no click; the writing area never shows a border or focus box. | P0 |
 | F3 | Live event capture | Every edit is recorded with a timestamp and streamed to the server every 5 seconds in hash-chained batches. Works offline and syncs on reconnect, flagged as delayed. Resending a batch is harmless (idempotent), and a writer can close the tab and resume exactly where they left off. | P0 |
-| F4 | Response mode | A new piece starts as "Blank page" or "Respond to something" (paste a URL). The server fetches only the page's title and site name, safely (see Privacy). If the fetch fails, the piece is still created with the hostname as an editable title. A line above the text reads "In response to [title] · [site]", linking to the source, and the receipt shows "Response to [title]". Text pasted onto a line starting with "> " counts as quoted, not pasted. | P0 |
+| F4 | Response mode | A new piece starts from the dashboard's plus icon (blank page) or quote icon (respond to a link: paste a URL). On the dashboard, response pieces carry the quote icon and the source's site name, and their title is the writer's own, never the article's. The server fetches only the page's title and site name, safely (see Privacy). If the fetch fails, the piece is still created with the hostname as an editable title. A line above the text reads "In response to [title] · [site]", linking to the source, and the receipt shows "Response to [title]". Text pasted onto a line starting with "> " counts as quoted, not pasted. | P0 |
 | F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public (off by default). Publishing freezes the piece: no editing after publish in the MVP. The receipt uses the library card design from Rain on the window, and shows times as minutes and hours ("52 min", "1 hr 12 min"), never decimals. On the public page the title sits above the text, the card is compact (about 440 px wide) with its stamp below the session table, never over it, and zero shares (0% pasted, 0% quoted) are left off the stamp | P0 |
 | F6 | Replay | Plays the piece being written at 1x, 4x, 16x, with a timeline scrubber. Idle gaps over 5 seconds compress to 1 second. Events are served only when the writer made the replay public, and the replay ends with a line confirming it matches the published text. | P1 |
-| F7 | Ambient room | The room around the page reflects the local time of day (light) and current weather (condition), per the Design language section. Location is coarse: a city from IP or typed once at onboarding, never a browser location prompt. Weather is checked about once an hour. Writers can choose Auto or pin a scene. The receipt may note conditions ("2 of 3 sessions in the rain"), never the place. | P1 |
+| F7 | Ambient room | A narrow side window shows the local time of day (light) and current weather (condition), per the Design language section and docs/DESIGN.md. It sits on the left by default; writers can drag it to the right edge, and the choice is saved per user. Location is coarse and optional: the display-name screen also asks "What city are you writing from?", which writers can skip or change later. There is no IP lookup and never a browser location prompt. If skipped, light follows the device clock with typical sunrise and sunset times and the condition defaults to clear. Weather is checked about once an hour. Writers can choose Auto or pin a scene. The receipt may note conditions ("2 of 3 sessions in the rain"), never the place. | P1 |
 
 **User stories**
 
@@ -199,7 +175,7 @@ Edits stream from the browser every 5 seconds; the server checks the chain and t
 
 | Table | Key fields |
 | --- | --- |
-| users | id, email, display_name, created_at |
+| users | id, email, display_name, city, lat, lon, window_side (left / right), created_at |
 | pieces | id, user_id, title, mode (freewrite / response), source_url, source_title, source_site, status (draft / published), slug, final_text, final_text_hash, replay_public, active_session_id, published_at |
 | sessions | id, piece_id, started_at, ended_at |
 | event_batches | id, session_id, seq, events (jsonb), prev_hash, hash, client_t_start, client_t_end, server_received_at, delayed |
@@ -243,13 +219,13 @@ alwaysApply: true
 description: Longhand design rules
 alwaysApply: true
 ---
-- Follow the Design language section of docs/PRD.md exactly. Its tokens are the only colors.
-- Page #FFFBF2, ink #2B2722, cursor #C9772E, lamp #E2A45A. Fonts: Literata for writing, DM Mono for small labels. No other fonts.
-- The page never changes with the scene. Only the room behind it does.
-- Banned: gradient washes, glassmorphism, emoji, sparkle icons, Inter or Roboto, default shadcn styling, toasts or modals while writing.
-- Motion: slow drift only. Nothing moves under prefers-reduced-motion. Scene changes crossfade over minutes.
+- docs/DESIGN.md is the visual source of truth. Follow it exactly, including its reference implementation for the side window. Its tokens are the only colors.
+- Paper #FFFFFF (soft pure white, very faint neutral grain, never beige) fills the whole screen; ink #1C1A16; caret #C9772E; labels #736C61. Fonts: Literata for writing and headings, DM Mono for labels. No other fonts.
+- The page never changes with the scene. Only the side window does.
+- Banned: gradient washes, glassmorphism, emoji, sparkle icons, Inter or Roboto, default shadcn styling, cards or shadows on the writing screen, toasts or modals while writing.
+- Motion only inside the side window, and slow. Nothing moves under prefers-reduced-motion. Scene changes crossfade over minutes.
 - Copy is plain and dry, with no exclamation marks.
-- When a design choice isn't covered here or in the PRD, ask instead of inventing one.
+- When a design choice isn't covered by DESIGN.md or the PRD, ask instead of inventing one.
 ```
 
 **Phase 0: Scaffold**
@@ -307,6 +283,23 @@ Build the ambient room (F7) per the Design language section of @docs/PRD.md. Add
 ```
 
 Done when: a dev toggle shows all 16 scenes matching the design canvas, reduced motion stops all movement, and no public page contains location data. Open-Meteo's free tier is for non-commercial use, so check its terms before you charge.
+
+**Phase 5c: Paper and the side window**
+
+```text
+Build Phase 5c. Replace the v1 room design with the v2 design in DESIGN.md, in this order:
+a. Paper, grain and type across the writing screen. Delete the v1 room layers, lamp glow and dark control colors.
+b. The side window: port DESIGN.md's reference implementation to lib/scene/window.ts and keep its numbers. Feed it from the existing light, weather, location and pinning logic from Phase 5b. Add the slow motion and the Still window setting.
+c. Drag to switch sides, with snapping and re-centering per DESIGN.md, saved in users.window_side (with a migration) and in the Scene popover as "Window: Left / Right".
+d. The bottom bar and popovers.
+e. Restyle the sign-in, name/city, dashboard and public pages, including the receipt card on paper.
+f. The small-screen rules.
+g. Extend the debug scene picker to show all 16 scenes on either side.
+
+When done, stop and go through the DESIGN.md acceptance checklist item by item, reporting pass or fail for each. Don't start Phase 6.
+```
+
+Done when: every item on the DESIGN.md acceptance checklist passes.
 
 **Phase 6: Deploy**
 

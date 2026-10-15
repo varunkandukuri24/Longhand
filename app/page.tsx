@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { PaperShell } from "@/components/scene/PaperShell";
 import { userHasDisplayName } from "@/lib/auth/display-name";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -13,19 +14,18 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-6 py-16">
-      <h1 className="font-writing text-[32px] leading-tight text-ink">
-        Longhand
-      </h1>
-      <p className="mt-3 font-ui text-[13px] text-ink/70">
-        A focused place to write, with an effort receipt when you publish.
-      </p>
-      <Link
-        href="/signin"
-        className="mt-8 inline-flex w-fit rounded-[6px] bg-lamp px-4 py-2 font-ui text-[13px] text-ink"
-      >
-        Sign in
-      </Link>
-    </main>
+    <PaperShell>
+      <main className="writing-column mx-auto flex min-h-dvh flex-col px-4 pb-16 pt-24">
+        <h1 className="font-writing text-[32px] leading-tight text-ink">
+          Longhand
+        </h1>
+        <p className="mt-3 font-ui text-[13px] text-label">
+          A focused place to write, with an effort receipt when you publish.
+        </p>
+        <Link href="/signin" className="editor-bar-btn mt-8 inline-flex w-fit">
+          Sign in
+        </Link>
+      </main>
+    </PaperShell>
   );
 }

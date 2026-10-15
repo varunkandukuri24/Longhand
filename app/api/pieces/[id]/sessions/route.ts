@@ -2,17 +2,26 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { pieces, sessions } from "@/db/schema";
 import { getOwnedPiece } from "@/lib/pieces/ownership";
+import { CONDITIONS, type Condition } from "@/lib/scene";
 import { and, eq, isNull } from "drizzle-orm";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+function parseCondition(raw: unknown): Condition | null {
+  if (typeof raw !== "string") return null;
+  return (CONDITIONS as readonly string[]).includes(raw)
+    ? (raw as Condition)
+    : null;
+}
+
 /**
  * Start a writing session for a piece. Ends any open session, claims
  * pieces.active_session_id so this session is the sole writer.
+ * Stores the ambient condition at session start for the receipt note.
  */
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
@@ -31,6 +40,14 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
+  let condition: Condition | null = null;
+  try {
+    const body = (await request.json()) as { condition?: unknown };
+    condition = parseCondition(body.condition);
+  } catch {
+    condition = null;
+  }
+
   const now = new Date();
 
   const created = await db.transaction(async (tx) => {
@@ -44,6 +61,7 @@ export async function POST(_request: Request, context: RouteContext) {
       .values({
         pieceId,
         startedAt: now,
+        condition,
       })
       .returning({ id: sessions.id, startedAt: sessions.startedAt });
 

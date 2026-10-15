@@ -49,6 +49,7 @@ export default async function WritePage({
       <FocusEditor
         pieceId={piece.id}
         source={source}
+        initialWindowSide={user.windowSide}
         published={{
           slug: piece.slug,
           title: piece.title,
@@ -63,6 +64,7 @@ export default async function WritePage({
       pieceId={piece.id}
       initialTitle={piece.title}
       source={source}
+      initialWindowSide={user.windowSide}
     />
   );
 }

@@ -3,7 +3,8 @@ import { VerifyLine } from "@/components/receipt/VerifyLine";
 import { LibraryCard } from "@/components/receipt/LibraryCard";
 import { ResponseLine } from "@/components/source/ResponseLine";
 import { db } from "@/db";
-import { pieces, receipts, users } from "@/db/schema";
+import { eventBatches, pieces, receipts, sessions, users } from "@/db/schema";
+import { formatWeatherSessionsNote, type Condition } from "@/lib/scene";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -77,8 +78,25 @@ export default async function PublicPiecePage({ params }: PageProps) {
     notFound();
   }
 
-  // Public surfaces show only display_name — never email or its prefix.
   const author = piece.authorName?.trim() || "Anonymous";
+
+  const sessionRows = await db
+    .select({
+      sessionId: sessions.id,
+      condition: sessions.condition,
+    })
+    .from(sessions)
+    .innerJoin(eventBatches, eq(eventBatches.sessionId, sessions.id))
+    .where(eq(sessions.pieceId, piece.id));
+
+  const seen = new Set<string>();
+  const conditions: Array<Condition | null> = [];
+  for (const row of sessionRows) {
+    if (seen.has(row.sessionId)) continue;
+    seen.add(row.sessionId);
+    conditions.push(row.condition);
+  }
+  const weatherNote = formatWeatherSessionsNote(conditions);
 
   const source =
     piece.mode === "response" &&
@@ -93,8 +111,8 @@ export default async function PublicPiecePage({ params }: PageProps) {
       : null;
 
   return (
-    <main className="flex min-h-screen flex-col items-center px-4 py-10">
-      <article className="w-full max-w-[820px] rounded-[6px] bg-page px-12 py-10 shadow-page">
+    <main className="writing-column mx-auto flex min-h-dvh flex-col px-4 pb-16 pt-10 md:pt-[140px]">
+      <article className="w-full">
         {source ? (
           <div className="mb-4">
             <ResponseLine
@@ -104,15 +122,15 @@ export default async function PublicPiecePage({ params }: PageProps) {
             />
           </div>
         ) : null}
-        <h1 className="font-writing text-[30px] leading-snug text-ink">
+        <h1 className="font-writing text-[32px] leading-snug text-ink">
           {piece.title}
         </h1>
-        <div className="mt-6 whitespace-pre-wrap font-writing text-[21px] leading-[1.75] text-ink">
+        <div className="writing-text mt-6 whitespace-pre-wrap font-writing text-[22px] leading-[1.7] text-ink">
           {piece.finalText}
         </div>
       </article>
 
-      <div className="mt-8 w-full max-w-[440px]">
+      <div className="mt-10 w-full max-w-[440px]">
         <LibraryCard
           pieceId={piece.id}
           title={piece.title}
@@ -121,6 +139,7 @@ export default async function PublicPiecePage({ params }: PageProps) {
           metrics={piece.metrics}
           responseTitle={source?.title ?? null}
           responseUrl={source?.url ?? null}
+          weatherNote={weatherNote}
         />
         <div className="mt-6">
           <VerifyLine
@@ -131,7 +150,7 @@ export default async function PublicPiecePage({ params }: PageProps) {
       </div>
 
       {piece.replayPublic ? (
-        <div className="mt-8 w-full max-w-[820px]">
+        <div className="mt-8 w-full">
           <ReplayPlayer slug={piece.slug} />
         </div>
       ) : null}

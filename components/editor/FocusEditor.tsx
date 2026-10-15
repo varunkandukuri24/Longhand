@@ -1,7 +1,11 @@
 "use client";
 
+import { saveWindowSide } from "@/app/actions/window-side";
+import { EditorControls } from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
 import { PublishSheet } from "@/components/editor/PublishSheet";
+import { PaperGrain } from "@/components/scene/PaperGrain";
+import { SideWindow } from "@/components/scene/SideWindow";
 import { ResponseLine } from "@/components/source/ResponseLine";
 import {
   applyDiffToOrigins,
@@ -13,9 +17,13 @@ import {
   shouldBlockKeydown,
 } from "@/lib/editor/no-backspace";
 import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
+import { captionFor, type WindowSide } from "@/lib/scene";
+import {
+  SCENE_PRESET_KEY,
+  useAmbientScene,
+} from "@/lib/scene/use-ambient-scene";
 import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
 import type { SyncStatus } from "@/lib/sync/types";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -26,7 +34,6 @@ import {
   type CompositionEvent,
   type FormEvent,
   type KeyboardEvent,
-  type MouseEvent,
 } from "react";
 
 const TIMER_OPTIONS = [10, 15, 25] as const;
@@ -49,7 +56,16 @@ type FocusEditorProps = {
   initialTitle?: string;
   published?: PublishedView;
   source?: ResponseSource | null;
+  initialWindowSide?: WindowSide;
 };
+
+function formatBarDate(d = new Date()): string {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
 
 function formatElapsed(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -68,6 +84,7 @@ export function FocusEditor({
   initialTitle = "",
   published,
   source = null,
+  initialWindowSide = "left",
 }: FocusEditorProps) {
   const router = useRouter();
   const isPublished = Boolean(published);
@@ -108,10 +125,18 @@ export function FocusEditor({
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  /** True after draft text has loaded (or published text is ready); drives autofocus. */
+  const [textLoaded, setTextLoaded] = useState(isPublished);
+  const ambient = useAmbientScene({ initialWindowSide });
 
   useEffect(() => {
     noBackspaceRef.current = noBackspace;
   }, [noBackspace]);
+
+  useEffect(() => {
+    syncRef.current?.setSessionCondition(ambient.condition);
+  }, [ambient.condition]);
 
   const exposeEvents = useCallback(() => {
     if (IS_DEV) {
@@ -132,16 +157,19 @@ export function FocusEditor({
   useEffect(() => {
     if (isPublished) {
       readyRef.current = false;
+      setTextLoaded(true);
       return;
     }
 
     let cancelled = false;
     readyRef.current = false;
+    setTextLoaded(false);
     setBootError(null);
     setSuperseded(false);
 
     const sync = new EventSync(pieceId);
     syncRef.current = sync;
+    sync.setSessionCondition(ambient.condition);
     const unsubscribe = sync.subscribe(setSyncStatus);
     const unsubSuperseded = sync.onSuperseded(() => {
       setSuperseded(true);
@@ -161,12 +189,51 @@ export function FocusEditor({
         setStoredDelayedCount(state.flags?.delayedCount ?? 0);
         exposeEvents();
         syncDebugSnapshot();
+        // Text is in React state; autofocus waits for this flag + paint.
+        setTextLoaded(true);
 
         // Flush any batches left in IndexedDB from a prior visit.
         await sync.flush();
         if (cancelled) return;
 
-        await sync.startSession();
+        // Resolve condition for this session start: pinned scene, else weather/defaults.
+        let startCondition = ambient.condition;
+        try {
+          const raw = window.localStorage.getItem(SCENE_PRESET_KEY);
+          const preset = raw
+            ? (JSON.parse(raw) as {
+                mode?: string;
+                condition?: string;
+              })
+            : null;
+          if (
+            preset?.mode === "pin" &&
+            (preset.condition === "clear" ||
+              preset.condition === "cloudy" ||
+              preset.condition === "rain" ||
+              preset.condition === "snow")
+          ) {
+            startCondition = preset.condition;
+          } else {
+            const weatherRes = await fetch("/api/weather");
+            if (weatherRes.ok) {
+              const body = (await weatherRes.json()) as { condition?: string };
+              if (
+                body.condition === "clear" ||
+                body.condition === "cloudy" ||
+                body.condition === "rain" ||
+                body.condition === "snow"
+              ) {
+                startCondition = body.condition;
+              }
+            }
+          }
+        } catch {
+          /* keep ambient default */
+        }
+        if (cancelled) return;
+        sync.setSessionCondition(startCondition);
+        await sync.startSession(startCondition);
         if (cancelled) return;
         const started = Date.now();
         sessionStartRef.current = started;
@@ -192,7 +259,38 @@ export function FocusEditor({
       sync.stop();
       syncRef.current = null;
     };
+    // Intentionally omit ambient.condition: session starts once per boot; later
+    // rotations read the latest condition via setSessionCondition.
   }, [pieceId, bootAttempt, exposeEvents, isPublished, syncDebugSnapshot]);
+
+  /** After text loads: focus editable pieces and put the caret at the end (once). */
+  const placedCaretRef = useRef(false);
+  useEffect(() => {
+    placedCaretRef.current = false;
+  }, [pieceId, bootAttempt]);
+
+  useEffect(() => {
+    if (!textLoaded || isPublished || superseded || bootError) return;
+    if (placedCaretRef.current) return;
+    const el = textareaRef.current;
+    if (!el || el.readOnly) return;
+
+    const placeCaret = () => {
+      if (placedCaretRef.current) return;
+      placedCaretRef.current = true;
+      el.focus({ preventScroll: true });
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
+      el.scrollTop = el.scrollHeight;
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+
+    // Wait a frame so the controlled value has painted.
+    const id = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(placeCaret);
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [textLoaded, isPublished, superseded, bootError, pieceId, bootAttempt]);
 
   const onPublish = useCallback(
     async (args: { title: string; replayPublic: boolean }) => {
@@ -252,6 +350,20 @@ export function FocusEditor({
       fadeTimerRef.current = null;
     }, 2000);
   }, []);
+
+  const holdControls =
+    isPublished || publishOpen || popoverOpen || debugOpen;
+
+  useEffect(() => {
+    if (!holdControls) {
+      return;
+    }
+    setControlsVisible(true);
+    if (fadeTimerRef.current) {
+      clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = null;
+    }
+  }, [holdControls]);
 
   const enterFullscreenOnce = useCallback(() => {
     if (enteredFullscreenRef.current) {
@@ -456,125 +568,61 @@ export function FocusEditor({
     showControls();
   };
 
-  const onPageClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (event.target === event.currentTarget) {
-      textareaRef.current?.focus();
+  const controlsShown = controlsVisible || holdControls;
+
+  const onWindowSideChange = (side: WindowSide) => {
+    ambient.setWindowSide(side);
+    void saveWindowSide(side);
+    showControls();
+  };
+
+  const focusWritingArea = () => {
+    if (isPublished || superseded || bootError) return;
+    const el = textareaRef.current;
+    if (!el || el.readOnly) return;
+    el.focus({ preventScroll: true });
+  };
+
+  const onPaperPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (isPublished || superseded || bootError) return;
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (
+      target.closest(
+        ".side-window, .editor-bar, .editor-popover, button, a, input, select, textarea, [role='dialog'], [aria-label='Event debug']",
+      )
+    ) {
+      return;
     }
+    // Clicking empty paper: put focus back in the text area.
+    event.preventDefault();
+    focusWritingArea();
   };
 
   return (
     <div
-      className="relative flex min-h-full w-full flex-1 items-center justify-center bg-room-night px-4 py-8"
+      className={[
+        "relative min-h-dvh w-full bg-paper text-ink",
+        ambient.windowSide === "left"
+          ? "writing-shell-left"
+          : "writing-shell-right",
+        "writing-shell-slide",
+      ].join(" ")}
       data-piece-id={pieceId}
       onMouseMove={onMouseMove}
+      onPointerDown={onPaperPointerDown}
     >
-      <div
-        className={[
-          "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between px-5 py-4 transition-opacity duration-500",
-          controlsVisible || isPublished || publishOpen
-            ? "opacity-100"
-            : "opacity-0",
-        ].join(" ")}
-      >
-        <div className="pointer-events-auto flex flex-col gap-2 font-ui text-[12px] text-page/70">
-          {isPublished && published ? (
-            <>
-              <span>Published</span>
-              <Link
-                href={`/p/${published.slug}`}
-                className="text-lamp underline-offset-2 hover:underline"
-              >
-                Open public page
-              </Link>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-3">
-                <span>Timer</span>
-                <div className="flex gap-2">
-                  {TIMER_OPTIONS.map((minutes) => (
-                    <button
-                      key={minutes}
-                      type="button"
-                      className={[
-                        "underline-offset-2 hover:underline",
-                        timerMinutes === minutes ? "text-lamp" : "",
-                      ].join(" ")}
-                      onClick={() => {
-                        setTimerMinutes(minutes);
-                        timerEndsAtRef.current =
-                          Date.now() + minutes * 60 * 1000;
-                        setTimerRemainingMs(minutes * 60 * 1000);
-                        showControls();
-                      }}
-                    >
-                      {minutes}m
-                    </button>
-                  ))}
-                  {timerMinutes !== null ? (
-                    <button
-                      type="button"
-                      className="underline-offset-2 hover:underline"
-                      onClick={() => {
-                        setTimerMinutes(null);
-                        timerEndsAtRef.current = null;
-                        setTimerRemainingMs(null);
-                        showControls();
-                      }}
-                    >
-                      off
-                    </button>
-                  ) : null}
-                  {timerMinutes !== null && timerRemainingMs !== null ? (
-                    <span className="text-lamp">
-                      {formatCountdown(timerRemainingMs)}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={noBackspace}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    noBackspaceRef.current = checked;
-                    setNoBackspace(checked);
-                    showControls();
-                  }}
-                  className="accent-lamp"
-                />
-                <span>No backspace</span>
-              </label>
-              <button
-                type="button"
-                className="w-fit text-left underline-offset-2 hover:underline"
-                onClick={() => {
-                  setPublishError(null);
-                  setPublishOpen(true);
-                  showControls();
-                }}
-              >
-                Publish
-              </button>
-            </>
-          )}
-        </div>
-
-        <div className="pointer-events-none font-ui text-[12px] text-page/70">
-          {isPublished ? (
-            <span>Read only</span>
-          ) : (
-            <>
-              <span>{formatElapsed(elapsedMs)}</span>
-              <span className="mx-2 text-page/40">·</span>
-              <span>
-                {syncStatus && syncStatus.queuedCount > 0 ? "saving" : "saved"}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
+      <PaperGrain />
+      <SideWindow
+        light={ambient.light}
+        condition={ambient.condition}
+        side={ambient.windowSide}
+        still={ambient.stillWindow}
+        instant={
+          ambient.debugOverride !== null || ambient.preset.mode === "pin"
+        }
+        onSideChange={onWindowSideChange}
+      />
 
       <PublishSheet
         open={publishOpen && !isPublished}
@@ -592,35 +640,32 @@ export function FocusEditor({
         }}
       />
 
-      <div
-        className="relative h-[min(620px,calc(100vh-4rem))] w-full max-w-[820px] rounded-[6px] bg-page shadow-page"
-        onClick={onPageClick}
-      >
+      <div className="writing-column relative z-[2]">
         {superseded ? (
-          <p className="pointer-events-none absolute inset-x-0 top-3 z-10 text-center font-ui text-[12px] text-ink/55">
+          <p className="mb-4 font-ui text-[12px] text-label">
             Open in another window. Refresh to continue here.
           </p>
         ) : null}
         {bootError ? (
-          <div className="flex h-full flex-col justify-center gap-4 px-12 py-10">
-            <p className="font-ui text-[13px] text-ink/80">
+          <div className="flex flex-col gap-4">
+            <p className="font-ui text-[13px] text-ink">
               Could not load this piece.
             </p>
-            <p className="font-ui text-[12px] text-ink/60 break-words">
+            <p className="font-ui text-[12px] text-label break-words">
               {bootError}
             </p>
             <button
               type="button"
-              className="w-fit font-ui text-[12px] text-lamp underline-offset-2 hover:underline"
+              className="editor-bar-btn w-fit"
               onClick={() => setBootAttempt((n) => n + 1)}
             >
               Retry
             </button>
           </div>
         ) : (
-          <div className="flex h-full flex-col">
+          <>
             {source ? (
-              <div className="shrink-0 px-12 pt-8">
+              <div className="mb-4">
                 <ResponseLine
                   title={source.title}
                   site={source.site}
@@ -642,16 +687,79 @@ export function FocusEditor({
               autoCapitalize="off"
               autoCorrect="off"
               className={[
-                "min-h-0 w-full flex-1 resize-none rounded-[6px] bg-transparent px-12 font-writing text-[21px] leading-[1.75] text-ink caret-cursor outline-none",
-                source ? "pt-3 pb-10" : "py-10",
-                superseded ? "pt-12" : "",
-                isPublished ? "cursor-default" : "",
+                "writing-text font-writing text-[22px] leading-[1.7] text-ink",
+                isPublished || superseded ? "cursor-default" : "",
               ].join(" ")}
+              style={{
+                caretColor:
+                  isPublished || superseded ? "transparent" : "#C9772E",
+              }}
               aria-label="Writing page"
             />
-          </div>
+          </>
         )}
       </div>
+
+      <EditorControls
+        visible={controlsShown}
+        caption={captionFor(ambient.light, ambient.condition)}
+        dateLabel={formatBarDate()}
+        elapsedLabel={formatElapsed(elapsedMs)}
+        saveLabel={
+          syncStatus && syncStatus.queuedCount > 0 ? "saving" : "saved"
+        }
+        timerMinutes={timerMinutes}
+        timerRemainingLabel={
+          timerMinutes !== null && timerRemainingMs !== null
+            ? formatCountdown(timerRemainingMs)
+            : null
+        }
+        noBackspace={noBackspace}
+        scenePreset={ambient.preset}
+        currentLight={ambient.light}
+        currentCondition={ambient.condition}
+        windowSide={ambient.windowSide}
+        stillWindow={ambient.stillWindow}
+        isPublished={isPublished}
+        onTimerChange={(minutes) => {
+          setTimerMinutes(minutes);
+          if (minutes === null) {
+            timerEndsAtRef.current = null;
+            setTimerRemainingMs(null);
+          } else {
+            timerEndsAtRef.current = Date.now() + minutes * 60 * 1000;
+            setTimerRemainingMs(minutes * 60 * 1000);
+          }
+          showControls();
+        }}
+        onNoBackspaceChange={(value) => {
+          noBackspaceRef.current = value;
+          setNoBackspace(value);
+          showControls();
+        }}
+        onSceneChange={(preset) => {
+          ambient.setPreset(preset);
+          showControls();
+        }}
+        onWindowSideChange={onWindowSideChange}
+        onStillWindowChange={(still) => {
+          ambient.setStillWindow(still);
+          showControls();
+        }}
+        onPublish={() => {
+          setPublishError(null);
+          setPublishOpen(true);
+          showControls();
+        }}
+        onOpenPublic={
+          published
+            ? () => {
+                window.location.href = `/p/${published.slug}`;
+              }
+            : undefined
+        }
+        onPopoverChange={setPopoverOpen}
+      />
 
       {IS_DEV && debugOpen && !isPublished ? (
         <EditorDebugPanel
@@ -664,6 +772,13 @@ export function FocusEditor({
           }
           syncStatus={syncStatus}
           loadError={bootError}
+          sceneLight={ambient.light}
+          sceneCondition={ambient.condition}
+          sceneSourceLabel={ambient.sourceLabel}
+          windowSide={ambient.windowSide}
+          debugOverride={ambient.debugOverride}
+          onDebugOverride={ambient.setDebugOverride}
+          onWindowSideChange={onWindowSideChange}
         />
       ) : null}
     </div>

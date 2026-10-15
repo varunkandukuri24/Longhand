@@ -116,7 +116,7 @@ export function ReplayPlayer({ slug }: ReplayPlayerProps) {
     return (
       <button
         type="button"
-        className="font-ui text-[12px] text-page/55 underline-offset-2 hover:underline"
+        className="font-ui text-[12px] text-label underline-offset-2 hover:underline"
         onClick={() => {
           void loadReplay();
         }}
@@ -128,13 +128,13 @@ export function ReplayPlayer({ slug }: ReplayPlayerProps) {
 
   if (load.status === "loading" || load.status === "idle") {
     return (
-      <p className="font-ui text-[12px] text-page/55">Loading replay</p>
+      <p className="font-ui text-[12px] text-label">Loading replay</p>
     );
   }
 
   if (load.status === "error") {
     return (
-      <p className="font-ui text-[12px] text-page/55">Replay unavailable</p>
+      <p className="font-ui text-[12px] text-label">Replay unavailable</p>
     );
   }
 
@@ -149,11 +149,11 @@ export function ReplayPlayer({ slug }: ReplayPlayerProps) {
 
   return (
     <div className="w-full">
-      <div className="min-h-[200px] whitespace-pre-wrap rounded-[6px] bg-page px-12 py-10 font-writing text-[21px] leading-[1.75] text-ink shadow-page">
+      <div className="min-h-[200px] whitespace-pre-wrap rounded-[6px] bg-[var(--receipt-card)] border border-[var(--receipt-border)] px-12 py-10 font-writing text-[22px] leading-[1.7] text-ink">
         {text}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3 font-ui text-[12px] text-page/70">
+      <div className="mt-4 flex flex-wrap items-center gap-3 font-ui text-[12px] text-label">
         <button
           type="button"
           className="underline-offset-2 hover:underline"
@@ -176,7 +176,7 @@ export function ReplayPlayer({ slug }: ReplayPlayerProps) {
             type="button"
             className={[
               "underline-offset-2 hover:underline",
-              speed === s ? "text-lamp" : "",
+              speed === s ? "text-ink" : "",
             ].join(" ")}
             onClick={() => setSpeed(s)}
           >
@@ -195,7 +195,7 @@ export function ReplayPlayer({ slug }: ReplayPlayerProps) {
             setFinished(value >= timeline.durationMs);
             setPlaybackMs(value);
           }}
-          className="min-w-[120px] flex-1 accent-lamp"
+          className="min-w-[120px] flex-1 accent-[#C9772E]"
           aria-label="Replay position"
         />
 
@@ -213,7 +213,7 @@ export function ReplayPlayer({ slug }: ReplayPlayerProps) {
       </div>
 
       {atEnd ? (
-        <p className="mt-3 font-ui text-[12px] text-page/55">
+        <p className="mt-3 font-ui text-[12px] text-label">
           {matches
             ? "Replay matches the published text."
             : "Replay does not match the published text."}

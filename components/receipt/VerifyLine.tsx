@@ -22,9 +22,9 @@ export function VerifyLine({ finalTextHash, chainHeadHash }: VerifyLineProps) {
   }
 
   return (
-    <p className="font-ui text-[12px] text-page/55">
+    <p className="font-ui text-[12px] text-label">
       Verify
-      <span className="mx-2 text-page/30">·</span>
+      <span className="mx-2 text-label/40">·</span>
       <button
         type="button"
         className="underline-offset-2 hover:underline"
@@ -34,7 +34,7 @@ export function VerifyLine({ finalTextHash, chainHeadHash }: VerifyLineProps) {
         text {shortenHash(finalTextHash)}
         {copied === "text" ? " (copied)" : ""}
       </button>
-      <span className="mx-2 text-page/30">·</span>
+      <span className="mx-2 text-label/40">·</span>
       <button
         type="button"
         className="underline-offset-2 hover:underline"
