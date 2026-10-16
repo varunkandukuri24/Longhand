@@ -1,6 +1,4 @@
-import { ReplayPlayer } from "@/components/receipt/ReplayPlayer";
-import { VerifyLine } from "@/components/receipt/VerifyLine";
-import { LibraryCard } from "@/components/receipt/LibraryCard";
+import { SignatureReceipt } from "@/components/receipt/SignatureReceipt";
 import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
 import { ResponseLine } from "@/components/source/ResponseLine";
 import { db } from "@/db";
@@ -22,7 +20,6 @@ async function loadPublished(slug: string) {
       finalText: pieces.finalText,
       finalTextHash: pieces.finalTextHash,
       publishedAt: pieces.publishedAt,
-      replayPublic: pieces.replayPublic,
       mode: pieces.mode,
       sourceUrl: pieces.sourceUrl,
       sourceTitle: pieces.sourceTitle,
@@ -134,30 +131,15 @@ export default async function PublicPiecePage({ params }: PageProps) {
         </div>
       </article>
 
-      <div className="mt-16 w-full max-w-[440px]">
-        <LibraryCard
-          pieceId={piece.id}
-          title={piece.title}
-          author={author}
-          publishedAt={piece.publishedAt}
-          metrics={piece.metrics}
-          responseTitle={source?.title ?? null}
-          responseUrl={source?.url ?? null}
-          weatherNote={weatherNote}
-        />
-        <div className="mt-6">
-          <VerifyLine
-            finalTextHash={piece.finalTextHash}
-            chainHeadHash={piece.chainHeadHash}
-          />
-        </div>
-      </div>
-
-      {piece.replayPublic ? (
-        <div className="mt-8 w-full">
-          <ReplayPlayer slug={piece.slug} />
-        </div>
-      ) : null}
+      <SignatureReceipt
+        author={author}
+        publishedAt={piece.publishedAt}
+        metrics={piece.metrics}
+        finalTextHash={piece.finalTextHash}
+        chainHeadHash={piece.chainHeadHash}
+        responseSite={source?.site ?? null}
+        weatherNote={weatherNote}
+      />
     </PaperPage>
   );
 }

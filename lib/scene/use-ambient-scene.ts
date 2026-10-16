@@ -47,6 +47,9 @@ export type AmbientSceneState = {
   setDebugOverride: (
     override: { light: Light; condition: Condition } | null,
   ) => void;
+  /** Dev-only: shorten scene transitions from 3 minutes to 5 seconds. */
+  fastTransitions: boolean;
+  setFastTransitions: (fast: boolean) => void;
 };
 
 type WeatherResponse = {
@@ -131,6 +134,7 @@ export function useAmbientScene(options?: {
     light: Light;
     condition: Condition;
   } | null>(null);
+  const [fastTransitions, setFastTransitions] = useState(false);
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [now, setNow] = useState(() => new Date());
 
@@ -257,5 +261,7 @@ export function useAmbientScene(options?: {
     setStillWindow,
     debugOverride,
     setDebugOverride,
+    fastTransitions,
+    setFastTransitions,
   };
 }

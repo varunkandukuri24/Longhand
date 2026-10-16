@@ -27,4 +27,5 @@ export {
   type WindowElement,
   type WindowLight,
   type WindowScene,
+  type WindowSun,
 } from "./window";

@@ -311,6 +311,13 @@ describe("computeReceipt", () => {
         wordsAdded: 2,
       },
     ]);
+    expect(receipt.sittingRows).toEqual([
+      {
+        startedAt: 1_000,
+        activeWritingTimeMs: 700,
+        wordsAdded: 2,
+      },
+    ]);
   });
 });
 

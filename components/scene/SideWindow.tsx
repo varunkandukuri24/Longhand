@@ -7,6 +7,7 @@ import {
   type Light,
   type WindowScene,
   type WindowSide,
+  type WindowSun,
 } from "@/lib/scene";
 import { useEffect, useRef, useState } from "react";
 
@@ -16,6 +17,8 @@ type SideWindowProps = {
   side: WindowSide;
   still: boolean;
   instant?: boolean;
+  /** Shorten scene transitions from 3 minutes to 5 seconds (debug). */
+  fastTransitions?: boolean;
   onSideChange: (side: WindowSide) => void;
   className?: string;
 };
@@ -25,8 +28,68 @@ type Layer = {
   scene: WindowScene;
 };
 
+type SunVisual = {
+  left: string;
+  top: string;
+  width: string;
+  background: string;
+  boxShadow: string;
+  opacity: number;
+};
+
+const MOON_STYLE: React.CSSProperties = {
+  left: "72%",
+  top: "12%",
+  width: "13cqmin",
+  aspectRatio: "1",
+  borderRadius: "50%",
+  boxShadow: "inset 3.4cqmin -1.6cqmin 0 0 #F2E8CC",
+};
+
+function sunHalo(size: number, halo: string): string {
+  return `0 0 0 ${(size * 0.3).toFixed(2)}cqmin ${halo}`;
+}
+
+function sunFromScene(sun: WindowSun): SunVisual {
+  return {
+    left: `${sun.x}%`,
+    top: `${sun.y}%`,
+    width: `${sun.size}cqmin`,
+    background: sun.color,
+    boxShadow: sunHalo(sun.size, sun.halo),
+    opacity: 1,
+  };
+}
+
+/**
+ * Target for the persistent sun. Weather clear→not: fade out in place.
+ * Golden/clear → night: sink to top 100% behind the roofs.
+ */
+function sunTarget(
+  prev: WindowScene | null,
+  next: WindowScene,
+): SunVisual | null {
+  if (next.sun) {
+    return sunFromScene(next.sun);
+  }
+  if (prev?.sun) {
+    const settingBehindRoofs = next.moon;
+    return {
+      left: `${prev.sun.x}%`,
+      top: settingBehindRoofs ? "100%" : `${prev.sun.y}%`,
+      width: `${prev.sun.size}cqmin`,
+      background: prev.sun.color,
+      boxShadow: sunHalo(prev.sun.size, prev.sun.halo),
+      opacity: 0,
+    };
+  }
+  return null;
+}
+
 /**
  * Tall narrow window from DESIGN.md. Drag horizontally to snap sides.
+ * Sun and moon stay mounted across scene changes; everything else crossfades.
+ * Layer order: sky+back → moon → sun → roofs+front.
  */
 export function SideWindow({
   light,
@@ -34,6 +97,7 @@ export function SideWindow({
   side,
   still,
   instant = false,
+  fastTransitions = false,
   onSideChange,
   className = "",
 }: SideWindowProps) {
@@ -45,6 +109,12 @@ export function SideWindow({
   const [overlay, setOverlay] = useState<Layer | null>(null);
   const [overlayOn, setOverlayOn] = useState(false);
   const shownKeyRef = useRef(`${light}-${condition}`);
+  const prevSceneRef = useRef<WindowScene>(base.scene);
+  const [sun, setSun] = useState<SunVisual | null>(() =>
+    base.scene.sun ? sunFromScene(base.scene.sun) : null,
+  );
+  const [moonOn, setMoonOn] = useState(base.scene.moon);
+  const [celestialReady, setCelestialReady] = useState(false);
   const dragRef = useRef<{
     startX: number;
     moved: boolean;
@@ -53,23 +123,63 @@ export function SideWindow({
   const [dragLeft, setDragLeft] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
+  const reduceMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const noMotion = instant || still || reduceMotion;
+  const transitionMs = noMotion ? 0 : fastTransitions ? 5000 : 180_000;
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setCelestialReady(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
   useEffect(() => {
     const nextKey = `${light}-${condition}`;
     if (nextKey === shownKeyRef.current) return;
     shownKeyRef.current = nextKey;
-    const next: Layer = {
-      key: nextKey,
-      scene: windowSceneFor(light, condition),
-    };
+    const nextScene = windowSceneFor(light, condition);
+    const next: Layer = { key: nextKey, scene: nextScene };
+    const prev = prevSceneRef.current;
 
-    const reduceMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (nextScene.sun && !prev.sun) {
+      if (prev.moon) {
+        // Night → morning: rise from behind the roofs.
+        const rising: SunVisual = {
+          ...sunFromScene(nextScene.sun),
+          top: "100%",
+          opacity: 1,
+        };
+        setSun(rising);
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            setSun(sunFromScene(nextScene.sun!));
+          });
+        });
+      } else {
+        // Weather clears: fade in at its spot.
+        setSun({ ...sunFromScene(nextScene.sun), opacity: 0 });
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            setSun(sunFromScene(nextScene.sun!));
+          });
+        });
+      }
+    } else {
+      setSun(sunTarget(prev, nextScene));
+    }
+    setMoonOn(nextScene.moon);
+    prevSceneRef.current = nextScene;
 
-    if (instant || reduceMotion) {
+    if (noMotion) {
       setBase(next);
       setOverlay(null);
       setOverlayOn(false);
+      if (nextScene.sun) {
+        setSun(sunFromScene(nextScene.sun));
+      } else {
+        setSun(null);
+      }
       return;
     }
 
@@ -79,7 +189,7 @@ export function SideWindow({
       window.requestAnimationFrame(() => setOverlayOn(true));
     });
     return () => window.cancelAnimationFrame(id);
-  }, [light, condition, instant]);
+  }, [light, condition, noMotion]);
 
   const snapTo = (next: WindowSide) => {
     setDragLeft(null);
@@ -156,15 +266,15 @@ export function SideWindow({
     }
   };
 
-  const reduceMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const slide = !reduceMotion && dragLeft === null;
-
   const style: React.CSSProperties =
-    dragLeft !== null
-      ? { left: dragLeft, right: "auto" }
-      : {};
+    dragLeft !== null ? { left: dragLeft, right: "auto" } : {};
+  const durationStyle = {
+    ["--scene-fade-ms" as string]: `${transitionMs}ms`,
+  } as React.CSSProperties;
+
+  const motionClass =
+    celestialReady && transitionMs > 0 ? "side-window-celestial-motion" : "";
 
   return (
     <div
@@ -179,18 +289,20 @@ export function SideWindow({
         still || reduceMotion ? "side-window-still" : "",
         className,
       ].join(" ")}
-      style={style}
+      style={{ ...style, ...durationStyle }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onKeyDown={onKeyDown}
     >
-      <Pane scene={base.scene} opacity={1} />
+      {/* Sky + back only (no sun/moon). */}
+      <Pane scene={base.scene} opacity={1} part="back" />
       {overlay ? (
         <Pane
           scene={overlay.scene}
           opacity={overlayOn ? 1 : 0}
+          part="back"
           fading
           onFadeInComplete={() => {
             setBase(overlay);
@@ -199,6 +311,39 @@ export function SideWindow({
           }}
         />
       ) : null}
+
+      <span
+        className={["side-window-moon", motionClass].join(" ")}
+        aria-hidden
+        style={{ ...MOON_STYLE, opacity: moonOn ? 1 : 0 }}
+      />
+
+      {sun ? (
+        <span
+          className={["side-window-sun", motionClass].join(" ")}
+          aria-hidden
+          style={{
+            left: sun.left,
+            top: sun.top,
+            width: sun.width,
+            background: sun.background,
+            boxShadow: sun.boxShadow,
+            opacity: sun.opacity,
+          }}
+        />
+      ) : null}
+
+      {/* Roofs + front sit above the sun so it can set behind the rooftops. */}
+      <Pane scene={base.scene} opacity={1} part="front" />
+      {overlay ? (
+        <Pane
+          scene={overlay.scene}
+          opacity={overlayOn ? 1 : 0}
+          part="front"
+          fading
+        />
+      ) : null}
+
       <span className="side-window-glazing" style={{ top: "25%" }} />
       <span className="side-window-glazing" style={{ top: "50%" }} />
       <span className="side-window-glazing" style={{ top: "75%" }} />
@@ -209,29 +354,33 @@ export function SideWindow({
 function Pane({
   scene,
   opacity,
+  part,
   fading = false,
   onFadeInComplete,
 }: {
   scene: WindowScene;
   opacity: number;
+  part: "back" | "front";
   fading?: boolean;
   onFadeInComplete?: () => void;
 }) {
   return (
     <div
-      className={
-        fading ? "side-window-pane side-window-pane-fade" : "side-window-pane"
-      }
+      className={[
+        fading ? "side-window-pane side-window-pane-fade" : "side-window-pane",
+        part === "front" ? "side-window-pane-front" : "",
+      ].join(" ")}
       style={
         {
           opacity,
-          background: scene.sky,
+          background: part === "back" ? scene.sky : "transparent",
           ["--ground-h" as string]: scene.groundH,
         } as React.CSSProperties
       }
       onTransitionEnd={(e) => {
         if (
           fading &&
+          part === "back" &&
           e.propertyName === "opacity" &&
           opacity >= 1 &&
           onFadeInComplete
@@ -240,39 +389,45 @@ function Pane({
         }
       }}
     >
-      {scene.back.map((el, i) => (
-        <span
-          key={`b-${i}`}
-          className="side-window-el"
-          data-kind={el.kind}
-          style={parseStyle(el.style)}
-        />
-      ))}
-      <div className="side-window-roofs" aria-hidden>
-        <svg
-          viewBox="0 0 100 20"
-          preserveAspectRatio="none"
-          width="100%"
-          height="100%"
-        >
-          {scene.snowCap ? (
-            <path
-              d={scene.roof}
-              fill="#F3F5F8"
-              transform="translate(0 -1.4)"
+      {part === "back"
+        ? scene.back.map((el, i) => (
+            <span
+              key={`b-${i}`}
+              className="side-window-el"
+              data-kind={el.kind}
+              style={parseStyle(el.style)}
             />
-          ) : null}
-          <path d={scene.roof} fill={scene.ground} />
-        </svg>
-      </div>
-      {scene.front.map((el, i) => (
-        <span
-          key={`f-${i}`}
-          className="side-window-el"
-          data-kind={el.kind}
-          style={parseStyle(el.style)}
-        />
-      ))}
+          ))
+        : null}
+      {part === "front" ? (
+        <>
+          <div className="side-window-roofs" aria-hidden>
+            <svg
+              viewBox="0 0 100 20"
+              preserveAspectRatio="none"
+              width="100%"
+              height="100%"
+            >
+              {scene.snowCap ? (
+                <path
+                  d={scene.roof}
+                  fill="#F3F5F8"
+                  transform="translate(0 -1.4)"
+                />
+              ) : null}
+              <path d={scene.roof} fill={scene.ground} />
+            </svg>
+          </div>
+          {scene.front.map((el, i) => (
+            <span
+              key={`f-${i}`}
+              className="side-window-el"
+              data-kind={el.kind}
+              style={parseStyle(el.style)}
+            />
+          ))}
+        </>
+      ) : null}
     </div>
   );
 }

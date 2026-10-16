@@ -70,7 +70,7 @@ The whole screen is paper, with a tall, narrow window along one edge showing the
 | Writing | Literata 22 px / 1.7 on `#1C1A16`, caret `#C9772E`; labels DM Mono 13 px `#736C61` |
 | Side window | 112 px wide, inset 36 px; left by default, draggable to the right, saved per user |
 | Scenes | 16 light × condition skies and elements from DESIGN.md; light boundaries unchanged (sunrise→11:00 morning, 11:00→hour before sunset afternoon, golden hour until 20 min after sunset, else night) |
-| Motion | Only inside the window, and slow; still under reduced motion or "Still window"; scene changes crossfade over 3 minutes |
+| Motion | Only inside the window, and slow; still under reduced motion or "Still window"; scene changes crossfade over 3 minutes. There is only ever one sun and one moon: between scenes they move to their new place instead of fading in twice, so two suns never show at once. The sun and moon overlap only from golden hour to night, as the sun sets behind the roofs and the moon fades in. |
 | Controls | Bottom bar: scene caption · date · elapsed · saved on the left; Timer, No backspace, Scene, Publish on the right |
 | Phones | Under 768 px the window is hidden; under 1024 px it shrinks to 72 px |
 
@@ -87,8 +87,8 @@ Seven features ship in the MVP; P0 items block launch.
 | F2 | Focus editor | Immersive by default, like Freewrite: the whole screen is paper, with the side window (F7) along one edge, and enters browser fullscreen on the first click or keystroke (browsers require a user gesture), with Esc to exit. One serif font, no toolbar, and any controls fade out while typing. A "Pages" back button at the start of the bottom bar returns to the dashboard from any piece. Optional timer (10, 15, 25 min). Optional no-backspace mode, which blocks every kind of deletion, including cut and undo. Autosaves continuously. Opening a piece puts a blinking caret at the end of the text, ready to type with no click; the writing area never shows a border or focus box. | P0 |
 | F3 | Live event capture | Every edit is recorded with a timestamp and streamed to the server every 5 seconds in hash-chained batches. Works offline and syncs on reconnect, flagged as delayed. Resending a batch is harmless (idempotent), and a writer can close the tab and resume exactly where they left off. | P0 |
 | F4 | Response mode | A new piece starts from the dashboard's plus icon (blank page) or quote icon (respond to a link: paste a URL). On the dashboard, response pieces carry the quote icon and the source's site name, and their title is the writer's own, never the article's. The server fetches only the page's title and site name, safely (see Privacy). If the fetch fails, the piece is still created with the hostname as an editable title. A line above the text reads "In response to [title] · [site]", linking to the source, and the receipt shows "Response to [title]". Text pasted onto a line starting with "> " counts as quoted, not pasted. | P0 |
-| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public (off by default). Publishing freezes the piece: no editing after publish in the MVP. The receipt uses the library card design from Rain on the window, and shows times as minutes and hours ("52 min", "1 hr 12 min"), never decimals. On the public page the title sits above the text, the card is compact (about 440 px wide) with its stamp below the session table, never over it, and zero shares (0% pasted, 0% quoted) are left off the stamp | P0 |
-| F6 | Replay | Plays the piece being written at 1x, 4x, 16x, with a timeline scrubber. Idle gaps over 5 seconds compress to 1 second. Events are served only when the writer made the replay public, and the replay ends with a line confirming it matches the published text. | P1 |
+| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public (off by default). Publishing freezes the piece: no editing after publish in the MVP. The receipt is a signature line at the end of the piece, with the full details behind a single "Verified · See how it was written" link (see the Effort receipt spec and docs/DESIGN.md). Times show as minutes and hours ("52 min", "1 hr 12 min"), never decimals. | P0 |
+| F6 | Replay | Removed from the MVP: there is no public replay. The full event log is kept, so it can return later. | P1 |
 | F7 | Ambient room | A narrow side window shows the local time of day (light) and current weather (condition), per the Design language section and docs/DESIGN.md. It sits on the left by default; writers can drag it to the right edge, and the choice is saved per user. Location is coarse and optional: the display-name screen also asks "What city are you writing from?", which writers can skip or change later. There is no IP lookup and never a browser location prompt. If skipped, light follows the device clock with typical sunrise and sunset times and the condition defaults to clear. Weather is checked about once an hour. Writers can choose Auto or pin a scene. The receipt may note conditions ("2 of 3 sessions in the rain"), never the place. | P1 |
 
 **User stories**
@@ -107,9 +107,9 @@ The receipt shows facts derived from the event log, never a verdict.
 | --- | --- | --- |
 | Active writing time | Sum of gaps between consecutive events, counting only gaps under 60 s | "52 min active" |
 | Elapsed span | First session start to the last batch's server receive time (server time, not client time) | "over 3 days" |
-| Sessions | Count of sessions with at least 1 event | "3 sessions" |
+| Sittings | Sessions less than 30 minutes apart count as one sitting; raw sessions stay in the log for integrity | "3 sittings" |
 | Typed share | Characters in the final text that came from typed input ÷ final length | "94% typed" |
-| Pasted share | Final characters from paste events, excluding quoted source text | "4% pasted" |
+| Pasted share | Final characters from paste events, excluding quoted source text | "4% brought in" |
 | Quoted share | Final characters pasted inside a quote block (`> `) in response mode | "2% quoted from source" |
 | Revision ratio | Total characters typed ÷ final characters | "1.6x written for every word kept" |
 | Word count | Final words | "812 words" |
@@ -118,7 +118,17 @@ The receipt shows facts derived from the event log, never a verdict.
 
 Character attribution works by tracking origin per character: each character in the live document is tagged typed, pasted or quoted, and deletions remove tags. The final shares come from those tags, so deleting a pasted block removes it from the pasted share.
 
-The receipt page shows: title, author, publish date, the source card (response mode), the full text, the metrics row, the replay (if public), and a "verify" line with the final text hash and event-chain head hash.
+**What the reader sees.** At the end of the piece, a signature line: one plain sentence saying who wrote it and how, then the minutes, sittings and dates ("52 min over 3 sittings · Oct 11–13"). Below it, one quiet link, "Verified · See how it was written", opens the details inline: a plain-language Verified explanation first, then sittings, what's in it (typed, brought in, quoted), revisions, any timing notes, and the technical fingerprints folded away at the bottom.
+
+| Typed share of the final text | Signature sentence |
+| --- | --- |
+| 95% or more | "{name} wrote this by hand." |
+| 75–95% | "{name} wrote most of this by hand." |
+| 40–75% | "{name} wrote and gathered this." |
+| Under 40% | "{name} gathered and shaped this." |
+| Response pieces | The same sentence, ending ", in response to {site}." |
+
+**Language rules.** Facts, never verdicts: no scores, no "only", no red or warnings. Effort always leads: every piece shows its minutes and sittings, whatever the mix. Percentages appear only in the details, never in the signature. Say "brought in", not "pasted". Never say "AI": we can't know where brought-in words came from.
 
 ## Integrity and privacy
 
@@ -136,7 +146,7 @@ The receipt is credible because time is witnessed by the server as it passes, no
 **Privacy**
 
 - Drafts and event logs are private to the owner. Nothing is public until they publish.
-- Replay is opt-in per piece and off by default. The toggle warns that replay shows everything typed, including deleted text. Without it, only the text and metrics are public.
+- There is no public replay. Public pages show the text and the receipt only; the event log is never served publicly.
 - Keystroke timing is treated as sensitive. It is never sold, shared or used for training, and it's deleted with the piece.
 - Response mode stores only the source URL, title and site name, never the article's text.
 - Fetching a pasted URL is locked down: http and https only, no localhost, private or internal addresses (including after redirects), at most 3 redirects, a 5-second timeout and 1 MB read limit.
@@ -176,7 +186,7 @@ Edits stream from the browser every 5 seconds; the server checks the chain and t
 | Table | Key fields |
 | --- | --- |
 | users | id, email, display_name, city, lat, lon, window_side (left / right), created_at |
-| pieces | id, user_id, title, mode (freewrite / response), source_url, source_title, source_site, status (draft / published), slug, final_text, final_text_hash, replay_public, active_session_id, published_at |
+| pieces | id, user_id, title, mode (freewrite / response), source_url, source_title, source_site, status (draft / published), slug, final_text, final_text_hash, active_session_id, published_at |
 | sessions | id, piece_id, started_at, ended_at |
 | event_batches | id, session_id, seq, events (jsonb), prev_hash, hash, client_t_start, client_t_end, server_received_at, delayed |
 | receipts | piece_id, metrics (jsonb), chain_head_hash, version, computed_at |
@@ -316,9 +326,9 @@ Done when: the app runs on your domain over HTTPS and a restore from backup work
 - [ ] Final name. Longhand is a placeholder; check the domain and trademark.
 - [ ] Is no-backspace mode the default (pure Freewrite) or an opt-in?
 - [ ] Should pasting be blocked entirely in a strict mode, or always allowed and just counted?
-- [ ] Is replay public by default? It's the most persuasive proof, and also the most exposing.
+- [ ] Resolved: there is no public replay in the MVP. It added little for readers and exposed deleted text.
 - [ ] Free forever, or charge for custom domains, embeds and verified badges later?
-- [ ] Stopping-moment style: the "Your page is safe" card from Rain on the window, or the save slots from Save point? (The public receipt uses the library card.)
+- [ ] Stopping-moment style: the "Your page is safe" card from Rain on the window, or the save slots from Save point? (The public receipt uses the signature line.)
 
 **Later, if the validation test passes**
 

@@ -32,6 +32,8 @@ type EditorDebugPanelProps = {
     override: { light: Light; condition: Condition } | null,
   ) => void;
   onWindowSideChange: (side: WindowSide) => void;
+  fastTransitions: boolean;
+  onFastTransitionsChange: (fast: boolean) => void;
 };
 
 function countOrigins(origins: readonly CharOrigin[]) {
@@ -76,6 +78,8 @@ export function EditorDebugPanel({
   debugOverride,
   onDebugOverride,
   onWindowSideChange,
+  fastTransitions,
+  onFastTransitionsChange,
 }: EditorDebugPanelProps) {
   const recent = events.slice(-10);
   const counts = countOrigins(origins);
@@ -134,6 +138,14 @@ export function EditorDebugPanel({
           </button>
         </p>
         <p>scene picker (preview only)</p>
+        <label className="flex items-center gap-2 text-ink">
+          <input
+            type="checkbox"
+            checked={fastTransitions}
+            onChange={(e) => onFastTransitionsChange(e.target.checked)}
+          />
+          <span>fast transitions (5 s)</span>
+        </label>
         <div className="flex flex-wrap gap-1 text-ink">
           <button
             type="button"

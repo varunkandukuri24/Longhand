@@ -60,3 +60,12 @@ export function BackIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** Check mark for the receipt Verified button (12 px). */
+export function CheckIcon(props: IconProps) {
+  return (
+    <Svg {...props} size={props.size ?? 12}>
+      <path {...stroke} d="M3.5 9.25 7.25 13 14.5 5.25" />
+    </Svg>
+  );
+}

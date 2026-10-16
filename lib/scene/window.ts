@@ -8,6 +8,15 @@ export type WindowElement = {
   style: string;
 };
 
+/** Persistent sun disc; null when the scene has no sun. */
+export type WindowSun = {
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  halo: string;
+};
+
 export type WindowScene = {
   sky: string;
   ground: string;
@@ -16,6 +25,10 @@ export type WindowScene = {
   groundH: string;
   back: WindowElement[];
   front: WindowElement[];
+  /** Clear daytime/golden sun; null at night or under weather. */
+  sun: WindowSun | null;
+  /** Clear night moon only. */
+  moon: boolean;
 };
 
 const SKY: Record<WindowLight, Record<Condition, string>> = {
@@ -76,6 +89,8 @@ export function toWindowLight(light: Light): WindowLight {
 /**
  * Port of DESIGN.md reference implementation. Keep the numbers.
  * Positions are % of the window; sizes are cqmin.
+ * Sun and moon are returned separately so the window can keep one of each
+ * mounted across scene changes.
  */
 export function windowSceneFor(
   light: Light,
@@ -94,25 +109,14 @@ export function windowSceneFor(
   const f = (n: number) => n.toFixed(2);
   const back: WindowElement[] = [];
   const front: WindowElement[] = [];
+  let sun: WindowSun | null = null;
+  let moon = false;
 
   const ground = night
     ? ([12, 18, 27] as [number, number, number])
     : wLight === "golden"
       ? mix(sky, [74, 44, 34], 0.6)
       : mix(sky, [52, 60, 72], 0.55);
-
-  const disc = (
-    x: number,
-    y: number,
-    s: number,
-    c: string,
-    halo: string,
-  ) => {
-    back.push({
-      kind: "sun",
-      style: `left:${x}%;top:${y}%;width:${s}cqmin;aspect-ratio:1;border-radius:50%;background:${c};box-shadow:0 0 0 ${f(s * 0.3)}cqmin ${halo}`,
-    });
-  };
 
   const cloud = (x: number, y: number, k: number, c: string) => {
     const at = (
@@ -142,11 +146,23 @@ export function windowSceneFor(
 
   if (cond === "clear") {
     if (wLight === "morning") {
-      disc(16, 14, 15, "#FFE9AE", "rgba(255,233,174,0.35)");
+      sun = {
+        x: 16,
+        y: 14,
+        size: 15,
+        color: "#FFE9AE",
+        halo: "rgba(255,233,174,0.35)",
+      };
       cloud(56, 34, 0.55, cloudColor);
     }
     if (wLight === "afternoon") {
-      disc(68, 10, 14, "#FFF3D2", "rgba(255,243,210,0.35)");
+      sun = {
+        x: 68,
+        y: 10,
+        size: 14,
+        color: "#FFF3D2",
+        halo: "rgba(255,243,210,0.35)",
+      };
       cloud(10, 30, 0.6, cloudColor);
     }
     if (wLight === "golden") {
@@ -154,7 +170,13 @@ export function windowSceneFor(
         kind: "band",
         style: `left:0;right:0;bottom:${f(groundH * 0.55)}%;height:26%;background:#EDB077;opacity:0.55`,
       });
-      disc(56, 52, 20, "#FFD27F", "rgba(255,210,127,0.35)");
+      sun = {
+        x: 56,
+        y: 52,
+        size: 20,
+        color: "#FFD27F",
+        halo: "rgba(255,210,127,0.35)",
+      };
     }
     if (night) {
       for (let i = 0; i < Math.round(26 * density); i += 1) {
@@ -163,11 +185,7 @@ export function windowSceneFor(
           style: `left:${f(rnd() * 100)}%;top:${f(rnd() * 55)}%;width:max(1.5px,0.55cqmin);aspect-ratio:1;border-radius:50%;background:rgba(255,236,200,${f(0.5 + rnd() * 0.4)})`,
         });
       }
-      back.push({
-        kind: "moon",
-        style:
-          "left:72%;top:12%;width:13cqmin;aspect-ratio:1;border-radius:50%;box-shadow:inset 3.4cqmin -1.6cqmin 0 0 #F2E8CC",
-      });
+      moon = true;
     }
   }
   if (cond === "cloudy") {
@@ -222,6 +240,8 @@ export function windowSceneFor(
     groundH: `${groundH}%`,
     back,
     front,
+    sun,
+    moon,
   };
 }
 

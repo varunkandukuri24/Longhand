@@ -57,9 +57,9 @@ No other fonts. No bold in the writing column.
 
 ## Scenes: light × condition
 
-Light (time of day) picks the sky family; the condition (weather) picks the exact sky and what's in it. Light boundaries are unchanged: morning runs from sunrise to 11:00, afternoon from 11:00 until an hour before sunset, golden hour from an hour before sunset until 20 minutes after it, and night the rest of the time.
+Light (time of day) picks the sky family; the condition (weather) picks the exact sky and what's in it.
 
-Every writer starts on **Auto**: light from the device clock and the city's sunrise and sunset, condition from the live weather. A scene is pinned only when the writer picks one in the Scene popover. The debug scene picker previews a scene for the current tab only and never saves anything.
+Every writer starts on **Auto**: light from the device clock and the city's sunrise and sunset, condition from the live weather. A scene is pinned only when the writer picks one in the Scene popover. The debug scene picker previews a scene for the current tab only and never saves anything. Light boundaries are unchanged: morning runs from sunrise to 11:00, afternoon from 11:00 until an hour before sunset, golden hour from an hour before sunset until 20 minutes after it, and night the rest of the time.
 
 ### Sky colors (one hand-picked color per scene, no formulas)
 
@@ -89,11 +89,17 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 - Clouds drift sideways by about 4 cqmin over 40 s, back and forth.
 - The sun, moon, stars and rooftops are still.
 - Scene changes (light or weather) crossfade over 3 minutes and never jump mid-session.
+- **One sun, one moon.** Never show two suns (or two moons) at once. The sun and the moon are not part of the crossfading layers: each is one persistent element that stays mounted across scene changes and CSS-transitions its `left`, `top`, `width`, `background` and `box-shadow` over the same 3 minutes (ease-in-out). The sky color, clouds, band, stars, lit windows, rain and snow keep the normal crossfade.
+  - Both scenes have a sun (morning → afternoon, afternoon → golden): the sun slides to its new position, size and color. Morning to afternoon it drifts right and up; afternoon to golden hour it sinks to the rooftops and turns `#FFD27F`.
+  - Only the old scene has a sun: at golden hour → night it sets, moving straight down behind the rooftops (`top: 100%`, under the front layer) while the moon fades in. This is the only time a sun and moon show together. When the weather turns cloudy, rainy or snowy, the sun fades out where it is.
+  - Only the new scene has a sun: at night → morning it rises from behind the rooftops at its morning `left`, while the moon fades out. When the weather clears, it fades in at its spot.
+  - The moon only ever fades in or out at its night position; it never moves.
+  - Under reduced motion or "Still window", the sun and moon jump to their new state with no transition.
 - With `prefers-reduced-motion`, or the "Still window" setting, nothing moves; the window shows the static frame from the mockups.
 
 ## Bottom bar and popovers
 
-- Left: a back button (the back icon and "Pages", DM Mono 13 px, returns to the dashboard, aria-label="Back to your pages"), then `{caption} · {weekday, Mon D} · {elapsed} · saved`, where caption is the scene in words: Clear morning, Sunny, Sunset, Clear night, Overcast, Raining, Snowing.
+- Left: a back button (the back icon and "Pages", DM Mono 13 px, returns to the dashboard, `aria-label="Back to your pages"`), then `{caption} · {weekday, Mon D} · {elapsed} · saved`, where caption is the scene in words: Clear morning, Sunny, Sunset, Clear night, Overcast, Raining, Snowing.
 - Right: Timer, No backspace, Scene, Publish. These are plain DM Mono 13 px text buttons in `#736C61`, 44 px tall hit areas, 20 px apart, with a 1 px underline on hover and a visible focus ring. No boxes, checkboxes or native dropdowns.
 - The bar fades out after 2 s of typing and fades back in over 300 ms when the mouse moves.
 - Popovers open above their button: a `#FFFFFF` card, 1 px `#E6E0D4` border, 6 px radius, shadow `0 8px 24px rgba(28,26,22,0.10)`, DM Mono 12–13 px options as text.
@@ -104,19 +110,58 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 
 ## Other screens
 
-- **One shared layout:** the editor, dashboard, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's text starts 140 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
 - **Sign-in, name and city screens:** the same paper and grain, with the side window on the writer's chosen side. Content top-aligned, never vertically centered.
 - **Dashboard:** the same paper, grain and side window as the editor, with the same 680 px column. The top of the "Longhand" heading sits exactly 56 px from the top of the viewport: one wrapper sets this, with no other top padding, margin or vertical centering above it.
-  - Header: "Longhand" in Literata 32 px, then one DM Mono 13 px #736C61 line: "{display name} · {city} · Settings · Sign out".
+  - Header: "Longhand" in Literata 32 px, then one DM Mono 13 px `#736C61` line: `{display name} · {city} · Settings · Sign out`.
   - Settings opens a popover with the display name, city, window side, Still window, and the email address (read-only). The email never appears on the page itself.
-  - Then one action row, 24 px below the header, left-aligned, with two icon buttons (no text labels): plus (new blank page, aria-label="New page") and quote (respond to a link, aria-label="Respond to a link"). Each shows a small DM Mono 12 px tooltip with its label on hover and focus. The quote button asks for the URL in a small popover.
-  - Then the pieces, newest first, 32 px below the actions, 28 px apart: the title in Literata 24 px, line-height 1.3, at most 2 lines with an ellipsis; below it a DM Mono 12.5 px meta line, "{date} · {words} words · draft" or "· published · receipt". An untitled draft shows its first 60 characters as the title, in #736C61.
-  - Response pieces: the title is the writer's own title or first line, never the source article's title. The meta line starts with the quote icon (12 px) and the source's site name, e.g. "[quote] theathletic.com · Oct 14 · 412 words · draft".
+  - Then one action row, 24 px below the header, left-aligned, with two icon buttons (no text labels): **plus** (new blank page, `aria-label="New page"`) and **quote** (respond to a link, `aria-label="Respond to a link"`). Each shows a small DM Mono 12 px tooltip with its label on hover and focus. The quote button asks for the URL in a small popover.
+  - Then the pieces, newest first, 32 px below the actions, 28 px apart: the title in Literata 24 px, line-height 1.3, at most 2 lines with an ellipsis; below it a DM Mono 12.5 px meta line, `{date} · {words} words · draft` or `· published · receipt`. An untitled draft shows its first 60 characters as the title, in `#736C61`.
+  - Response pieces: the title is the writer's own title or first line, never the source article's title. The meta line starts with the quote icon (12 px) and the source's site name: `[quote] theathletic.com · Oct 14 · 412 words · draft`.
   - No cards, dividers or boxes.
-- **Icons:** inline SVG, 1.5 px stroke, round caps and joins, currentColor (#736C61, #1C1A16 on hover), 18 px inside a 44 × 44 px button. Only three exist: plus, quote (a pair of curly quotation marks) and back (a left arrow). No icon library.
-- **Focus:** keyboard focus only (`:focus-visible`): a 1.5 px #1C1A16 outline, offset 3 px, 3 px radius. A mouse click never leaves a box around a button.
-- **Public piece page:** paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it, then the receipt 64 px below the text.
-- **Receipt card:** keeps the library-card design, but on paper it's `#F6F1E6` with a 1 px `#E3DACA` border and no shadow. Max 440 px wide. Stamp in `#3D5A8A`, below the table.
+- **Icons:** inline SVG, 1.5 px stroke, round caps and joins, `currentColor` (`#736C61`, `#1C1A16` on hover), 18 px inside a 44 × 44 px button. Only four exist: plus, quote (a pair of curly quotation marks), back (a left arrow) and check (used only in the receipt's Verified button, 12 px). No icon library.
+- **Focus:** keyboard focus only (`:focus-visible`): a 1.5 px `#1C1A16` outline, offset 3 px, 3 px radius. A mouse click never leaves a box around a button.
+- **One shared layout:** the editor, dashboard, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's text starts 140 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
+- **Public piece page:** paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it, then the receipt (see "The receipt").
+
+## The receipt
+
+The receipt answers one question: did a person write this? It sits on the paper itself, with no card, box, background or border. Reference mockups: "R2 · Signature line", "Signature line: four ways to say it" (option A) and "How this was written (expanded)" on the design canvas.
+
+### The signature line (always visible)
+
+- 72 px below the last paragraph: a 72 px wide, 1 px `#1C1A16` rule.
+- 22 px below the rule, a row with a 16 px gap:
+  - **The seal:** this exact 44 px inline SVG, copied as-is (don't redraw or simplify the paths). It's a double ring with a quill stroke and a baseline inside, and it's decorative (`aria-hidden`):
+    ```html
+    <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <circle cx="22" cy="22" r="20.5" stroke="#3D5A8A" stroke-width="1.5"/>
+      <circle cx="22" cy="22" r="16.5" stroke="#3D5A8A" stroke-width="0.8"/>
+      <path d="M15.5 26.5c2.2-0.4 4.2-2.2 5.6-4.6 1.2-2 2.2-4.6 4.4-6 1.6-1 3.1-0.6 3 0.9-0.2 2.2-3.4 4-6 5.2" stroke="#3D5A8A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14.5 29.5h15" stroke="#3D5A8A" stroke-width="1" stroke-linecap="round"/>
+    </svg>
+    ```
+  - **The sentence:** Literata 19 px, `#1C1A16`, picked by typed share of the final text:
+    - 95% or more: `{name} wrote this by hand.`
+    - 75–95%: `{name} wrote most of this by hand.`
+    - 40–75%: `{name} wrote and gathered this.`
+    - under 40%: `{name} gathered and shaped this.`
+    - response pieces end the sentence with `, in response to {site}.` instead of the full stop.
+  - **The meta line** below it, 4 px gap: DM Mono 12.5 px `#736C61`: `{duration} over {n} sittings · {date range}`, e.g. `52 min over 3 sittings · Oct 11–13`. Use "1 sitting" for one. Add the year only when it isn't the current year. Duration uses the existing formatter ("52 min", "1 hr 12 min").
+- 22 px below: **one** text button, DM Mono 12.5 px `#736C61`, `#1C1A16` on hover: the check icon (12 px), a 6 px gap, then `Verified · See how it was written`. It toggles the details below (`aria-expanded`, `aria-controls`); the label stays the same open or closed. There are no other links: no "Watch it being written", no separate "How this was written" or "Verified".
+- A sitting is a stretch of writing with no break longer than 30 minutes; sessions closer than that merge for display. The gap is measured in real clock time: the end of one session (its last event's absolute timestamp) to the start of the next. The raw sessions stay in the log.
+
+### How this was written (opens inline on click)
+
+- 44 px below the links: a 1 px `#E8E3DA` top rule, 36 px padding, then "How this was written" in Literata 24 px.
+- Section labels: DM Mono 11 px, letter-spacing 0.14em, uppercase, `#9A9387`, 30 px above each section. The order is VERIFIED, SITTINGS, WHAT'S IN IT, REVISIONS, NOTES, then the fingerprints toggle. Verified comes first because it's what the reader clicked.
+  - **SITTINGS:** one row per sitting, DM Mono 13 px, three columns (`{weekday, Mon D} · {start time}`, `{minutes}`, `{words} words`), 9 px vertical padding, 1 px `#EEEAE3` rule between rows.
+  - **WHAT'S IN IT:** a single 8 px tall bar with a 2 px gap between segments: typed `#1C1A16`, brought in `#BDB6AA`, quoted `#3D5A8A`. Below it, a DM Mono 12.5 px legend with 8 px swatches, listing only non-zero parts: `94% typed here`, `4% brought in`, `2% quoted from {site}`. Percentages are whole numbers that add up to 100.
+  - **REVISIONS:** Literata 17 px: `{ratio} words written for every word kept.`
+  - **NOTES:** only when there are timing flags or offline stretches, in plain words: `2 stretches of unusually fast typing`, `1 stretch written offline and synced later`.
+  - **VERIFIED:** Literata 17 px: "Longhand recorded this piece as it was written, keystroke by keystroke, on its own clock. The published text matches that record exactly, and neither has changed since it was published on {date}." Then, in `#5C564C`: "It shows how the words got onto the page. It can't see what happened off the page, like what the writer read or talked through first."
+  - **Fingerprints:** a collapsed DM Mono 11.5 px `#9A9387` toggle, "Technical fingerprints, for anyone who wants to check". When opened, it shows the full SHA-256 of the published text ("Text") and of the writing log head ("Writing log"), each with a copy button.
+- Language rules: facts, never verdicts (no scores, "only", red or warnings); effort always leads; percentages only in the details; say "brought in", never "pasted"; never say "AI".
+- Removed: the library card, the rotated stamp, the "Verify · text · chain" line, and the public replay ("Watch it being written", the "Show replay" toggle and the public replay endpoint). The canvas mockups still show three links under the signature; this spec supersedes them.
 
 ## Small screens
 
@@ -139,11 +184,19 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] A brand-new account, and an existing one with no saved choices, starts on Auto with the window on the left.
 - [ ] The dashboard is top-aligned, shows the side window, and never shows the email address outside Settings.
 - [ ] The "Longhand" heading's top edge is 56 px from the viewport top, at every window size.
+- [ ] On a public piece page, the title's top edge is 56 px from the viewport top, at every window size and for short and long pieces alike.
+- [ ] Every paper page renders through the one shared layout component; no page sets its own top padding, margin or vertical centering.
+- [ ] A public piece ends with the signature line (rule, seal, sentence, meta line, links) on the paper, with no card, box or background.
+- [ ] The signature sentence matches the typed-share tier, and response pieces add ", in response to {site}."
+- [ ] Under the signature there is exactly one link, "Verified · See how it was written"; it opens and closes the details inline, with Verified first; hashes only appear inside the fingerprints toggle.
+- [ ] The seal is the exact SVG in this spec.
+- [ ] No public page offers a replay, and no public endpoint serves events.
+- [ ] Sittings merge sessions less than 30 minutes apart by real clock time, so a piece written in one sitting with reloads shows "1 sitting".
+- [ ] In every light change (morning → afternoon → golden → night → morning), at most one sun is ever visible; a sun and moon show together only from golden hour to night.
+- [ ] No public text says "pasted" or "AI".
 - [ ] Every piece (draft, published or read-only) has a working "Pages" back button.
 - [ ] Response pieces show the quote icon and site name on the dashboard, and their title is never the article's title.
 - [ ] Clicking a button with the mouse never leaves a focus box; tabbing to it shows the outline.
-- [ ] On a public piece page, the title's top edge is 56 px from the viewport top, at every window size and for short and long pieces alike.
-- [ ] Every paper page renders through the one shared layout component; no page sets its own top padding, margin or vertical centering.
 
 ## Reference implementation
 

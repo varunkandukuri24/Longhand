@@ -13,7 +13,7 @@ describe("public page never contains location", () => {
     "app/p/[slug]/page.tsx",
     "app/p/layout.tsx",
     "app/p/[slug]/opengraph-image.tsx",
-    "components/receipt/LibraryCard.tsx",
+    "components/receipt/SignatureReceipt.tsx",
   ];
 
   it("does not reference city or coordinates on public surfaces", () => {

@@ -1,9 +1,10 @@
 import { db } from "@/db";
 import { pieces, receipts, users } from "@/db/schema";
 import {
-  formatDuration,
-  sharesToPercents,
+  formatSignatureMeta,
+  formatSignatureSentence,
 } from "@/lib/receipt/format";
+import type { ReceiptSessionRow } from "@/lib/receipt/types";
 import { loadGoogleFont } from "@/lib/og/fonts";
 import { eq } from "drizzle-orm";
 import { ImageResponse } from "next/og";
@@ -16,6 +17,16 @@ type ImageProps = {
   params: Promise<{ slug: string }>;
 };
 
+function sittingRowsFor(metrics: {
+  sittingRows?: ReceiptSessionRow[];
+  sessionRows: ReceiptSessionRow[];
+}): ReceiptSessionRow[] {
+  if (metrics.sittingRows && metrics.sittingRows.length > 0) {
+    return metrics.sittingRows;
+  }
+  return metrics.sessionRows;
+}
+
 export default async function Image({ params }: ImageProps) {
   const { slug } = await params;
 
@@ -23,6 +34,8 @@ export default async function Image({ params }: ImageProps) {
     .select({
       title: pieces.title,
       authorName: users.name,
+      mode: pieces.mode,
+      sourceSite: pieces.sourceSite,
       metrics: receipts.metrics,
     })
     .from(pieces)
@@ -34,20 +47,22 @@ export default async function Image({ params }: ImageProps) {
   const title = row?.title ?? "Untitled";
   const author = row?.authorName?.trim() || "Anonymous";
   const metrics = row?.metrics;
-  const active = metrics
-    ? formatDuration(metrics.activeWritingTimeMs)
-    : "<1 min";
-  const sessions = metrics?.sessionCount ?? 0;
-  const typed = metrics
-    ? sharesToPercents(
-        metrics.typedShare,
-        metrics.pastedShare,
-        metrics.quotedShare,
-      ).typed
-    : 0;
+  const responseSite =
+    row?.mode === "response" ? row.sourceSite?.trim() || null : null;
+
+  const sentence = metrics
+    ? formatSignatureSentence(author, metrics.typedShare, responseSite)
+    : formatSignatureSentence(author, 1);
+  const sittings = metrics ? sittingRowsFor(metrics) : [];
+  const meta = metrics
+    ? formatSignatureMeta(
+        metrics.activeWritingTimeMs,
+        sittings.map((s) => s.startedAt),
+      )
+    : "";
 
   const [literata, dmMono] = await Promise.all([
-    loadGoogleFont("Literata", 400, "italic"),
+    loadGoogleFont("Literata", 400, "normal"),
     loadGoogleFont("DM Mono", 400, "normal"),
   ]);
 
@@ -68,23 +83,10 @@ export default async function Image({ params }: ImageProps) {
         <div
           style={{
             display: "flex",
-            fontFamily: "DM Mono",
-            fontSize: 22,
-            letterSpacing: "0.08em",
-            color: "rgba(28,26,22,0.55)",
-          }}
-        >
-          LONGHAND
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 28,
             fontFamily: "Literata",
-            fontSize: 64,
-            fontStyle: "italic",
-            lineHeight: 1.2,
-            maxHeight: 180,
+            fontSize: 52,
+            lineHeight: 1.25,
+            maxHeight: 140,
             overflow: "hidden",
           }}
         >
@@ -93,30 +95,38 @@ export default async function Image({ params }: ImageProps) {
         <div
           style={{
             display: "flex",
-            marginTop: 16,
-            fontFamily: "DM Mono",
-            fontSize: 24,
-            color: "rgba(28,26,22,0.55)",
+            marginTop: 36,
+            width: 72,
+            height: 1,
+            background: "#1C1A16",
           }}
-        >
-          {author}
-        </div>
+        />
         <div
           style={{
             display: "flex",
-            marginTop: 40,
-            gap: 40,
-            fontFamily: "DM Mono",
-            fontSize: 28,
-            color: "rgba(28,26,22,0.75)",
+            marginTop: 28,
+            fontFamily: "Literata",
+            fontSize: 32,
+            lineHeight: 1.35,
+            maxHeight: 100,
+            overflow: "hidden",
           }}
         >
-          <span>{active} active</span>
-          <span>
-            {sessions} {sessions === 1 ? "session" : "sessions"}
-          </span>
-          <span>{typed}% by hand</span>
+          {sentence}
         </div>
+        {meta ? (
+          <div
+            style={{
+              display: "flex",
+              marginTop: 12,
+              fontFamily: "DM Mono",
+              fontSize: 24,
+              color: "#736C61",
+            }}
+          >
+            {meta}
+          </div>
+        ) : null}
       </div>
     ),
     {
@@ -125,7 +135,7 @@ export default async function Image({ params }: ImageProps) {
         {
           name: "Literata",
           data: literata,
-          style: "italic",
+          style: "normal",
           weight: 400,
         },
         {

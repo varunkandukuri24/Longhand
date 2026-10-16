@@ -22,6 +22,32 @@ describe("windowSceneFor", () => {
     expect(windowSceneFor("morning", "clear").snowCap).toBe(false);
   });
 
+  it("returns sun and moon as separate fields, not in back layers", () => {
+    const morning = windowSceneFor("morning", "clear");
+    expect(morning.sun).toEqual({
+      x: 16,
+      y: 14,
+      size: 15,
+      color: "#FFE9AE",
+      halo: "rgba(255,233,174,0.35)",
+    });
+    expect(morning.moon).toBe(false);
+    expect(morning.back.some((e) => e.kind === "sun" || e.kind === "moon")).toBe(
+      false,
+    );
+
+    const night = windowSceneFor("night", "clear");
+    expect(night.sun).toBeNull();
+    expect(night.moon).toBe(true);
+    expect(night.back.some((e) => e.kind === "moon" || e.kind === "sun")).toBe(
+      false,
+    );
+
+    const cloudy = windowSceneFor("afternoon", "cloudy");
+    expect(cloudy.sun).toBeNull();
+    expect(cloudy.moon).toBe(false);
+  });
+
   it("draws daytime snow flakes with an outline", () => {
     const scene = windowSceneFor("afternoon", "snow");
     const flake = scene.front.find((e) => e.kind === "snow");

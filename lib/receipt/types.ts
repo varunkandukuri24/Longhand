@@ -22,12 +22,12 @@ export type ReceiptBatchInput = {
   events: EditEvent[];
 };
 
-/** One session row for the library-card receipt table. */
+/** One session or sitting row for the receipt (start, active time, words). */
 export type ReceiptSessionRow = {
-  /** Session wall-clock start, epoch ms. */
+  /** Wall-clock start, epoch ms. */
   startedAt: number;
   activeWritingTimeMs: number;
-  /** Net word-count increase during this session (never negative). */
+  /** Net word-count increase (never negative). */
   wordsAdded: number;
 };
 
@@ -38,7 +38,7 @@ export type ReceiptMetrics = {
   activeWritingTimeMs: number;
   /** First session start → last batch serverReceivedAt, in ms. */
   elapsedSpanMs: number;
-  /** Sessions that contain at least one event. */
+  /** Sessions that contain at least one event (integrity; not the display unit). */
   sessionCount: number;
   /** Final characters tagged typed ÷ final length (0 when empty). */
   typedShare: number;
@@ -56,6 +56,11 @@ export type ReceiptMetrics = {
   uniformTypingRunCount: number;
   /** Batches flagged delayed (offline sync). */
   delayedBatchCount: number;
-  /** Per-session rows for the library card (sessions with ≥1 event). */
+  /** Per-session rows (sessions with ≥1 event); kept for integrity. */
   sessionRows: ReceiptSessionRow[];
+  /**
+   * Display sittings: sessions less than 30 minutes apart merge.
+   * Optional on older stored receipts; fall back to sessionRows.
+   */
+  sittingRows?: ReceiptSessionRow[];
 };

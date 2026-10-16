@@ -6,9 +6,6 @@
   --caret: #c9772e;
   --label: #736c61;
   --popover-border: #e6e0d4;
-  --receipt-card: #f6f1e6;
-  --receipt-border: #e3daca;
-  --stamp: #3d5a8a;
   --window-w: 112px;
   --window-inset: 36px;
   --bar-from-window: 184px;
@@ -127,7 +124,35 @@ body {
 }
 
 .side-window-pane-fade {
-  transition: opacity 180s linear;
+  transition: opacity var(--scene-fade-ms, 180s) linear;
+}
+
+.side-window-pane-front {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.side-window-sun,
+.side-window-moon {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.side-window-moon {
+  z-index: 1;
+}
+
+.side-window-celestial-motion {
+  transition:
+    left var(--scene-fade-ms, 180s) ease-in-out,
+    top var(--scene-fade-ms, 180s) ease-in-out,
+    width var(--scene-fade-ms, 180s) ease-in-out,
+    background var(--scene-fade-ms, 180s) ease-in-out,
+    box-shadow var(--scene-fade-ms, 180s) ease-in-out,
+    opacity var(--scene-fade-ms, 180s) ease-in-out;
 }
 
 .side-window-el {
@@ -414,7 +439,8 @@ body {
     transition: none !important;
   }
 
-  .side-window-pane-fade {
+  .side-window-pane-fade,
+  .side-window-celestial-motion {
     transition: none !important;
   }
 

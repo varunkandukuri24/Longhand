@@ -1,4 +1,5 @@
 import { applyEvents } from "./apply-events";
+import { groupSessionsIntoSittings, type SessionSpan } from "./sittings";
 import type {
   EditEvent,
   ReceiptBatchInput,
@@ -427,30 +428,64 @@ export function liveBatchesFromEvents(
 export function computeSessionRows(
   batches: readonly ReceiptBatchInput[],
 ): ReceiptSessionRow[] {
-  const rows: ReceiptSessionRow[] = [];
+  return sessionSpansFromBatches(batches).map((span) => ({
+    startedAt: span.startedAt,
+    activeWritingTimeMs: span.activeWritingTimeMs,
+    wordsAdded: span.wordsAdded,
+  }));
+}
+
+function sessionSpansFromBatches(
+  batches: readonly ReceiptBatchInput[],
+): SessionSpan[] {
+  const spans: SessionSpan[] = [];
   let prefixEvents: EditEvent[] = [];
 
   for (const sessionId of sessionsWithEvents(batches)) {
     const sessionEvents = eventsForSession(batches, sessionId);
+    if (sessionEvents.length === 0) {
+      continue;
+    }
     const beforeWords = wordCount(applyEvents(prefixEvents).text);
     prefixEvents = [...prefixEvents, ...sessionEvents];
     const afterWords = wordCount(applyEvents(prefixEvents).text);
 
-    let startedAt = Number.POSITIVE_INFINITY;
+    let sessionStartedAt = Number.POSITIVE_INFINITY;
     for (const batch of batches) {
-      if (batch.sessionId === sessionId && batch.sessionStartedAt < startedAt) {
-        startedAt = batch.sessionStartedAt;
+      if (batch.sessionId === sessionId && batch.sessionStartedAt < sessionStartedAt) {
+        sessionStartedAt = batch.sessionStartedAt;
       }
     }
+    if (!Number.isFinite(sessionStartedAt)) {
+      sessionStartedAt = 0;
+    }
 
-    rows.push({
-      startedAt: Number.isFinite(startedAt) ? startedAt : 0,
+    let maxT = Number.NEGATIVE_INFINITY;
+    for (const event of sessionEvents) {
+      if (event.t > maxT) maxT = event.t;
+    }
+    if (!Number.isFinite(maxT)) {
+      maxT = 0;
+    }
+
+    spans.push({
+      startedAt: sessionStartedAt,
+      lastEventAt: sessionStartedAt + maxT,
       activeWritingTimeMs: activeWritingTimeMsForEvents(sessionEvents),
       wordsAdded: Math.max(0, afterWords - beforeWords),
     });
   }
 
-  return rows;
+  return spans;
+}
+
+/**
+ * Group sessions into sittings for display. Raw sessions stay unchanged.
+ */
+export function computeSittings(
+  batches: readonly ReceiptBatchInput[],
+): ReceiptSessionRow[] {
+  return groupSessionsIntoSittings(sessionSpansFromBatches(batches));
 }
 
 /** Compute versioned effort receipt metrics from stored/live batches. */
@@ -465,6 +500,7 @@ export function computeReceipt(
   const typedChars = typedInsertChars(events);
   const revisionRatio = length > 0 ? typedChars / length : 0;
 
+  const sessionRows = computeSessionRows(batches);
   return {
     version: RECEIPT_VERSION,
     activeWritingTimeMs: activeWritingTimeMs(batches),
@@ -478,6 +514,7 @@ export function computeReceipt(
     fastStretchCount: fastStretchCount(batches),
     uniformTypingRunCount: uniformTypingRunCountForBatches(batches),
     delayedBatchCount: delayedBatchCount(batches),
-    sessionRows: computeSessionRows(batches),
+    sessionRows,
+    sittingRows: computeSittings(batches),
   };
 }

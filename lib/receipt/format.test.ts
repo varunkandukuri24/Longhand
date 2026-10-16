@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatCompositionLegend,
   formatDuration,
   formatReceiptDate,
   formatReceiptNotes,
-  formatStampSecondaryLine,
-  pieceCardNumber,
+  formatRevisionLine,
+  formatSignatureMeta,
+  formatSignatureSentence,
+  formatSittingDateRange,
   sharesToPercents,
   shortenHash,
 } from "./format";
@@ -21,22 +24,95 @@ describe("formatDuration", () => {
     expect(formatDuration(59 * 60_000 + 59_999)).toBe("59 min");
   });
 
-  it('returns hours and minutes without decimals', () => {
+  it("returns hours and minutes without decimals", () => {
     expect(formatDuration(60 * 60_000)).toBe("1 hr");
     expect(formatDuration((60 + 12) * 60_000)).toBe("1 hr 12 min");
     expect(formatDuration((2 * 60 + 5) * 60_000 + 999)).toBe("2 hr 5 min");
   });
 });
 
-describe("formatStampSecondaryLine", () => {
-  it("omits the line when both shares are zero", () => {
-    expect(formatStampSecondaryLine(0, 0)).toBeNull();
+describe("formatSignatureSentence", () => {
+  it("picks the tier by typed share", () => {
+    expect(formatSignatureSentence("Ada", 1)).toBe("Ada wrote this by hand.");
+    expect(formatSignatureSentence("Ada", 0.8)).toBe(
+      "Ada wrote most of this by hand.",
+    );
+    expect(formatSignatureSentence("Ada", 0.5)).toBe(
+      "Ada wrote and gathered this.",
+    );
+    expect(formatSignatureSentence("Ada", 0.2)).toBe(
+      "Ada gathered and shaped this.",
+    );
   });
 
-  it("lists only non-zero shares", () => {
-    expect(formatStampSecondaryLine(4, 2)).toBe("4% PASTED · 2% QUOTED");
-    expect(formatStampSecondaryLine(4, 0)).toBe("4% PASTED");
-    expect(formatStampSecondaryLine(0, 2)).toBe("2% QUOTED");
+  it("adds the response suffix instead of a full stop", () => {
+    expect(formatSignatureSentence("Ada", 1, "theathletic.com")).toBe(
+      "Ada wrote this by hand, in response to theathletic.com.",
+    );
+    expect(formatSignatureSentence("Ada", 0.5, "nytimes.com")).toBe(
+      "Ada wrote and gathered this, in response to nytimes.com.",
+    );
+  });
+});
+
+describe("formatSignatureMeta", () => {
+  it("formats duration, sittings and date range", () => {
+    const starts = [
+      Date.UTC(2026, 9, 11, 14, 0, 0),
+      Date.UTC(2026, 9, 13, 10, 0, 0),
+    ];
+    expect(
+      formatSignatureMeta(52 * 60_000, starts, {
+        now: new Date("2026-10-15T12:00:00Z"),
+        locale: "en-US",
+      }),
+    ).toBe("52 min over 2 sittings · Oct 11–13");
+  });
+
+  it('uses "1 sitting" for a single sitting', () => {
+    const start = Date.UTC(2026, 9, 11, 14, 0, 0);
+    expect(
+      formatSignatureMeta(20 * 60_000, [start], {
+        now: new Date("2026-10-15T12:00:00Z"),
+        locale: "en-US",
+      }),
+    ).toBe("20 min over 1 sitting · Oct 11");
+  });
+});
+
+describe("formatSittingDateRange", () => {
+  it("adds the year when it is not the current year", () => {
+    expect(
+      formatSittingDateRange([new Date(2024, 0, 5).getTime()], {
+        now: new Date(2026, 9, 15),
+        locale: "en-US",
+      }),
+    ).toBe("Jan 5, 2024");
+  });
+});
+
+describe("formatCompositionLegend", () => {
+  it("hides zero parts and sums to 100", () => {
+    const legend = formatCompositionLegend(0.94, 0.04, 0.02, "example.com");
+    expect(legend.map((p) => p.percent).reduce((a, b) => a + b, 0)).toBe(100);
+    expect(legend.map((p) => p.label)).toEqual([
+      "94% typed here",
+      "4% brought in",
+      "2% quoted from example.com",
+    ]);
+  });
+
+  it("omits zero shares", () => {
+    const legend = formatCompositionLegend(1, 0, 0);
+    expect(legend).toEqual([
+      { kind: "typed", percent: 100, label: "100% typed here" },
+    ]);
+  });
+
+  it("never says pasted", () => {
+    const legend = formatCompositionLegend(0.5, 0.5, 0);
+    expect(legend.some((p) => /pasted/i.test(p.label))).toBe(false);
+    expect(legend.some((p) => /brought in/i.test(p.label))).toBe(true);
   });
 });
 
@@ -44,7 +120,7 @@ describe("sharesToPercents", () => {
   it("returns zeros when all shares are zero", () => {
     expect(sharesToPercents(0, 0, 0)).toEqual({
       typed: 0,
-      pasted: 0,
+      broughtIn: 0,
       quoted: 0,
     });
   });
@@ -59,21 +135,29 @@ describe("sharesToPercents", () => {
     ];
     for (const [t, p, q] of cases) {
       const result = sharesToPercents(t, p, q);
-      expect(result.typed + result.pasted + result.quoted).toBe(100);
+      expect(result.typed + result.broughtIn + result.quoted).toBe(100);
     }
   });
 
   it("uses largest-remainder rounding", () => {
     expect(sharesToPercents(1 / 3, 1 / 3, 1 / 3)).toEqual({
       typed: 34,
-      pasted: 33,
+      broughtIn: 33,
       quoted: 33,
     });
     expect(sharesToPercents(0.94, 0.04, 0.02)).toEqual({
       typed: 94,
-      pasted: 4,
+      broughtIn: 4,
       quoted: 2,
     });
+  });
+});
+
+describe("formatRevisionLine", () => {
+  it("formats the revision ratio in plain words", () => {
+    expect(formatRevisionLine(1.6)).toBe(
+      "1.6 words written for every word kept.",
+    );
   });
 });
 
@@ -102,23 +186,16 @@ describe("formatReceiptNotes", () => {
     ).toBeNull();
   });
 
-  it("joins timing and delayed notes as one line", () => {
+  it("uses DESIGN.md wording for timing and offline notes", () => {
     expect(
       formatReceiptNotes({
         fastStretchCount: 2,
         uniformTypingRunCount: 0,
         delayedBatchCount: 1,
       }),
-    ).toBe("2 unusually fast stretches. 1 offline stretch.");
-  });
-});
-
-describe("pieceCardNumber", () => {
-  it("returns a stable number in 1–9999", () => {
-    const id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-    const n = pieceCardNumber(id);
-    expect(n).toBeGreaterThanOrEqual(1);
-    expect(n).toBeLessThanOrEqual(9999);
-    expect(pieceCardNumber(id)).toBe(n);
+    ).toEqual([
+      "2 stretches of unusually fast typing",
+      "1 stretch written offline and synced later",
+    ]);
   });
 });

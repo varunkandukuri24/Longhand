@@ -102,7 +102,6 @@ export const pieces = pgTable("pieces", {
   slug: text("slug").unique(),
   finalText: text("final_text"),
   finalTextHash: text("final_text_hash"),
-  replayPublic: boolean("replay_public").notNull().default(false),
   /** Newest writing session that owns this piece; only its batches are accepted. */
   activeSessionId: uuid("active_session_id").references(
     (): AnyPgColumn => sessions.id,

@@ -36,9 +36,6 @@ function PaperShellInner({
     void saveWindowSide(side);
   };
 
-  const instant =
-    ambient.debugOverride !== null || ambient.preset.mode === "pin";
-
   return (
     <div
       className={[
@@ -57,7 +54,7 @@ function PaperShellInner({
           condition={ambient.condition}
           side={ambient.windowSide}
           still={ambient.stillWindow}
-          instant={instant}
+          fastTransitions={ambient.fastTransitions}
           onSideChange={onSideChange}
         />
       )}

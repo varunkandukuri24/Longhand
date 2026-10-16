@@ -71,12 +71,14 @@ describe("paper page top offsets", () => {
 
   it("public page uses PaperPage at 56 px with title/text/receipt spacing", () => {
     const page = read("app/p/[slug]/page.tsx");
+    const receipt = read("components/receipt/SignatureReceipt.tsx");
     expect(page).toContain("PaperPage");
     expect(page).toContain("PAGE_TOP_OFFSET_PX");
     expect(page).toContain("publicPage");
     expect(page).toContain("data-paper-heading");
     expect(page).toContain("mt-6");
-    expect(page).toContain("mt-16");
+    expect(page).toContain("SignatureReceipt");
+    expect(receipt).toContain("mt-[72px]");
     expect(page).not.toMatch(/writing-column|dashboard-column|pt-\[140px\]|pt-10|pt-24/);
   });
 

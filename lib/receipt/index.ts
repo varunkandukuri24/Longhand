@@ -16,18 +16,27 @@ export {
   RECEIPT_VERSION,
   computeReceipt,
   computeSessionRows,
+  computeSittings,
   liveBatchesFromEvents,
 } from "./compute-receipt";
 export {
+  formatCompositionLegend,
   formatDuration,
   formatReceiptDate,
   formatReceiptNotes,
-  formatStampSecondaryLine,
-  pieceCardNumber,
+  formatRevisionLine,
+  formatSignatureMeta,
+  formatSignatureSentence,
+  formatSittingCount,
+  formatSittingDateRange,
+  formatSittingRowWhen,
+  formatVerifiedCopy,
   sharesToPercents,
   shortenHash,
 } from "./format";
-export type { SharePercents } from "./format";
+export type { CompositionLegendPart, SharePercents } from "./format";
+export { groupSessionsIntoSittings, SITTING_GAP_MS } from "./sittings";
+export type { SessionSpan } from "./sittings";
 export { makePieceSlug, randomSlugSuffix } from "./slug";
 export {
   COMPRESSED_IDLE_MS,

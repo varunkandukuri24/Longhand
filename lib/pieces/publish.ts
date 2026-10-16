@@ -12,7 +12,6 @@ export type PublishInput = {
   userId: string;
   title: string;
   finalText: string;
-  replayPublic: boolean;
 };
 
 export type PublishSuccess = {
@@ -97,7 +96,6 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
             slug,
             finalText: input.finalText,
             finalTextHash,
-            replayPublic: input.replayPublic,
             publishedAt,
             activeSessionId: null,
             updatedAt: publishedAt,

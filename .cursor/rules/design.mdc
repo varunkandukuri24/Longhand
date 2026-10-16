@@ -6,6 +6,6 @@ alwaysApply: true
 - Paper #FFFFFF (soft pure white, very faint neutral grain, never beige) fills the whole screen; ink #1C1A16; caret #C9772E; labels #736C61. Fonts: Literata for writing and headings, DM Mono for labels. No other fonts.
 - The page never changes with the scene. Only the side window does.
 - Banned: gradient washes, glassmorphism, emoji, sparkle icons, Inter or Roboto, default shadcn styling, cards or shadows on the writing screen, toasts or modals while writing.
-- Motion only inside the side window, and slow. Nothing moves under prefers-reduced-motion. Scene changes crossfade over minutes.
+- Motion only inside the side window, and slow. Nothing moves under prefers-reduced-motion. Scene changes crossfade over minutes, and the sun and moon move between scenes instead of showing twice.
 - Copy is plain and dry, with no exclamation marks.
 - When a design choice isn't covered by DESIGN.md or the PRD, ask instead of inventing one.

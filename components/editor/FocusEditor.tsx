@@ -329,7 +329,7 @@ function FocusEditorBody({
   }, [textLoaded, isPublished, superseded, bootError, pieceId, bootAttempt]);
 
   const onPublish = useCallback(
-    async (args: { title: string; replayPublic: boolean }) => {
+    async (args: { title: string }) => {
       setPublishBusy(true);
       setPublishError(null);
       try {
@@ -340,7 +340,6 @@ function FocusEditorBody({
           body: JSON.stringify({
             title: args.title,
             finalText: prevValueRef.current,
-            replayPublic: args.replayPublic,
           }),
         });
         const body = (await res.json().catch(() => null)) as {
@@ -735,6 +734,8 @@ function FocusEditorBody({
             debugOverride={ambient.debugOverride}
             onDebugOverride={ambient.setDebugOverride}
             onWindowSideChange={onWindowSideChange}
+            fastTransitions={ambient.fastTransitions}
+            onFastTransitionsChange={ambient.setFastTransitions}
           />
         ) : null}
       </>,

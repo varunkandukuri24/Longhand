@@ -8,10 +8,7 @@ type PublishSheetProps = {
   busy: boolean;
   error: string | null;
   onClose: () => void;
-  onPublish: (args: {
-    title: string;
-    replayPublic: boolean;
-  }) => void;
+  onPublish: (args: { title: string }) => void;
 };
 
 export function PublishSheet({
@@ -23,12 +20,10 @@ export function PublishSheet({
   onPublish,
 }: PublishSheetProps) {
   const [title, setTitle] = useState(initialTitle);
-  const [replayPublic, setReplayPublic] = useState(false);
 
   useEffect(() => {
     if (open) {
       setTitle(initialTitle);
-      setReplayPublic(false);
     }
   }, [open, initialTitle]);
 
@@ -62,21 +57,6 @@ export function PublishSheet({
           />
         </label>
 
-        <div className="mt-4">
-          <label className="flex cursor-pointer items-center gap-2 font-ui text-[12px] text-label">
-            <input
-              type="checkbox"
-              checked={replayPublic}
-              onChange={(e) => setReplayPublic(e.target.checked)}
-              disabled={busy}
-            />
-            <span>Show replay</span>
-          </label>
-          <p className="mt-1.5 pl-6 font-ui text-[11.5px] text-label">
-            Shows everything you typed, including what you deleted.
-          </p>
-        </div>
-
         {error ? (
           <p className="mt-3 font-ui text-[12px] text-ink">{error}</p>
         ) : null}
@@ -85,7 +65,7 @@ export function PublishSheet({
           type="button"
           disabled={busy || title.trim().length === 0}
           className="editor-bar-btn mt-4 disabled:opacity-40"
-          onClick={() => onPublish({ title: title.trim(), replayPublic })}
+          onClick={() => onPublish({ title: title.trim() })}
         >
           {busy ? "Publishing" : "Publish"}
         </button>

@@ -102,7 +102,6 @@ describe.skipIf(!url)("publish piece", () => {
       userId,
       title: "Hello world",
       finalText: "hello!",
-      replayPublic: false,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -115,7 +114,6 @@ describe.skipIf(!url)("publish piece", () => {
         slug: schema.pieces.slug,
         finalText: schema.pieces.finalText,
         finalTextHash: schema.pieces.finalTextHash,
-        replayPublic: schema.pieces.replayPublic,
       })
       .from(schema.pieces)
       .where(eq(schema.pieces.id, draftPieceId));
@@ -124,7 +122,6 @@ describe.skipIf(!url)("publish piece", () => {
     expect(piece.slug).toBe(result.slug);
     expect(piece.finalText).toBe("hello!");
     expect(piece.finalTextHash).toBe(result.finalTextHash);
-    expect(piece.replayPublic).toBe(false);
 
     const [receipt] = await db
       .select()
@@ -141,7 +138,6 @@ describe.skipIf(!url)("publish piece", () => {
       userId,
       title: "Tampered",
       finalText: "hello! EXTRA",
-      replayPublic: false,
     });
     expect(result).toEqual({
       ok: false,
@@ -221,7 +217,6 @@ describe.skipIf(!url)("publish piece", () => {
         body: JSON.stringify({
           title: "No",
           finalText: "not the rebuilt text",
-          replayPublic: false,
         }),
       }),
       { params: Promise.resolve({ id: tamperPieceId }) },
