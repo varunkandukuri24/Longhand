@@ -8,7 +8,7 @@ import {
   useAmbientSceneContext,
 } from "@/components/scene/ambient-context";
 import type { WindowSide } from "@/lib/scene";
-import type { ReactNode } from "react";
+import type { PointerEventHandler, ReactNode } from "react";
 
 type PaperShellProps = {
   children: ReactNode;
@@ -18,6 +18,7 @@ type PaperShellProps = {
   /** Hide the side window (e.g. optional). */
   hideWindow?: boolean;
   className?: string;
+  onPointerDown?: PointerEventHandler<HTMLDivElement>;
 };
 
 function PaperShellInner({
@@ -25,6 +26,7 @@ function PaperShellInner({
   publicPage = false,
   hideWindow = false,
   className = "",
+  onPointerDown,
 }: Omit<PaperShellProps, "initialWindowSide">) {
   const ambient = useAmbientSceneContext();
 
@@ -33,6 +35,9 @@ function PaperShellInner({
     ambient.setWindowSide(side);
     void saveWindowSide(side);
   };
+
+  const instant =
+    ambient.debugOverride !== null || ambient.preset.mode === "pin";
 
   return (
     <div
@@ -43,6 +48,7 @@ function PaperShellInner({
           : "writing-shell-right",
         className,
       ].join(" ")}
+      onPointerDown={onPointerDown}
     >
       <PaperGrain />
       {hideWindow ? null : (
@@ -51,6 +57,7 @@ function PaperShellInner({
           condition={ambient.condition}
           side={ambient.windowSide}
           still={ambient.stillWindow}
+          instant={instant}
           onSideChange={onSideChange}
         />
       )}
@@ -59,13 +66,14 @@ function PaperShellInner({
   );
 }
 
-/** Paper + grain + optional side window for non-editor screens. */
+/** Paper + grain + side window shell (used by PaperPage). */
 export function PaperShell({
   children,
   publicPage = false,
   initialWindowSide = "left",
   hideWindow = false,
   className = "",
+  onPointerDown,
 }: PaperShellProps) {
   return (
     <AmbientSceneProvider
@@ -76,6 +84,7 @@ export function PaperShell({
         publicPage={publicPage}
         hideWindow={hideWindow}
         className={className}
+        onPointerDown={onPointerDown}
       >
         {children}
       </PaperShellInner>

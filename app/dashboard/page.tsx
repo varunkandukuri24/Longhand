@@ -1,7 +1,7 @@
 import { DashboardSettings } from "@/components/dashboard/DashboardSettings";
 import { NewPieceActions } from "@/components/dashboard/NewPieceActions";
 import { QuoteIcon } from "@/components/icons/LonghandIcons";
-import { PaperShell } from "@/components/scene/PaperShell";
+import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
 import { signOut } from "@/auth";
 import { db } from "@/db";
 import { pieces } from "@/db/schema";
@@ -65,10 +65,15 @@ export default async function DashboardPage({
   const cityLabel = user.cityName?.trim() || "No city";
 
   return (
-    <PaperShell initialWindowSide={user.windowSide}>
-      <main className="dashboard-column mx-auto flex min-h-dvh flex-col px-4 pb-16">
+    <PaperPage
+      topOffsetPx={PAGE_TOP_OFFSET_PX}
+      initialWindowSide={user.windowSide}
+    >
         <header>
-          <h1 className="font-writing text-[32px] leading-tight text-ink">
+          <h1
+            className="font-writing text-[32px] leading-tight text-ink"
+            data-paper-heading
+          >
             Longhand
           </h1>
           <div className="mt-2 flex flex-wrap items-center font-ui text-[13px] text-label">
@@ -160,7 +165,6 @@ export default async function DashboardPage({
             </ul>
           )}
         </section>
-      </main>
-    </PaperShell>
+    </PaperPage>
   );
 }

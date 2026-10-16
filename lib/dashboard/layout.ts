@@ -1,5 +1,10 @@
-/** Top of the "Longhand" heading from the viewport top (DESIGN.md). */
-export const DASHBOARD_HEADING_TOP_PX = 56;
+/** Re-export shared paper-page offsets (DESIGN.md). */
+export {
+  DASHBOARD_HEADING_TOP_PX,
+  EDITOR_TOP_OFFSET_PX,
+  PAGE_TOP_OFFSET_PX,
+  paperPageTopStyle,
+} from "@/lib/scene/paper-page-layout";
 
 /** Editor "Pages" back control. */
 export const PAGES_HREF = "/dashboard";

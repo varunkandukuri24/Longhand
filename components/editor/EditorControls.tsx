@@ -146,7 +146,7 @@ export function EditorControls({
       }}
       aria-hidden={!visible}
     >
-      <div className="flex min-w-0 items-center gap-4 font-ui text-[13px] text-label">
+      <div className="flex shrink-0 items-center gap-4 font-ui text-[13px] text-label">
         <Link
           href={PAGES_HREF}
           aria-label={PAGES_ARIA_LABEL}
@@ -155,7 +155,7 @@ export function EditorControls({
           <BackIcon />
           Pages
         </Link>
-        <p className="min-w-0 truncate">
+        <p className="whitespace-nowrap">
           {isPublished ? (
             "Read only"
           ) : (
@@ -172,7 +172,7 @@ export function EditorControls({
         </p>
       </div>
 
-      <div className="flex items-center gap-5">
+      <div className="flex shrink-0 items-center gap-5">
         {isPublished ? (
           onOpenPublic ? (
             <button type="button" className="editor-bar-btn" onClick={onOpenPublic}>

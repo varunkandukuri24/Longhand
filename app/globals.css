@@ -14,7 +14,7 @@
   --bar-from-window: 184px;
   --bar-other-edge: 40px;
   --column-shift: 74px;
-  --dashboard-heading-top: 56px;
+  --paper-page-top: 56px;
 }
 
 @theme inline {
@@ -218,48 +218,38 @@ body {
   animation: window-cloud 40s ease-in-out infinite alternate;
 }
 
-/* Writing column (editor: text starts 140 px from the top) */
-.writing-column {
-  position: relative;
-  z-index: 2;
-  width: min(680px, calc(100% - var(--bar-from-window) - var(--bar-other-edge)));
-  margin-top: 140px;
-  margin-bottom: 80px;
-  padding-bottom: 40px;
-}
-
-/* Dashboard: same column width/centering; heading top edge at 56 px */
-.dashboard-column {
+/* Shared paper column: top offset owned by PaperPage via --paper-page-top */
+.paper-column {
   position: relative;
   z-index: 2;
   width: min(680px, calc(100% - var(--bar-from-window) - var(--bar-other-edge)));
   margin-top: 0;
   margin-bottom: 80px;
-  padding-top: var(--dashboard-heading-top);
+  padding-top: var(--paper-page-top);
   padding-bottom: 40px;
+  padding-left: 0;
+  padding-right: 0;
 }
 
-.writing-shell-left .writing-column,
-.writing-shell-left .dashboard-column {
+.writing-shell-left .paper-column {
   margin-left: calc(50% + var(--column-shift));
   transform: translateX(-50%);
 }
 
-.writing-shell-right .writing-column,
-.writing-shell-right .dashboard-column {
+.writing-shell-right .paper-column {
   margin-left: calc(50% - var(--column-shift));
   transform: translateX(-50%);
 }
 
-.writing-shell-slide .writing-column,
-.writing-shell-slide .dashboard-column {
+.writing-shell-slide .paper-column {
   transition:
     margin-left 250ms ease-out,
     width 250ms ease-out;
 }
 
-.dashboard-column h1 {
-  margin: 0;
+.paper-column h1 {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 /* Bottom bar */
@@ -270,11 +260,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 20px;
   min-height: 44px;
   font-family: var(--font-ui), monospace;
   font-size: 13px;
   color: var(--label);
   transition: opacity 300ms ease;
+  white-space: nowrap;
 }
 
 .writing-shell-left .editor-bar {
@@ -395,21 +387,13 @@ body {
     display: none;
   }
 
-  .writing-shell-left .writing-column,
-  .writing-shell-right .writing-column {
-    width: calc(100% - 40px);
-    margin-left: 20px;
-    transform: none;
-    margin-top: 80px;
-  }
-
-  .writing-shell-left .dashboard-column,
-  .writing-shell-right .dashboard-column {
+  .writing-shell-left .paper-column,
+  .writing-shell-right .paper-column {
     width: calc(100% - 40px);
     margin-left: 20px;
     transform: none;
     margin-top: 0;
-    padding-top: var(--dashboard-heading-top);
+    padding-top: var(--paper-page-top);
   }
 
   .writing-shell-left .editor-bar,
@@ -425,7 +409,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .side-window-slide,
-  .writing-shell-slide .writing-column,
+  .writing-shell-slide .paper-column,
   .writing-shell-slide .editor-bar {
     transition: none !important;
   }

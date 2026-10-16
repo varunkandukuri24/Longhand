@@ -4,6 +4,7 @@ import {
   DASHBOARD_HEADING_TOP_PX,
   PAGES_ARIA_LABEL,
   PAGES_HREF,
+  PAGE_TOP_OFFSET_PX,
 } from "./layout";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -48,15 +49,13 @@ describe("dashboardDisplayTitle", () => {
 describe("dashboard layout tokens", () => {
   it("heading top offset is 56 px in code and CSS", () => {
     expect(DASHBOARD_HEADING_TOP_PX).toBe(56);
+    expect(PAGE_TOP_OFFSET_PX).toBe(56);
     const css = readFileSync(
       join(process.cwd(), "app/globals.css"),
       "utf8",
     );
-    expect(css).toMatch(/--dashboard-heading-top:\s*56px/);
-    expect(css).toMatch(
-      /\.dashboard-column\s*\{[\s\S]*?padding-top:\s*var\(--dashboard-heading-top\)/,
-    );
-    expect(css).toMatch(/\.dashboard-column\s*\{[\s\S]*?margin-top:\s*0/);
+    expect(css).toMatch(/padding-top:\s*var\(--paper-page-top\)/);
+    expect(css).toMatch(/\.paper-column\s*\{[\s\S]*?margin-top:\s*0/);
   });
 
   it("Pages back button targets the dashboard", () => {
@@ -66,7 +65,7 @@ describe("dashboard layout tokens", () => {
       join(process.cwd(), "components/editor/EditorControls.tsx"),
       "utf8",
     );
-    expect(controls).toContain('href={PAGES_HREF}');
+    expect(controls).toContain("href={PAGES_HREF}");
     expect(controls).toContain("PAGES_ARIA_LABEL");
     expect(controls).toContain("Pages");
   });

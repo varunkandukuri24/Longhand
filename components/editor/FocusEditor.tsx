@@ -4,8 +4,11 @@ import { saveWindowSide } from "@/app/actions/window-side";
 import { EditorControls } from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
 import { PublishSheet } from "@/components/editor/PublishSheet";
-import { PaperGrain } from "@/components/scene/PaperGrain";
-import { SideWindow } from "@/components/scene/SideWindow";
+import {
+  EDITOR_TOP_OFFSET_PX,
+  PaperPage,
+} from "@/components/scene/PaperPage";
+import { useAmbientSceneContext } from "@/components/scene/ambient-context";
 import { ResponseLine } from "@/components/source/ResponseLine";
 import {
   applyDiffToOrigins,
@@ -18,10 +21,7 @@ import {
 } from "@/lib/editor/no-backspace";
 import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
 import { captionFor, type WindowSide } from "@/lib/scene";
-import {
-  SCENE_PRESET_KEY,
-  useAmbientScene,
-} from "@/lib/scene/use-ambient-scene";
+import { SCENE_PRESET_KEY } from "@/lib/scene/use-ambient-scene";
 import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
 import type { SyncStatus } from "@/lib/sync/types";
 import { useRouter } from "next/navigation";
@@ -34,7 +34,10 @@ import {
   type CompositionEvent,
   type FormEvent,
   type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type PointerEventHandler,
 } from "react";
+import { createPortal } from "react-dom";
 
 const TIMER_OPTIONS = [10, 15, 25] as const;
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -79,13 +82,46 @@ function formatCountdown(ms: number): string {
   return formatElapsed(clamped);
 }
 
-export function FocusEditor({
+export function FocusEditor(props: FocusEditorProps) {
+  const paperPointerDownRef = useRef<PointerEventHandler<HTMLDivElement> | null>(
+    null,
+  );
+  const [chromeHost, setChromeHost] = useState<HTMLDivElement | null>(null);
+
+  return (
+    <PaperPage
+      topOffsetPx={EDITOR_TOP_OFFSET_PX}
+      initialWindowSide={props.initialWindowSide ?? "left"}
+      slide
+      onPointerDown={(event) => {
+        paperPointerDownRef.current?.(event);
+      }}
+      chrome={<div ref={setChromeHost} />}
+    >
+      <FocusEditorBody
+        {...props}
+        chromeHost={chromeHost}
+        bindPaperPointerDown={(handler) => {
+          paperPointerDownRef.current = handler;
+        }}
+      />
+    </PaperPage>
+  );
+}
+
+function FocusEditorBody({
   pieceId,
   initialTitle = "",
   published,
   source = null,
-  initialWindowSide = "left",
-}: FocusEditorProps) {
+  bindPaperPointerDown,
+  chromeHost,
+}: FocusEditorProps & {
+  bindPaperPointerDown: (
+    handler: PointerEventHandler<HTMLDivElement> | null,
+  ) => void;
+  chromeHost: HTMLDivElement | null;
+}) {
   const router = useRouter();
   const isPublished = Boolean(published);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -128,7 +164,7 @@ export function FocusEditor({
   const [popoverOpen, setPopoverOpen] = useState(false);
   /** True after draft text has loaded (or published text is ready); drives autofocus. */
   const [textLoaded, setTextLoaded] = useState(isPublished);
-  const ambient = useAmbientScene({ initialWindowSide });
+  const ambient = useAmbientSceneContext();
 
   useEffect(() => {
     noBackspaceRef.current = noBackspace;
@@ -583,204 +619,188 @@ export function FocusEditor({
     el.focus({ preventScroll: true });
   };
 
-  const onPaperPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (isPublished || superseded || bootError) return;
-    const target = event.target as HTMLElement | null;
-    if (!target) return;
-    if (
-      target.closest(
-        ".side-window, .editor-bar, .editor-popover, button, a, input, select, textarea, [role='dialog'], [aria-label='Event debug']",
-      )
-    ) {
-      return;
-    }
-    // Clicking empty paper: put focus back in the text area.
-    event.preventDefault();
-    focusWritingArea();
-  };
+  useEffect(() => {
+    const onPaperPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (isPublished || superseded || bootError) return;
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (
+        target.closest(
+          ".side-window, .editor-bar, .editor-popover, button, a, input, select, textarea, [role='dialog'], [aria-label='Event debug']",
+        )
+      ) {
+        return;
+      }
+      event.preventDefault();
+      focusWritingArea();
+    };
+    bindPaperPointerDown(onPaperPointerDown);
+    return () => bindPaperPointerDown(null);
+  }, [bindPaperPointerDown, isPublished, superseded, bootError]);
+
+  const chrome =
+    chromeHost &&
+    createPortal(
+      <>
+        <PublishSheet
+          open={publishOpen && !isPublished}
+          initialTitle={initialTitle}
+          busy={publishBusy}
+          error={publishError}
+          onClose={() => {
+            if (!publishBusy) {
+              setPublishOpen(false);
+              setPublishError(null);
+            }
+          }}
+          onPublish={(args) => {
+            void onPublish(args);
+          }}
+        />
+        <EditorControls
+          visible={controlsShown}
+          caption={captionFor(ambient.light, ambient.condition)}
+          dateLabel={formatBarDate()}
+          elapsedLabel={formatElapsed(elapsedMs)}
+          saveLabel={
+            syncStatus && syncStatus.queuedCount > 0 ? "saving" : "saved"
+          }
+          timerMinutes={timerMinutes}
+          timerRemainingLabel={
+            timerMinutes !== null && timerRemainingMs !== null
+              ? formatCountdown(timerRemainingMs)
+              : null
+          }
+          noBackspace={noBackspace}
+          scenePreset={ambient.preset}
+          currentLight={ambient.light}
+          currentCondition={ambient.condition}
+          windowSide={ambient.windowSide}
+          stillWindow={ambient.stillWindow}
+          isPublished={isPublished}
+          onTimerChange={(minutes) => {
+            setTimerMinutes(minutes);
+            if (minutes === null) {
+              timerEndsAtRef.current = null;
+              setTimerRemainingMs(null);
+            } else {
+              timerEndsAtRef.current = Date.now() + minutes * 60 * 1000;
+              setTimerRemainingMs(minutes * 60 * 1000);
+            }
+            showControls();
+          }}
+          onNoBackspaceChange={(value) => {
+            noBackspaceRef.current = value;
+            setNoBackspace(value);
+            showControls();
+          }}
+          onSceneChange={(preset) => {
+            ambient.setPreset(preset);
+            showControls();
+          }}
+          onWindowSideChange={onWindowSideChange}
+          onStillWindowChange={(still) => {
+            ambient.setStillWindow(still);
+            showControls();
+          }}
+          onPublish={() => {
+            setPublishError(null);
+            setPublishOpen(true);
+            showControls();
+          }}
+          onOpenPublic={
+            published
+              ? () => {
+                  window.location.href = `/p/${published.slug}`;
+                }
+              : undefined
+          }
+          onPopoverChange={setPopoverOpen}
+        />
+        {IS_DEV && debugOpen && !isPublished ? (
+          <EditorDebugPanel
+            events={debugSnapshot.events}
+            origins={debugSnapshot.origins}
+            value={value}
+            sessionStartedAt={sessionStartedAt}
+            delayedBatchCount={
+              storedDelayedCount + (syncStatus?.delayedQueued ?? 0)
+            }
+            syncStatus={syncStatus}
+            loadError={bootError}
+            sceneLight={ambient.light}
+            sceneCondition={ambient.condition}
+            sceneSourceLabel={ambient.sourceLabel}
+            windowSide={ambient.windowSide}
+            debugOverride={ambient.debugOverride}
+            onDebugOverride={ambient.setDebugOverride}
+            onWindowSideChange={onWindowSideChange}
+          />
+        ) : null}
+      </>,
+      chromeHost,
+    );
 
   return (
-    <div
-      className={[
-        "relative min-h-dvh w-full bg-paper text-ink",
-        ambient.windowSide === "left"
-          ? "writing-shell-left"
-          : "writing-shell-right",
-        "writing-shell-slide",
-      ].join(" ")}
-      data-piece-id={pieceId}
-      onMouseMove={onMouseMove}
-      onPointerDown={onPaperPointerDown}
-    >
-      <PaperGrain />
-      <SideWindow
-        light={ambient.light}
-        condition={ambient.condition}
-        side={ambient.windowSide}
-        still={ambient.stillWindow}
-        instant={
-          ambient.debugOverride !== null || ambient.preset.mode === "pin"
-        }
-        onSideChange={onWindowSideChange}
-      />
-
-      <PublishSheet
-        open={publishOpen && !isPublished}
-        initialTitle={initialTitle}
-        busy={publishBusy}
-        error={publishError}
-        onClose={() => {
-          if (!publishBusy) {
-            setPublishOpen(false);
-            setPublishError(null);
-          }
-        }}
-        onPublish={(args) => {
-          void onPublish(args);
-        }}
-      />
-
-      <div className="writing-column relative z-[2]">
-        {superseded ? (
-          <p className="mb-4 font-ui text-[12px] text-label">
-            Open in another window. Refresh to continue here.
-          </p>
-        ) : null}
-        {bootError ? (
-          <div className="flex flex-col gap-4">
-            <p className="font-ui text-[13px] text-ink">
-              Could not load this piece.
-            </p>
-            <p className="font-ui text-[12px] text-label break-words">
-              {bootError}
-            </p>
-            <button
-              type="button"
-              className="editor-bar-btn w-fit"
-              onClick={() => setBootAttempt((n) => n + 1)}
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          <>
-            {source ? (
-              <div className="mb-4">
-                <ResponseLine
-                  title={source.title}
-                  site={source.site}
-                  url={source.url}
-                />
-              </div>
-            ) : null}
-            <textarea
-              ref={textareaRef}
-              value={value}
-              readOnly={isPublished || superseded}
-              onCompositionStart={onCompositionStart}
-              onCompositionEnd={onCompositionEnd}
-              onInput={onInput}
-              onChange={onChange}
-              onKeyDown={onKeyDown}
-              onMouseDown={onMouseDown}
-              spellCheck
-              autoCapitalize="off"
-              autoCorrect="off"
-              className={[
-                "writing-text font-writing text-[22px] leading-[1.7] text-ink",
-                isPublished || superseded ? "cursor-default" : "",
-              ].join(" ")}
-              style={{
-                caretColor:
-                  isPublished || superseded ? "transparent" : "#C9772E",
-              }}
-              aria-label="Writing page"
-            />
-          </>
-        )}
-      </div>
-
-      <EditorControls
-        visible={controlsShown}
-        caption={captionFor(ambient.light, ambient.condition)}
-        dateLabel={formatBarDate()}
-        elapsedLabel={formatElapsed(elapsedMs)}
-        saveLabel={
-          syncStatus && syncStatus.queuedCount > 0 ? "saving" : "saved"
-        }
-        timerMinutes={timerMinutes}
-        timerRemainingLabel={
-          timerMinutes !== null && timerRemainingMs !== null
-            ? formatCountdown(timerRemainingMs)
-            : null
-        }
-        noBackspace={noBackspace}
-        scenePreset={ambient.preset}
-        currentLight={ambient.light}
-        currentCondition={ambient.condition}
-        windowSide={ambient.windowSide}
-        stillWindow={ambient.stillWindow}
-        isPublished={isPublished}
-        onTimerChange={(minutes) => {
-          setTimerMinutes(minutes);
-          if (minutes === null) {
-            timerEndsAtRef.current = null;
-            setTimerRemainingMs(null);
-          } else {
-            timerEndsAtRef.current = Date.now() + minutes * 60 * 1000;
-            setTimerRemainingMs(minutes * 60 * 1000);
-          }
-          showControls();
-        }}
-        onNoBackspaceChange={(value) => {
-          noBackspaceRef.current = value;
-          setNoBackspace(value);
-          showControls();
-        }}
-        onSceneChange={(preset) => {
-          ambient.setPreset(preset);
-          showControls();
-        }}
-        onWindowSideChange={onWindowSideChange}
-        onStillWindowChange={(still) => {
-          ambient.setStillWindow(still);
-          showControls();
-        }}
-        onPublish={() => {
-          setPublishError(null);
-          setPublishOpen(true);
-          showControls();
-        }}
-        onOpenPublic={
-          published
-            ? () => {
-                window.location.href = `/p/${published.slug}`;
-              }
-            : undefined
-        }
-        onPopoverChange={setPopoverOpen}
-      />
-
-      {IS_DEV && debugOpen && !isPublished ? (
-        <EditorDebugPanel
-          events={debugSnapshot.events}
-          origins={debugSnapshot.origins}
-          value={value}
-          sessionStartedAt={sessionStartedAt}
-          delayedBatchCount={
-            storedDelayedCount + (syncStatus?.delayedQueued ?? 0)
-          }
-          syncStatus={syncStatus}
-          loadError={bootError}
-          sceneLight={ambient.light}
-          sceneCondition={ambient.condition}
-          sceneSourceLabel={ambient.sourceLabel}
-          windowSide={ambient.windowSide}
-          debugOverride={ambient.debugOverride}
-          onDebugOverride={ambient.setDebugOverride}
-          onWindowSideChange={onWindowSideChange}
-        />
+    <div data-piece-id={pieceId} onMouseMove={onMouseMove}>
+      {superseded ? (
+        <p className="mb-4 font-ui text-[12px] text-label">
+          Open in another window. Refresh to continue here.
+        </p>
       ) : null}
+      {bootError ? (
+        <div className="flex flex-col gap-4">
+          <p className="font-ui text-[13px] text-ink">
+            Could not load this piece.
+          </p>
+          <p className="font-ui text-[12px] text-label break-words">
+            {bootError}
+          </p>
+          <button
+            type="button"
+            className="editor-bar-btn w-fit"
+            onClick={() => setBootAttempt((n) => n + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+        <>
+          {source ? (
+            <div className="mb-4">
+              <ResponseLine
+                title={source.title}
+                site={source.site}
+                url={source.url}
+              />
+            </div>
+          ) : null}
+          <textarea
+            ref={textareaRef}
+            value={value}
+            readOnly={isPublished || superseded}
+            onCompositionStart={onCompositionStart}
+            onCompositionEnd={onCompositionEnd}
+            onInput={onInput}
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+            onMouseDown={onMouseDown}
+            spellCheck
+            autoCapitalize="off"
+            autoCorrect="off"
+            className={[
+              "writing-text font-writing text-[22px] leading-[1.7] text-ink",
+              isPublished || superseded ? "cursor-default" : "",
+            ].join(" ")}
+            style={{
+              caretColor:
+                isPublished || superseded ? "transparent" : "#C9772E",
+            }}
+            aria-label="Writing page"
+          />
+        </>
+      )}
+      {chrome}
     </div>
   );
 }

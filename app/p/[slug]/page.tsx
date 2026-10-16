@@ -1,6 +1,7 @@
 import { ReplayPlayer } from "@/components/receipt/ReplayPlayer";
 import { VerifyLine } from "@/components/receipt/VerifyLine";
 import { LibraryCard } from "@/components/receipt/LibraryCard";
+import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
 import { ResponseLine } from "@/components/source/ResponseLine";
 import { db } from "@/db";
 import { eventBatches, pieces, receipts, sessions, users } from "@/db/schema";
@@ -111,26 +112,29 @@ export default async function PublicPiecePage({ params }: PageProps) {
       : null;
 
   return (
-    <main className="writing-column mx-auto flex min-h-dvh flex-col px-4 pb-16 pt-10 md:pt-[140px]">
-      <article className="w-full">
-        {source ? (
-          <div className="mb-4">
-            <ResponseLine
-              title={source.title}
-              site={source.site}
-              url={source.url}
-            />
-          </div>
-        ) : null}
-        <h1 className="font-writing text-[32px] leading-snug text-ink">
+    <PaperPage topOffsetPx={PAGE_TOP_OFFSET_PX} publicPage>
+      <article>
+        <h1
+          className="font-writing text-[32px] leading-snug text-ink"
+          data-paper-heading
+        >
           {piece.title}
         </h1>
-        <div className="writing-text mt-6 whitespace-pre-wrap font-writing text-[22px] leading-[1.7] text-ink">
+        <div className="mt-6 whitespace-pre-wrap font-writing text-[22px] leading-[1.7] text-ink">
+          {source ? (
+            <div className="mb-4">
+              <ResponseLine
+                title={source.title}
+                site={source.site}
+                url={source.url}
+              />
+            </div>
+          ) : null}
           {piece.finalText}
         </div>
       </article>
 
-      <div className="mt-10 w-full max-w-[440px]">
+      <div className="mt-16 w-full max-w-[440px]">
         <LibraryCard
           pieceId={piece.id}
           title={piece.title}
@@ -154,6 +158,6 @@ export default async function PublicPiecePage({ params }: PageProps) {
           <ReplayPlayer slug={piece.slug} />
         </div>
       ) : null}
-    </main>
+    </PaperPage>
   );
 }

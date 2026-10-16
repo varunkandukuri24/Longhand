@@ -104,6 +104,7 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 
 ## Other screens
 
+- **One shared layout:** the editor, dashboard, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's text starts 140 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
 - **Sign-in, name and city screens:** the same paper and grain, with the side window on the writer's chosen side. Content top-aligned, never vertically centered.
 - **Dashboard:** the same paper, grain and side window as the editor, with the same 680 px column. The top of the "Longhand" heading sits exactly 56 px from the top of the viewport: one wrapper sets this, with no other top padding, margin or vertical centering above it.
   - Header: "Longhand" in Literata 32 px, then one DM Mono 13 px #736C61 line: "{display name} · {city} · Settings · Sign out".
@@ -114,7 +115,7 @@ The reference implementation below draws exactly these. Port it; don't redesign 
   - No cards, dividers or boxes.
 - **Icons:** inline SVG, 1.5 px stroke, round caps and joins, currentColor (#736C61, #1C1A16 on hover), 18 px inside a 44 × 44 px button. Only three exist: plus, quote (a pair of curly quotation marks) and back (a left arrow). No icon library.
 - **Focus:** keyboard focus only (`:focus-visible`): a 1.5 px #1C1A16 outline, offset 3 px, 3 px radius. A mouse click never leaves a box around a button.
-- **Public piece page:** paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px, then the text, then the receipt card.
+- **Public piece page:** paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it, then the receipt 64 px below the text.
 - **Receipt card:** keeps the library-card design, but on paper it's `#F6F1E6` with a 1 px `#E3DACA` border and no shadow. Max 440 px wide. Stamp in `#3D5A8A`, below the table.
 
 ## Small screens
@@ -141,6 +142,8 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] Every piece (draft, published or read-only) has a working "Pages" back button.
 - [ ] Response pieces show the quote icon and site name on the dashboard, and their title is never the article's title.
 - [ ] Clicking a button with the mouse never leaves a focus box; tabbing to it shows the outline.
+- [ ] On a public piece page, the title's top edge is 56 px from the viewport top, at every window size and for short and long pieces alike.
+- [ ] Every paper page renders through the one shared layout component; no page sets its own top padding, margin or vertical centering.
 
 ## Reference implementation
 
