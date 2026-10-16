@@ -1,7 +1,7 @@
 /**
- * Public receipt routes: pages use PaperPage themselves (shared layout).
+ * Public piece routes: pages use PaperPage themselves (shared layout).
  */
-export default function PublicReceiptLayout({
+export default function PublicPieceLayout({
   children,
 }: {
   children: React.ReactNode;

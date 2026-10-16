@@ -1,8 +1,13 @@
+import { PagesBackLink } from "@/components/dashboard/PagesBackLink";
 import { SignatureReceipt } from "@/components/receipt/SignatureReceipt";
+import { PieceText } from "@/components/references/PieceText";
+import { ReferencesRow } from "@/components/references/ReferencesRow";
 import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
-import { ResponseLine } from "@/components/source/ResponseLine";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventBatches, pieces, receipts, sessions, users } from "@/db/schema";
+import { referencesFor } from "@/lib/references";
+import { displayLinksFor } from "@/lib/references/display-links";
 import { formatWeatherSessionsNote, type Condition } from "@/lib/scene";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
@@ -16,14 +21,12 @@ async function loadPublished(slug: string) {
   const [row] = await db
     .select({
       id: pieces.id,
+      userId: pieces.userId,
       title: pieces.title,
       finalText: pieces.finalText,
       finalTextHash: pieces.finalTextHash,
+      links: pieces.links,
       publishedAt: pieces.publishedAt,
-      mode: pieces.mode,
-      sourceUrl: pieces.sourceUrl,
-      sourceTitle: pieces.sourceTitle,
-      sourceSite: pieces.sourceSite,
       slug: pieces.slug,
       authorName: users.name,
       metrics: receipts.metrics,
@@ -65,7 +68,7 @@ export async function generateMetadata({
   const author = piece.authorName?.trim();
   return {
     title: `${piece.title} · Longhand`,
-    description: author ? `${author} · Effort receipt` : "Effort receipt",
+    description: author ? `${author} · Longhand` : "Longhand",
   };
 }
 
@@ -76,7 +79,11 @@ export default async function PublicPiecePage({ params }: PageProps) {
     notFound();
   }
 
+  const session = await auth();
+  const isOwner = session?.user?.id === piece.userId;
   const author = piece.authorName?.trim() || "Anonymous";
+  const displayLinks = displayLinksFor(piece.finalText, piece.links);
+  const references = referencesFor(piece.finalText, displayLinks);
 
   const sessionRows = await db
     .select({
@@ -96,20 +103,12 @@ export default async function PublicPiecePage({ params }: PageProps) {
   }
   const weatherNote = formatWeatherSessionsNote(conditions);
 
-  const source =
-    piece.mode === "response" &&
-    piece.sourceUrl &&
-    piece.sourceTitle &&
-    piece.sourceSite
-      ? {
-          url: piece.sourceUrl,
-          title: piece.sourceTitle,
-          site: piece.sourceSite,
-        }
-      : null;
-
   return (
-    <PaperPage topOffsetPx={PAGE_TOP_OFFSET_PX} publicPage>
+    <PaperPage
+      topOffsetPx={PAGE_TOP_OFFSET_PX}
+      publicPage
+      chrome={isOwner ? <PagesBackLink /> : null}
+    >
       <article>
         <h1
           className="font-writing text-[32px] leading-snug text-ink"
@@ -117,18 +116,8 @@ export default async function PublicPiecePage({ params }: PageProps) {
         >
           {piece.title}
         </h1>
-        <div className="mt-6 whitespace-pre-wrap font-writing text-[22px] leading-[1.7] text-ink">
-          {source ? (
-            <div className="mb-4">
-              <ResponseLine
-                title={source.title}
-                site={source.site}
-                url={source.url}
-              />
-            </div>
-          ) : null}
-          {piece.finalText}
-        </div>
+        <PieceText text={piece.finalText} links={displayLinks} />
+        <ReferencesRow references={references} />
       </article>
 
       <SignatureReceipt
@@ -137,7 +126,6 @@ export default async function PublicPiecePage({ params }: PageProps) {
         metrics={piece.metrics}
         finalTextHash={piece.finalTextHash}
         chainHeadHash={piece.chainHeadHash}
-        responseSite={source?.site ?? null}
         weatherNote={weatherNote}
       />
     </PaperPage>

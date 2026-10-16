@@ -26,6 +26,7 @@ describe.skipIf(!url)("publish piece", () => {
   const userId = `publish-${crypto.randomUUID()}`;
   let draftPieceId = "";
   let tamperPieceId = "";
+  let linkPieceId = "";
   let publishPiece: typeof import("./publish").publishPiece;
   let POST_batches: typeof import("@/app/api/pieces/[id]/batches/route").POST;
   let POST_publish: typeof import("@/app/api/pieces/[id]/publish/route").POST;
@@ -89,6 +90,64 @@ describe.skipIf(!url)("publish piece", () => {
 
     await seedBatch(draftPieceId, "hello");
     await seedBatch(tamperPieceId, "hello");
+
+    const [linkPiece] = await db
+      .insert(schema.pieces)
+      .values({ userId, title: "link draft" })
+      .returning({ id: schema.pieces.id });
+    linkPieceId = linkPiece.id;
+
+    const url = "https://www.theatlantic.com/ideas/x/";
+    const label = "theatlantic.com";
+    const linkEvents: EditEvent[] = [
+      {
+        t: 0,
+        type: "insert",
+        pos: 0,
+        len: `see ${url}`.length,
+        text: `see ${url}`,
+      },
+      {
+        t: 100,
+        type: "link",
+        pos: 4,
+        len: url.length,
+        text: label,
+        url,
+      },
+      {
+        t: 140,
+        type: "insert",
+        pos: 4 + label.length,
+        len: 4,
+        text: " now",
+      },
+    ];
+    const [linkSession] = await db
+      .insert(schema.sessions)
+      .values({ pieceId: linkPieceId })
+      .returning({ id: schema.sessions.id });
+    await db
+      .update(schema.pieces)
+      .set({ activeSessionId: linkSession.id })
+      .where(eq(schema.pieces.id, linkPieceId));
+    const linkHash = await hashBatch(
+      GENESIS_PREV_HASH,
+      1,
+      linkEvents,
+      sha256HexNode,
+    );
+    await db.insert(schema.eventBatches).values({
+      sessionId: linkSession.id,
+      seq: 1,
+      events: linkEvents,
+      prevHash: GENESIS_PREV_HASH,
+      hash: linkHash,
+      clientTStart: 0,
+      clientTEnd: 140,
+      delayed: false,
+      clockSuspect: false,
+    });
   });
 
   afterAll(async () => {
@@ -130,6 +189,37 @@ describe.skipIf(!url)("publish piece", () => {
     expect(receipt.chainHeadHash).toBe(result.chainHeadHash);
     expect(receipt.metrics.wordCount).toBe(1);
     expect(receipt.metrics.sessionRows).toHaveLength(1);
+  });
+
+  it("publishes a piece shortened via link events", async () => {
+    const finalText = "see theatlantic.com now";
+    const result = await publishPiece({
+      pieceId: linkPieceId,
+      userId,
+      title: "Atlantic",
+      finalText,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const [piece] = await db
+      .select({
+        status: schema.pieces.status,
+        finalText: schema.pieces.finalText,
+        links: schema.pieces.links,
+      })
+      .from(schema.pieces)
+      .where(eq(schema.pieces.id, linkPieceId));
+
+    expect(piece.status).toBe("published");
+    expect(piece.finalText).toBe(finalText);
+    expect(piece.links).toEqual([
+      {
+        start: 4,
+        end: 4 + "theatlantic.com".length,
+        url: "https://www.theatlantic.com/ideas/x/",
+      },
+    ]);
   });
 
   it("fails with 409 when submitted text does not match stored events", async () => {

@@ -14,9 +14,8 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { EditEvent, ReceiptMetrics } from "@/lib/receipt/types";
+import type { EditEvent, ReceiptMetrics, TextLink } from "@/lib/receipt/types";
 
-export const pieceModeEnum = pgEnum("piece_mode", ["freewrite", "response"]);
 export const pieceStatusEnum = pgEnum("piece_status", ["draft", "published"]);
 export const sceneConditionEnum = pgEnum("scene_condition", [
   "clear",
@@ -94,14 +93,12 @@ export const pieces = pgTable("pieces", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull().default(""),
-  mode: pieceModeEnum("mode").notNull().default("freewrite"),
-  sourceUrl: text("source_url"),
-  sourceTitle: text("source_title"),
-  sourceSite: text("source_site"),
   status: pieceStatusEnum("status").notNull().default("draft"),
   slug: text("slug").unique(),
   finalText: text("final_text"),
   finalTextHash: text("final_text_hash"),
+  /** Shortened link spans; computed from the event log at publish. */
+  links: jsonb("links").$type<TextLink[]>(),
   /** Newest writing session that owns this piece; only its batches are accepted. */
   activeSessionId: uuid("active_session_id").references(
     (): AnyPgColumn => sessions.id,

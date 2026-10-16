@@ -1,5 +1,6 @@
 export { applyEvents, isQuoteLineAt } from "./apply-events";
 export type { ApplyResult } from "./apply-events";
+export { isEditEvent } from "./edit-event";
 export {
   GENESIS_PREV_HASH,
   batchHashInput,
@@ -55,4 +56,10 @@ export type {
   ReceiptBatchInput,
   ReceiptMetrics,
   ReceiptSessionRow,
+  TextLink,
 } from "./types";
+export {
+  shortenRemainingUrls,
+  urlBeforeWhitespace,
+  urlsFollowedByWhitespaceInRange,
+} from "./shorten";

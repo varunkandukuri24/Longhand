@@ -6,6 +6,7 @@ import {
   clientBoundsFromEvents,
   decideBatchAcceptance,
 } from "@/lib/receipt/accept-batch";
+import { isEditEvent } from "@/lib/receipt/edit-event";
 import { hashBatch } from "@/lib/receipt/hash";
 import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import type { EditEvent } from "@/lib/receipt/types";
@@ -25,18 +26,6 @@ type BatchBody = {
   clientTStart?: number;
   clientTEnd?: number;
 };
-
-function isEditEvent(value: unknown): value is EditEvent {
-  if (!value || typeof value !== "object") return false;
-  const e = value as Record<string, unknown>;
-  return (
-    typeof e.t === "number" &&
-    (e.type === "insert" || e.type === "delete" || e.type === "paste") &&
-    typeof e.pos === "number" &&
-    typeof e.len === "number" &&
-    typeof e.text === "string"
-  );
-}
 
 export async function POST(request: Request, context: RouteContext) {
   const session = await auth();

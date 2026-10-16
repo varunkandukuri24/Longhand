@@ -45,13 +45,8 @@ describe("formatSignatureSentence", () => {
     );
   });
 
-  it("adds the response suffix instead of a full stop", () => {
-    expect(formatSignatureSentence("Ada", 1, "theathletic.com")).toBe(
-      "Ada wrote this by hand, in response to theathletic.com.",
-    );
-    expect(formatSignatureSentence("Ada", 0.5, "nytimes.com")).toBe(
-      "Ada wrote and gathered this, in response to nytimes.com.",
-    );
+  it("never changes the sentence for links", () => {
+    expect(formatSignatureSentence("Ada", 1)).toBe("Ada wrote this by hand.");
   });
 });
 
@@ -93,12 +88,12 @@ describe("formatSittingDateRange", () => {
 
 describe("formatCompositionLegend", () => {
   it("hides zero parts and sums to 100", () => {
-    const legend = formatCompositionLegend(0.94, 0.04, 0.02, "example.com");
+    const legend = formatCompositionLegend(0.94, 0.04, 0.02);
     expect(legend.map((p) => p.percent).reduce((a, b) => a + b, 0)).toBe(100);
     expect(legend.map((p) => p.label)).toEqual([
       "94% typed here",
       "4% brought in",
-      "2% quoted from example.com",
+      "2% quoted",
     ]);
   });
 

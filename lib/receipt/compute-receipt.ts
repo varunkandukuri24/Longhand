@@ -1,3 +1,4 @@
+import { findLinks } from "@/lib/references";
 import { applyEvents } from "./apply-events";
 import { groupSessionsIntoSittings, type SessionSpan } from "./sittings";
 import type {
@@ -7,7 +8,7 @@ import type {
   ReceiptSessionRow,
 } from "./types";
 
-export const RECEIPT_VERSION = 1 as const;
+export const RECEIPT_VERSION = 2 as const;
 
 /** Gaps at or above this are idle, not active writing. */
 export const ACTIVE_GAP_MAX_MS = 60_000;
@@ -166,25 +167,46 @@ export type OriginShares = {
   quotedShare: number;
 };
 
+/**
+ * Shares of final text by origin. Characters inside a link's range are
+ * left out of all three counts and the denominator.
+ */
 export function originShares(
   origins: readonly string[],
-  finalLength: number,
+  finalText: string,
 ): OriginShares {
-  if (finalLength <= 0) {
+  if (finalText.length <= 0 || origins.length === 0) {
     return { typedShare: 0, pastedShare: 0, quotedShare: 0 };
   }
+
+  const excluded = new Uint8Array(finalText.length);
+  for (const link of findLinks(finalText)) {
+    for (let i = link.start; i < link.end && i < excluded.length; i += 1) {
+      excluded[i] = 1;
+    }
+  }
+
   let typed = 0;
   let pasted = 0;
   let quoted = 0;
-  for (const origin of origins) {
+  let counted = 0;
+  const n = Math.min(origins.length, finalText.length);
+  for (let i = 0; i < n; i += 1) {
+    const origin = origins[i];
+    // Shortened labels (origin link) and raw URL ranges are left out.
+    if (origin === "link" || excluded[i]) continue;
+    counted += 1;
     if (origin === "typed") typed += 1;
     else if (origin === "pasted") pasted += 1;
     else if (origin === "quoted") quoted += 1;
   }
+  if (counted <= 0) {
+    return { typedShare: 0, pastedShare: 0, quotedShare: 0 };
+  }
   return {
-    typedShare: typed / finalLength,
-    pastedShare: pasted / finalLength,
-    quotedShare: quoted / finalLength,
+    typedShare: typed / counted,
+    pastedShare: pasted / counted,
+    quotedShare: quoted / counted,
   };
 }
 
@@ -496,7 +518,7 @@ export function computeReceipt(
   const events = allEvents(batches);
   const { origins } = applyEvents(events);
   const length = finalText.length;
-  const shares = originShares(origins, length);
+  const shares = originShares(origins, finalText);
   const typedChars = typedInsertChars(events);
   const revisionRatio = length > 0 ? typedChars / length : 0;
 

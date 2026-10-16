@@ -22,7 +22,7 @@ export default async function HomePage() {
         Longhand
       </h1>
       <p className="mt-3 font-ui text-[13px] text-label">
-        A focused place to write, with an effort receipt when you publish.
+        A focused place to write, with proof of how it was written when you publish.
       </p>
       <Link href="/signin" className="editor-bar-btn mt-8 inline-flex w-fit">
         Sign in

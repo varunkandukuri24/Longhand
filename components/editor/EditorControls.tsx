@@ -53,14 +53,12 @@ type EditorControlsProps = {
   currentCondition: Condition;
   windowSide: WindowSide;
   stillWindow: boolean;
-  isPublished: boolean;
   onTimerChange: (minutes: (typeof TIMER_OPTIONS)[number] | null) => void;
   onNoBackspaceChange: (value: boolean) => void;
   onSceneChange: (preset: ScenePreset) => void;
   onWindowSideChange: (side: WindowSide) => void;
   onStillWindowChange: (still: boolean) => void;
   onPublish: () => void;
-  onOpenPublic?: () => void;
   onPopoverChange?: (open: boolean) => void;
 };
 
@@ -80,14 +78,12 @@ export function EditorControls({
   currentCondition,
   windowSide,
   stillWindow,
-  isPublished,
   onTimerChange,
   onNoBackspaceChange,
   onSceneChange,
   onWindowSideChange,
   onStillWindowChange,
   onPublish,
-  onOpenPublic,
   onPopoverChange,
 }: EditorControlsProps) {
   const [open, setOpen] = useState<PopoverId>(null);
@@ -140,6 +136,7 @@ export function EditorControls({
     <div
       ref={rowRef}
       className="editor-bar"
+      data-editor-bar
       style={{
         opacity: visible ? 1 : 0,
         pointerEvents: visible ? "auto" : "none",
@@ -156,31 +153,17 @@ export function EditorControls({
           Pages
         </Link>
         <p className="whitespace-nowrap">
-          {isPublished ? (
-            "Read only"
-          ) : (
-            <>
-              {caption}
-              <span className="mx-2">·</span>
-              {dateLabel}
-              <span className="mx-2">·</span>
-              {elapsedLabel}
-              <span className="mx-2">·</span>
-              {saveLabel}
-            </>
-          )}
+          {caption}
+          <span className="mx-2">·</span>
+          {dateLabel}
+          <span className="mx-2">·</span>
+          {elapsedLabel}
+          <span className="mx-2">·</span>
+          {saveLabel}
         </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-5">
-        {isPublished ? (
-          onOpenPublic ? (
-            <button type="button" className="editor-bar-btn" onClick={onOpenPublic}>
-              Open public page
-            </button>
-          ) : null
-        ) : (
-          <>
             <Popover
               label={timerLabel}
               open={open === "timer"}
@@ -312,8 +295,6 @@ export function EditorControls({
             >
               Publish
             </button>
-          </>
-        )}
       </div>
     </div>
   );

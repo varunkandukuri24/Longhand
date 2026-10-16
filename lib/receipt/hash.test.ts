@@ -31,6 +31,40 @@ const VECTOR_INPUT =
 export const VECTOR_HASH =
   "55b670da58e304cbd8d89cda477cb550fc821af185941f18612cbc435f8e7e21";
 
+/** Batch that includes a link event (url key after text). */
+const LINK_VECTOR_EVENTS: EditEvent[] = [
+  { t: 0, type: "insert", pos: 0, len: 5, text: "Hello" },
+  { t: 40, type: "insert", pos: 5, len: 1, text: " " },
+  { t: 80, type: "paste", pos: 6, len: 5, text: "world" },
+  {
+    t: 120,
+    type: "link",
+    pos: 6,
+    len: 5,
+    text: "example.com",
+    url: "https://www.example.com/x",
+  },
+];
+
+const LINK_VECTOR_INPUT =
+  "0000000000000000000000000000000000000000000000000000000000000000|1|" +
+  JSON.stringify([
+    { t: 0, type: "insert", pos: 0, len: 5, text: "Hello" },
+    { t: 40, type: "insert", pos: 5, len: 1, text: " " },
+    { t: 80, type: "paste", pos: 6, len: 5, text: "world" },
+    {
+      t: 120,
+      type: "link",
+      pos: 6,
+      len: 5,
+      text: "example.com",
+      url: "https://www.example.com/x",
+    },
+  ]);
+
+export const LINK_VECTOR_HASH =
+  "bcd9deedfd7f83ee1ae841f16ba3afd5d0e34b650f6ff3126dd99b3487e10954";
+
 describe("hashBatch", () => {
   it("builds the canonical input with fixed key order", () => {
     const scrambled: EditEvent = {
@@ -85,5 +119,42 @@ describe("hashBatch", () => {
     const secondWeb = await hashBatch(first, 2, secondEvents, sha256HexWeb);
     expect(second).toBe(secondWeb);
     expect(second).not.toBe(first);
+  });
+
+  it("matches fixed vectors for a batch that includes a link event", async () => {
+    const scrambled: EditEvent = {
+      url: "https://www.example.com/x",
+      text: "example.com",
+      len: 5,
+      pos: 6,
+      type: "link",
+      t: 120,
+    };
+    expect(canonicalizeEvent(scrambled)).toEqual({
+      t: 120,
+      type: "link",
+      pos: 6,
+      len: 5,
+      text: "example.com",
+      url: "https://www.example.com/x",
+    });
+    expect(batchHashInput(VECTOR_PREV, VECTOR_SEQ, LINK_VECTOR_EVENTS)).toBe(
+      LINK_VECTOR_INPUT,
+    );
+
+    const nodeHash = await hashBatch(
+      VECTOR_PREV,
+      VECTOR_SEQ,
+      LINK_VECTOR_EVENTS,
+      sha256HexNode,
+    );
+    const webHash = await hashBatch(
+      VECTOR_PREV,
+      VECTOR_SEQ,
+      LINK_VECTOR_EVENTS,
+      sha256HexWeb,
+    );
+    expect(nodeHash).toBe(LINK_VECTOR_HASH);
+    expect(webHash).toBe(LINK_VECTOR_HASH);
   });
 });

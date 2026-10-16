@@ -1,7 +1,7 @@
 import { clientBoundsFromEvents } from "@/lib/receipt/accept-batch";
 import { GENESIS_PREV_HASH, hashBatch } from "@/lib/receipt/hash";
 import { sha256HexWeb } from "@/lib/receipt/sha256-web";
-import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
+import type { CharOrigin, EditEvent, TextLink } from "@/lib/receipt/types";
 import { isBatchDelayed } from "./delay";
 import {
   enqueueBatch,
@@ -18,6 +18,7 @@ export const IDLE_NEW_SESSION_MS = 30 * 60 * 1000;
 export type PieceStateResponse = {
   text: string;
   origins: CharOrigin[];
+  links: TextLink[];
   events: EditEvent[];
   lastAckSeq: number | null;
   lastSessionId: string | null;
@@ -57,6 +58,7 @@ export class EventSync {
   private lastClockSuspect = false;
   private superseded = false;
   private discardedBatches = 0;
+  private refused = false;
   private flushChain: Promise<void> = Promise.resolve();
   private writeChain: Promise<void> = Promise.resolve();
   private flushTimer: ReturnType<typeof setInterval> | null = null;
@@ -94,6 +96,11 @@ export class EventSync {
     return this.superseded;
   }
 
+  /** True when the server refused a batch (not a network failure). */
+  hasRefusedBatches(): boolean {
+    return this.refused;
+  }
+
   private async emitStatus(): Promise<void> {
     const queued =
       this.superseded || !this.sessionId
@@ -114,6 +121,7 @@ export class EventSync {
       online: this.online,
       superseded: this.superseded,
       discardedBatches: this.discardedBatches,
+      refused: this.refused,
     };
     for (const listener of this.listeners) {
       listener(status);
@@ -407,27 +415,44 @@ export class EventSync {
         if (this.lastClockSuspect) {
           this.clockSuspectCount += 1;
         }
+        this.refused = false;
         return true;
       }
 
+      let body: unknown = null;
+      try {
+        body = await res.json();
+      } catch {
+        body = null;
+      }
+
       if (res.status === 409) {
-        let reason: string | undefined;
-        try {
-          const body = (await res.json()) as { reason?: string };
-          reason = body.reason;
-        } catch {
-          reason = undefined;
-        }
+        const reason =
+          body &&
+          typeof body === "object" &&
+          "reason" in body &&
+          typeof (body as { reason: unknown }).reason === "string"
+            ? (body as { reason: string }).reason
+            : undefined;
         if (reason === "superseded") {
           await this.markSuperseded("server");
           return false;
         }
-        // Other conflicts: leave queued; do not advance.
+        console.error("[longhand] batch refused", res.status, body);
+        this.refused = true;
+        return false;
+      }
+
+      // Any other 4xx/5xx: refuse permanently until a later ack clears it.
+      if (res.status >= 400) {
+        console.error("[longhand] batch refused", res.status, body);
+        this.refused = true;
         return false;
       }
 
       return false;
     } catch {
+      // Network failure: keep retrying as "saving"; do not mark refused.
       return false;
     }
   }

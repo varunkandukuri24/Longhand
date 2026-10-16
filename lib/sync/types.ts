@@ -27,4 +27,10 @@ export type SyncStatus = {
   online: boolean;
   superseded: boolean;
   discardedBatches: number;
+  /**
+   * True after a non-network batch refusal (4xx/5xx). Cleared on the next
+   * successful ack. Network failures leave this false so the bar can stay on
+   * "saving" while retrying.
+   */
+  refused: boolean;
 };

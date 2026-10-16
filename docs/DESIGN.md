@@ -99,7 +99,7 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 
 ## Bottom bar and popovers
 
-- Left: a back button (the back icon and "Pages", DM Mono 13 px, returns to the dashboard, `aria-label="Back to your pages"`), then `{caption} · {weekday, Mon D} · {elapsed} · saved`, where caption is the scene in words: Clear morning, Sunny, Sunset, Clear night, Overcast, Raining, Snowing.
+- Left: a back button (the back icon and "Pages", DM Mono 13 px, returns to the dashboard, `aria-label="Back to your pages"`), then `{caption} · {weekday, Mon D} · {elapsed} · {status}`, where status is `saved`, `saving` (only while a batch is in flight) or `not saved` (the server refused a batch; same color, no red), and caption is the scene in words: Clear morning, Sunny, Sunset, Clear night, Overcast, Raining, Snowing.
 - Right: Timer, No backspace, Scene, Publish. These are plain DM Mono 13 px text buttons in `#736C61`, 44 px tall hit areas, 20 px apart, with a 1 px underline on hover and a visible focus ring. No boxes, checkboxes or native dropdowns.
 - The bar fades out after 2 s of typing and fades back in over 300 ms when the mouse moves.
 - Popovers open above their button: a `#FFFFFF` card, 1 px `#E6E0D4` border, 6 px radius, shadow `0 8px 24px rgba(28,26,22,0.10)`, DM Mono 12–13 px options as text.
@@ -114,14 +114,37 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 - **Dashboard:** the same paper, grain and side window as the editor, with the same 680 px column. The top of the "Longhand" heading sits exactly 56 px from the top of the viewport: one wrapper sets this, with no other top padding, margin or vertical centering above it.
   - Header: "Longhand" in Literata 32 px, then one DM Mono 13 px `#736C61` line: `{display name} · {city} · Settings · Sign out`.
   - Settings opens a popover with the display name, city, window side, Still window, and the email address (read-only). The email never appears on the page itself.
-  - Then one action row, 24 px below the header, left-aligned, with two icon buttons (no text labels): **plus** (new blank page, `aria-label="New page"`) and **quote** (respond to a link, `aria-label="Respond to a link"`). Each shows a small DM Mono 12 px tooltip with its label on hover and focus. The quote button asks for the URL in a small popover.
-  - Then the pieces, newest first, 32 px below the actions, 28 px apart: the title in Literata 24 px, line-height 1.3, at most 2 lines with an ellipsis; below it a DM Mono 12.5 px meta line, `{date} · {words} words · draft` or `· published · receipt`. An untitled draft shows its first 60 characters as the title, in `#736C61`.
-  - Response pieces: the title is the writer's own title or first line, never the source article's title. The meta line starts with the quote icon (12 px) and the source's site name: `[quote] theathletic.com · Oct 14 · 412 words · draft`.
+  - Then one action row, 24 px below the header, left-aligned, with a single icon button (no text label): **plus** (new page, `aria-label="New page"`), with a small DM Mono 12 px tooltip on hover and focus. There is no quote button and no other way to start a piece.
+  - Then the pieces, newest first, 32 px below the actions, 28 px apart: the title in Literata 24 px, line-height 1.3, at most 2 lines with an ellipsis; below it a DM Mono 12.5 px meta line, `{date} · {words} words · draft` or `{date} · {words} words · published` (never "receipt"). An untitled draft shows its first 60 characters as the title, in `#736C61`. A draft opens the editor; a published piece opens its piece page (`/p/[slug]`).
+  - Every piece looks the same on the dashboard: no icons, site names or modes.
   - No cards, dividers or boxes.
-- **Icons:** inline SVG, 1.5 px stroke, round caps and joins, `currentColor` (`#736C61`, `#1C1A16` on hover), 18 px inside a 44 × 44 px button. Only four exist: plus, quote (a pair of curly quotation marks), back (a left arrow) and check (used only in the receipt's Verified button, 12 px). No icon library.
+- **Icons:** inline SVG, 1.5 px stroke, round caps and joins, `currentColor` (`#736C61`, `#1C1A16` on hover), 18 px inside a 44 × 44 px button. Only four exist: plus, quote (a pair of curly quotation marks, used only in reference pills, 12 px), back (a left arrow) and check (used only in the receipt's Verified button, 12 px). No icon library.
 - **Focus:** keyboard focus only (`:focus-visible`): a 1.5 px `#1C1A16` outline, offset 3 px, 3 px radius. A mouse click never leaves a box around a button.
 - **One shared layout:** the editor, dashboard, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's text starts 140 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
-- **Public piece page:** paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it, then the receipt (see "The receipt").
+- **Piece page (`/p/[slug]`):** the only page for a published piece, the same for readers and the writer. There is no separate receipt page, and no link anywhere says "receipt". Paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it (Literata 22 px, line-height 1.7, 26 px between paragraphs), then References (if any), then the receipt (see "References" and "The receipt"). When the signed-in writer views their own piece, a "Pages" back link (back icon + "Pages", DM Mono 13 px `#736C61`) sits fixed at the bottom left, exactly where it sits in the editor's bar; readers never see it. Reference mockup: "A published piece · read it, the receipt is at the end".
+
+## References
+
+Links in a piece become references. There are no response pieces and no source cards. Reference mockups: "A published piece", "Writing · a pasted link becomes a reference" and option A on "References · three ways to show a link".
+
+- **What counts:** any `http://` or `https://` URL in the text, up to the next whitespace, with trailing `.,;:!?)]"'` trimmed. One reference per unique address (compare the full URL), in the order each first appears.
+- **The label:** the hostname, lowercase, without a leading `www.` (`theatlantic.com`, `en.wikipedia.org`). Never fetched: no titles, favicons or previews.
+- **In the published text:** each URL shows as its label in place, underlined (1 px, `#BDB6AA`, 4 px offset), ink `#1C1A16`, opening in a new tab with `rel="noopener nofollow ugc"`. The full URL is the `href`. A URL that already sits in parentheses keeps them.
+- **The References row:** 56 px below the last paragraph. The label "REFERENCES" in DM Mono 11 px, letter-spacing 0.14em, `#9A9387`; 12 px below it, the pills in a wrapping row with a 10 px gap. Then the receipt's 72 px rule spacing starts below this row. No row at all when there are no links.
+- **A pill:** an `<a>`, 32 px tall, padding 0 14 px 0 11 px, 1 px `#E6E0D4` border, fully rounded, no fill; the quote icon (12 px, `#736C61`), a 7 px gap, then the label in DM Mono 12.5 px `#3A352E`. Hover: border and text `#1C1A16`. Long labels truncate with an ellipsis at the column width.
+- **While writing, links shorten in place.** The moment the writer types a space or Enter right after a URL, the URL (minus any trailing punctuation, which stays as typed) is replaced by its label, and the full URL is kept behind it. A pasted URL that is already followed by whitespace in the pasted text shortens at paste time. A URL still being typed, with nothing after it, stays as typed until then.
+  - The editor is a textarea, so the underline comes from a mirror layer: a `div` behind the textarea with identical font, size, line-height, padding, width and wrapping, holding the same text in transparent color, with each link label wrapped in a span that draws the underline (1 px `#BDB6AA`, 4 px offset). It scrolls with the textarea. The textarea's own text stays ink.
+  - Backspace with the caret right after a label removes the whole label. Any other edit inside a label turns it back into plain text (the link is dropped). Typing at either edge is ordinary text.
+  - Cmd/Ctrl+Z immediately after a link shortens restores the full URL, like undoing an autocorrect (the browser's own undo does this, because the shortening is a normal text replacement).
+  - Copying a shortened link copies its label.
+  - The writing area grows with its text; it never fills the screen with empty textarea. Clicking the empty paper below the text puts the caret at the end. The References row sits 56 px under the last line of text and scrolls with it, never pinned to the viewport and never under the bottom bar. It appears as soon as the text contains a link (shortened or not), updating live. Here the pills are plain labels, not links. The row never takes focus or moves the caret.
+- **At publish:** any URL still written out in full is shortened the same way, so the published text never shows a raw address.
+- **Quotes:** a line starting with `> ` publishes as an indented quote: 28 px left padding, Literata italic, `#3A352E`, with the `> ` removed. No border or bar beside it.
+
+The quote icon SVG (18 × 18 viewBox, drawn at 12 px):
+```html
+<svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 5C5 6 3.5 8.2 3.5 11v2.5H7V10H4"/><path d="M14.5 5C12 6 10.5 8.2 10.5 11v2.5H14V10h-3"/></svg>
+```
 
 ## The receipt
 
@@ -145,7 +168,7 @@ The receipt answers one question: did a person write this? It sits on the paper 
     - 75–95%: `{name} wrote most of this by hand.`
     - 40–75%: `{name} wrote and gathered this.`
     - under 40%: `{name} gathered and shaped this.`
-    - response pieces end the sentence with `, in response to {site}.` instead of the full stop.
+    - links never change the sentence; they're listed under References.
   - **The meta line** below it, 4 px gap: DM Mono 12.5 px `#736C61`: `{duration} over {n} sittings · {date range}`, e.g. `52 min over 3 sittings · Oct 11–13`. Use "1 sitting" for one. Add the year only when it isn't the current year. Duration uses the existing formatter ("52 min", "1 hr 12 min").
 - 22 px below: **one** text button, DM Mono 12.5 px `#736C61`, `#1C1A16` on hover: the check icon (12 px), a 6 px gap, then `Verified · See how it was written`. It toggles the details below (`aria-expanded`, `aria-controls`); the label stays the same open or closed. There are no other links: no "Watch it being written", no separate "How this was written" or "Verified".
 - A sitting is a stretch of writing with no break longer than 30 minutes; sessions closer than that merge for display. The gap is measured in real clock time: the end of one session (its last event's absolute timestamp) to the start of the next. The raw sessions stay in the log.
@@ -155,7 +178,7 @@ The receipt answers one question: did a person write this? It sits on the paper 
 - 44 px below the links: a 1 px `#E8E3DA` top rule, 36 px padding, then "How this was written" in Literata 24 px.
 - Section labels: DM Mono 11 px, letter-spacing 0.14em, uppercase, `#9A9387`, 30 px above each section. The order is VERIFIED, SITTINGS, WHAT'S IN IT, REVISIONS, NOTES, then the fingerprints toggle. Verified comes first because it's what the reader clicked.
   - **SITTINGS:** one row per sitting, DM Mono 13 px, three columns (`{weekday, Mon D} · {start time}`, `{minutes}`, `{words} words`), 9 px vertical padding, 1 px `#EEEAE3` rule between rows.
-  - **WHAT'S IN IT:** a single 8 px tall bar with a 2 px gap between segments: typed `#1C1A16`, brought in `#BDB6AA`, quoted `#3D5A8A`. Below it, a DM Mono 12.5 px legend with 8 px swatches, listing only non-zero parts: `94% typed here`, `4% brought in`, `2% quoted from {site}`. Percentages are whole numbers that add up to 100.
+  - **WHAT'S IN IT:** a single 8 px tall bar with a 2 px gap between segments: typed `#1C1A16`, brought in `#BDB6AA`, quoted `#3D5A8A`. Below it, a DM Mono 12.5 px legend with 8 px swatches, listing only non-zero parts: `94% typed here`, `4% brought in`, `2% quoted`. Percentages are whole numbers that add up to 100. Link characters are left out of all three shares.
   - **REVISIONS:** Literata 17 px: `{ratio} words written for every word kept.`
   - **NOTES:** only when there are timing flags or offline stretches, in plain words: `2 stretches of unusually fast typing`, `1 stretch written offline and synced later`.
   - **VERIFIED:** Literata 17 px: "Longhand recorded this piece as it was written, keystroke by keystroke, on its own clock. The published text matches that record exactly, and neither has changed since it was published on {date}." Then, in `#5C564C`: "It shows how the words got onto the page. It can't see what happened off the page, like what the writer read or talked through first."
@@ -187,7 +210,7 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] On a public piece page, the title's top edge is 56 px from the viewport top, at every window size and for short and long pieces alike.
 - [ ] Every paper page renders through the one shared layout component; no page sets its own top padding, margin or vertical centering.
 - [ ] A public piece ends with the signature line (rule, seal, sentence, meta line, links) on the paper, with no card, box or background.
-- [ ] The signature sentence matches the typed-share tier, and response pieces add ", in response to {site}."
+- [ ] The signature sentence matches the typed-share tier; links never change it.
 - [ ] Under the signature there is exactly one link, "Verified · See how it was written"; it opens and closes the details inline, with Verified first; hashes only appear inside the fingerprints toggle.
 - [ ] The seal is the exact SVG in this spec.
 - [ ] No public page offers a replay, and no public endpoint serves events.
@@ -195,7 +218,16 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] In every light change (morning → afternoon → golden → night → morning), at most one sun is ever visible; a sun and moon show together only from golden hour to night.
 - [ ] No public text says "pasted" or "AI".
 - [ ] Every piece (draft, published or read-only) has a working "Pages" back button.
-- [ ] Response pieces show the quote icon and site name on the dashboard, and their title is never the article's title.
+- [ ] The dashboard has only the plus button; published pieces say "published" (never "receipt") and open their piece page.
+- [ ] There is one page per published piece (`/p/[slug]`); any old receipt-only route redirects to it. The writer sees a "Pages" back link there; readers don't.
+- [ ] Links in a piece show as hostnames in the text and as pills under REFERENCES, one per unique address, above the receipt; the same row shows live under the text while writing.
+- [ ] Pasting a long URL into an otherwise typed piece still reads "wrote this by hand."
+- [ ] Typing a URL and then a space turns it into its underlined hostname in the editor at once, with the caret after the space; Cmd/Ctrl+Z right after brings the full URL back; Backspace after a shortened link removes it whole; reloading the draft keeps it shortened; the piece still publishes.
+- [ ] After every edit, rebuilding the event log gives exactly the text on screen.
+- [ ] On every piece page (old and new), no full URL is ever shown in the text.
+- [ ] In the editor, REFERENCES sits right under the text, never under the bottom bar.
+- [ ] Each reference pill is one row (icon and label side by side) inside a rounded 1 px outline, never stacked.
+- [ ] Nothing in the app says "response", "respond" or "source", and no code fetches linked pages.
 - [ ] Clicking a button with the mouse never leaves a focus box; tabbing to it shows the outline.
 
 ## Reference implementation

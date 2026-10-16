@@ -92,7 +92,7 @@ export function EditorDebugPanel({
     now,
     delayedBatchCount,
   });
-  const receipt = computeReceipt(batches, value);
+  const metrics = computeReceipt(batches, value);
 
   return (
     <aside
@@ -115,7 +115,7 @@ export function EditorDebugPanel({
         <p className="text-ink">
           light {sceneLight} · condition {sceneCondition}
         </p>
-        <p className="text-ink">source {sceneSourceLabel}</p>
+        <p className="text-ink">weather {sceneSourceLabel}</p>
         {debugOverride ? (
           <p>debug preview (this tab only, not saved)</p>
         ) : null}
@@ -177,18 +177,18 @@ export function EditorDebugPanel({
       </div>
 
       <div className="mt-2 space-y-1 border-t border-[var(--popover-border)] pt-2 text-label">
-        <p>receipt v{receipt.version}</p>
-        <p>active {formatMs(receipt.activeWritingTimeMs)}</p>
-        <p>elapsed {formatMs(receipt.elapsedSpanMs)}</p>
-        <p>sessions {receipt.sessionCount}</p>
+        <p>metrics v{metrics.version}</p>
+        <p>active {formatMs(metrics.activeWritingTimeMs)}</p>
+        <p>elapsed {formatMs(metrics.elapsedSpanMs)}</p>
+        <p>sessions {metrics.sessionCount}</p>
         <p>
-          typed {formatShare(receipt.typedShare)} · pasted{" "}
-          {formatShare(receipt.pastedShare)} · quoted{" "}
-          {formatShare(receipt.quotedShare)}
+          typed {formatShare(metrics.typedShare)} · brought in{" "}
+          {formatShare(metrics.pastedShare)} · quoted{" "}
+          {formatShare(metrics.quotedShare)}
         </p>
-        <p>revision {receipt.revisionRatio.toFixed(2)}x</p>
-        <p>words {receipt.wordCount}</p>
-        <p>delayed batches {receipt.delayedBatchCount}</p>
+        <p>revision {metrics.revisionRatio.toFixed(2)}x</p>
+        <p>words {metrics.wordCount}</p>
+        <p>delayed batches {metrics.delayedBatchCount}</p>
       </div>
       {syncStatus ? (
         <div className="mt-2 space-y-1 border-t border-[var(--popover-border)] pt-2 text-label">

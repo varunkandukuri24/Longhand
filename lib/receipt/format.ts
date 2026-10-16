@@ -60,31 +60,23 @@ export function sharesToPercents(
 
 /**
  * Signature sentence from typed share of the final text.
- * Tiers: ≥95%, 75–95%, 40–75%, under 40%. Response pieces replace the
- * full stop with ", in response to {site}."
+ * Tiers: ≥95%, 75–95%, 40–75%, under 40%. Links never change the sentence.
  */
 export function formatSignatureSentence(
   name: string,
   typedShare: number,
-  responseSite?: string | null,
 ): string {
   const who = name.trim() || "Anonymous";
-  let core: string;
   if (typedShare >= 0.95) {
-    core = `${who} wrote this by hand`;
-  } else if (typedShare >= 0.75) {
-    core = `${who} wrote most of this by hand`;
-  } else if (typedShare >= 0.4) {
-    core = `${who} wrote and gathered this`;
-  } else {
-    core = `${who} gathered and shaped this`;
+    return `${who} wrote this by hand.`;
   }
-
-  const site = responseSite?.trim();
-  if (site) {
-    return `${core}, in response to ${site}.`;
+  if (typedShare >= 0.75) {
+    return `${who} wrote most of this by hand.`;
   }
-  return `${core}.`;
+  if (typedShare >= 0.4) {
+    return `${who} wrote and gathered this.`;
+  }
+  return `${who} gathered and shaped this.`;
 }
 
 /** "1 sitting" / "3 sittings". */
@@ -191,7 +183,6 @@ export function formatCompositionLegend(
   typedShare: number,
   broughtInShare: number,
   quotedShare: number,
-  quotedSite?: string | null,
 ): CompositionLegendPart[] {
   const percents = sharesToPercents(typedShare, broughtInShare, quotedShare);
   const parts: CompositionLegendPart[] = [];
@@ -210,13 +201,10 @@ export function formatCompositionLegend(
     });
   }
   if (percents.quoted > 0) {
-    const site = quotedSite?.trim();
     parts.push({
       kind: "quoted",
       percent: percents.quoted,
-      label: site
-        ? `${percents.quoted}% quoted from ${site}`
-        : `${percents.quoted}% quoted`,
+      label: `${percents.quoted}% quoted`,
     });
   }
   return parts;

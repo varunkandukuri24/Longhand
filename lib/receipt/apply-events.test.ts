@@ -255,3 +255,73 @@ describe("applyEvents", () => {
     expect(rebuilt.origins).toEqual(origins);
   });
 });
+
+describe("link events", () => {
+  it("shortens a URL with a link event", () => {
+    const url = "https://www.theatlantic.com/ideas/x";
+    const label = "theatlantic.com";
+    const events: EditEvent[] = [
+      { t: 0, type: "insert", pos: 0, len: url.length, text: url },
+      { t: 10, type: "insert", pos: url.length, len: 1, text: " " },
+      {
+        t: 20,
+        type: "link",
+        pos: 0,
+        len: url.length,
+        text: label,
+        url,
+      },
+    ];
+    const shortened = applyEvents(events);
+    expect(shortened.text).toBe(`${label} `);
+    expect(shortened.links).toEqual([
+      { start: 0, end: label.length, url },
+    ]);
+    expect(
+      shortened.origins.slice(0, label.length).every((o) => o === "link"),
+    ).toBe(true);
+  });
+
+  it("keeps origins and links in sync when typing before, after and around a link", () => {
+    const url = "https://example.com/a";
+    const label = "example.com";
+    const base: EditEvent[] = [
+      { t: 0, type: "insert", pos: 0, len: url.length, text: url },
+      {
+        t: 10,
+        type: "link",
+        pos: 0,
+        len: url.length,
+        text: label,
+        url,
+      },
+    ];
+    const after = applyEvents([
+      ...base,
+      { t: 20, type: "insert", pos: 0, len: 3, text: "Hi " },
+      { t: 30, type: "insert", pos: 3 + label.length, len: 2, text: " !" },
+    ]);
+    expect(after.text).toBe(`Hi ${label} !`);
+    expect(after.links).toEqual([
+      { start: 3, end: 3 + label.length, url },
+    ]);
+    expect(after.origins).toHaveLength(after.text.length);
+    expect(after.origins.slice(3, 3 + label.length).every((o) => o === "link")).toBe(
+      true,
+    );
+
+    const deleted = applyEvents([
+      ...base,
+      { t: 20, type: "insert", pos: 0, len: 3, text: "Hi " },
+      {
+        t: 40,
+        type: "delete",
+        pos: 3,
+        len: label.length,
+        text: label,
+      },
+    ]);
+    expect(deleted.text).toBe("Hi ");
+    expect(deleted.links).toEqual([]);
+  });
+});

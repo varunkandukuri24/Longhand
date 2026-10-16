@@ -50,6 +50,20 @@
       "when": 1792100000000,
       "tag": "0006_drop_replay_public",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792200000000,
+      "tag": "0007_drop_response_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792300000000,
+      "tag": "0008_piece_links",
+      "breakpoints": true
     }
   ]
 }

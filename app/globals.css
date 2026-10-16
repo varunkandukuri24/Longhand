@@ -53,21 +53,63 @@ body {
 }
 
 /* Writing textarea: invisible chrome; only words and caret */
+.writing-frame {
+  position: relative;
+  width: 100%;
+}
+
+.writing-mirror,
 .writing-text {
   display: block;
   width: 100%;
-  min-height: calc(100dvh - 140px - 80px);
+  min-height: calc(1.7em * 3);
   margin: 0;
   padding: 0;
   border: none;
   outline: none;
+  font: inherit;
+  font-family: var(--font-writing), serif;
+  font-size: 22px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.writing-mirror {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 0;
+  height: auto;
+  min-height: 100%;
+  color: transparent;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.writing-mirror-link {
+  text-decoration: underline;
+  text-decoration-color: #bdb6aa;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.writing-text {
+  position: relative;
+  z-index: 1;
+  height: auto;
   resize: none;
+  overflow: hidden;
   background: transparent;
   box-shadow: none;
   appearance: none;
   -webkit-appearance: none;
-  field-sizing: content;
+  color: var(--ink);
   caret-color: var(--caret);
+  /* Grow with content; never fill the viewport. */
+  field-sizing: content;
 }
 
 .writing-text:focus,
@@ -381,6 +423,53 @@ body {
 .pages-back:hover {
   color: var(--ink);
   text-decoration: none;
+}
+
+.reference-pill {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  max-width: 100%;
+  padding: 0 14px 0 11px;
+  border: 1px solid #e6e0d4;
+  border-radius: 999px;
+  background: transparent;
+  color: #3a352e;
+  font-family: var(--font-ui), monospace;
+  font-size: 12.5px;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.reference-pill > svg {
+  display: block;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+}
+
+.reference-pill > span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.reference-pill:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.reference-pill:hover svg {
+  color: var(--ink);
 }
 
 /* Keyboard focus only — mouse click leaves no box (never on .writing-text) */

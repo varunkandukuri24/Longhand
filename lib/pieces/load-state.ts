@@ -1,13 +1,14 @@
 import { db } from "@/db";
 import { eventBatches, sessions } from "@/db/schema";
 import { applyEvents } from "@/lib/receipt/apply-events";
-import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
+import type { CharOrigin, EditEvent, TextLink } from "@/lib/receipt/types";
 import { asc, eq } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm";
 
 export type PieceState = {
   text: string;
   origins: CharOrigin[];
+  links: TextLink[];
   events: EditEvent[];
   lastAckSeq: number | null;
   lastSessionId: string | null;
@@ -58,11 +59,12 @@ export async function loadPieceState(pieceId: string): Promise<PieceState> {
     lastSessionId = row.sessionId;
   }
 
-  const { text, origins } = applyEvents(events);
+  const { text, origins, links } = applyEvents(events);
 
   return {
     text,
     origins,
+    links,
     events,
     lastAckSeq,
     lastSessionId,

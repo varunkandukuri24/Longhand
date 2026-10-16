@@ -18,8 +18,8 @@ The MVP has one job: find out whether writers attach an effort receipt when nobo
 
 - A minimal, focused web editor people choose to write in.
 - A tamper-evident record of how each piece was written, captured live.
-- A public receipt page with stats and a replay, linkable from anywhere.
-- A response mode: paste a link, write your take, and the receipt ties to the source.
+- One public page per published piece, with the receipt at the end, linkable from anywhere.
+- References: any link in a piece is listed at the end as a small pill.
 
 **Non-goals for the MVP**
 
@@ -43,13 +43,13 @@ The first user is someone who already writes in public and wants credit for doin
 | Students, voluntarily | Essays | Pre-empt a false AI-detector flag |
 | Journalers | Private thoughts, morning pages | Mostly won't share; they come for the Freewrite-style ritual, and their private session history keeps them writing |
 
-Core use cases for the MVP: journal privately, with nothing ever published; write a freeform piece and publish it with a receipt; respond to an article by pasting its link; share the receipt link on X, LinkedIn or a blog.
+Core use cases for the MVP: journal privately, with nothing ever published; write a freeform piece and publish it with a receipt; write about an article with its link in the piece; share the piece's link on X, LinkedIn or a blog.
 
 ## Core concepts
 
 Four objects carry the whole product.
 
-- **Piece:** one document. Mode is `freewrite` or `response`. A response piece stores a source URL and its title.
+- **Piece:** one document. There are no modes; links in its text become its references.
 - **Session:** one continuous stretch of writing on a piece. A piece can have many sessions over days.
 - **Event log:** every edit (insert, delete, paste) with a timestamp, streamed to the server in hash-chained batches while you write. It is the evidence.
 - **Effort receipt:** stats computed from the event log when a piece is published, shown on a public page with an optional replay.
@@ -85,9 +85,9 @@ Seven features ship in the MVP; P0 items block launch.
 | --- | --- | --- | --- |
 | F1 | Accounts | Email magic-link sign-in. A dashboard lists your pieces with draft or published status. Writers choose a display name at first sign-in; public pages show only that name, never any part of the email address. | P0 |
 | F2 | Focus editor | Immersive by default, like Freewrite: the whole screen is paper, with the side window (F7) along one edge, and enters browser fullscreen on the first click or keystroke (browsers require a user gesture), with Esc to exit. One serif font, no toolbar, and any controls fade out while typing. A "Pages" back button at the start of the bottom bar returns to the dashboard from any piece. Optional timer (10, 15, 25 min). Optional no-backspace mode, which blocks every kind of deletion, including cut and undo. Autosaves continuously. Opening a piece puts a blinking caret at the end of the text, ready to type with no click; the writing area never shows a border or focus box. | P0 |
-| F3 | Live event capture | Every edit is recorded with a timestamp and streamed to the server every 5 seconds in hash-chained batches. Works offline and syncs on reconnect, flagged as delayed. Resending a batch is harmless (idempotent), and a writer can close the tab and resume exactly where they left off. | P0 |
-| F4 | Response mode | A new piece starts from the dashboard's plus icon (blank page) or quote icon (respond to a link: paste a URL). On the dashboard, response pieces carry the quote icon and the source's site name, and their title is the writer's own, never the article's. The server fetches only the page's title and site name, safely (see Privacy). If the fetch fails, the piece is still created with the hostname as an editable title. A line above the text reads "In response to [title] · [site]", linking to the source, and the receipt shows "Response to [title]". Text pasted onto a line starting with "> " counts as quoted, not pasted. | P0 |
-| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates a public page at /p/[slug]. Owner chooses whether the replay is public (off by default). Publishing freezes the piece: no editing after publish in the MVP. The receipt is a signature line at the end of the piece, with the full details behind a single "Verified · See how it was written" link (see the Effort receipt spec and docs/DESIGN.md). Times show as minutes and hours ("52 min", "1 hr 12 min"), never decimals. | P0 |
+| F3 | Live event capture | Every edit is recorded with a timestamp and streamed to the server every 5 seconds in hash-chained batches. Works offline and syncs on reconnect, flagged as delayed. Resending a batch is harmless (idempotent), and a writer can close the tab and resume exactly where they left off. If the server refuses a batch (anything other than a network failure), the bar says "not saved" instead of "saving" and the error is logged; it never sits on "saving" indefinitely. Publish first waits for every pending batch to be saved, and if one was refused it says so in plain words instead of "Try again after saving". | P0 |
+| F4 | References | There is one way to start a piece: the dashboard's plus icon. Any http or https link in the text becomes a reference. At the end of a published piece, above the receipt, a References row lists one pill per unique address, in the order they first appear: the quote icon and the hostname without "www." (theatlantic.com). While writing, a link shortens in place as soon as the writer types a space or Enter right after it (or pastes a link that already has a space after it): the full address becomes its hostname, underlined, with the full address kept behind it. Cmd/Ctrl+Z right after restores the full address. Backspace right after a shortened link removes it whole; editing inside one turns it back into plain text. Any link still written out in full at publish is shortened then. In the published text, each link shows as its hostname, underlined, opening in a new tab. The References row appears under the text while writing as soon as a link is typed. Longhand never fetches linked pages. Link characters don't count toward the typed, brought in or quoted shares. Text pasted onto a line starting with "> " counts as quoted, and those lines publish as indented italic quotes. | P0 |
+| F5 | Publish and receipt | Publishing verifies the event log rebuilds the final text, computes the receipt, and creates the piece's page at /p/[slug]. That is the only page for a published piece, for readers and the writer alike: title, text, references, then the receipt. There is no separate receipt page. On the dashboard, a published piece opens this page, and the writer sees a "Pages" back link at the bottom left. Owner chooses whether the replay is public (off by default). Publishing freezes the piece: no editing after publish in the MVP. The receipt is a signature line at the end of the piece, with the full details behind a single "Verified · See how it was written" link (see the Effort receipt spec and docs/DESIGN.md). Times show as minutes and hours ("52 min", "1 hr 12 min"), never decimals. | P0 |
 | F6 | Replay | Removed from the MVP: there is no public replay. The full event log is kept, so it can return later. | P1 |
 | F7 | Ambient room | A narrow side window shows the local time of day (light) and current weather (condition), per the Design language section and docs/DESIGN.md. It sits on the left by default; writers can drag it to the right edge, and the choice is saved per user. Location is coarse and optional: the display-name screen also asks "What city are you writing from?", which writers can skip or change later. There is no IP lookup and never a browser location prompt. If skipped, light follows the device clock with typical sunrise and sunset times and the condition defaults to clear. Weather is checked about once an hour. Writers can choose Auto or pin a scene. The receipt may note conditions ("2 of 3 sessions in the rain"), never the place. | P1 |
 
@@ -109,14 +109,14 @@ The receipt shows facts derived from the event log, never a verdict.
 | Elapsed span | First session start to the last batch's server receive time (server time, not client time) | "over 3 days" |
 | Sittings | Sessions less than 30 minutes apart count as one sitting; raw sessions stay in the log for integrity | "3 sittings" |
 | Typed share | Characters in the final text that came from typed input ÷ final length | "94% typed" |
-| Pasted share | Final characters from paste events, excluding quoted source text | "4% brought in" |
-| Quoted share | Final characters pasted inside a quote block (`> `) in response mode | "2% quoted from source" |
+| Pasted share | Final characters from paste events, excluding quoted text and links | "4% brought in" |
+| Quoted share | Final characters pasted inside a quote block (`> `) | "2% quoted" |
 | Revision ratio | Total characters typed ÷ final characters | "1.6x written for every word kept" |
 | Word count | Final words | "812 words" |
 | Timing flags | A fast stretch is any rolling 60-second window above 150 wpm (5 characters = 1 word); uniform typing is 50+ consecutive keystrokes whose intervals vary by less than 15% (coefficient of variation) | Neutral note, e.g. "2 unusually fast stretches" |
 | Delayed sync | Batches that reached the server more than 2 minutes late (offline) | "1 offline stretch" |
 
-Character attribution works by tracking origin per character: each character in the live document is tagged typed, pasted or quoted, and deletions remove tags. The final shares come from those tags, so deleting a pasted block removes it from the pasted share.
+Character attribution works by tracking origin per character: each character in the live document is tagged typed, pasted or quoted, and deletions remove tags. The final shares come from those tags, so deleting a pasted block removes it from the pasted share. Characters that are part of a link are left out of all three shares, so pasting a long address never makes a handwritten piece look gathered.
 
 **What the reader sees.** At the end of the piece, a signature line: one plain sentence saying who wrote it and how, then the minutes, sittings and dates ("52 min over 3 sittings · Oct 11–13"). Below it, one quiet link, "Verified · See how it was written", opens the details inline: a plain-language Verified explanation first, then sittings, what's in it (typed, brought in, quoted), revisions, any timing notes, and the technical fingerprints folded away at the bottom.
 
@@ -126,7 +126,7 @@ Character attribution works by tracking origin per character: each character in 
 | 75–95% | "{name} wrote most of this by hand." |
 | 40–75% | "{name} wrote and gathered this." |
 | Under 40% | "{name} gathered and shaped this." |
-| Response pieces | The same sentence, ending ", in response to {site}." |
+| Links | Never change the sentence; they're listed under References. |
 
 **Language rules.** Facts, never verdicts: no scores, no "only", no red or warnings. Effort always leads: every piece shows its minutes and sittings, whatever the mix. Percentages appear only in the details, never in the signature. Say "brought in", not "pasted". Never say "AI": we can't know where brought-in words came from.
 
@@ -148,8 +148,8 @@ The receipt is credible because time is witnessed by the server as it passes, no
 - Drafts and event logs are private to the owner. Nothing is public until they publish.
 - There is no public replay. Public pages show the text and the receipt only; the event log is never served publicly.
 - Keystroke timing is treated as sensitive. It is never sold, shared or used for training, and it's deleted with the piece.
-- Response mode stores only the source URL, title and site name, never the article's text.
-- Fetching a pasted URL is locked down: http and https only, no localhost, private or internal addresses (including after redirects), at most 3 redirects, a 5-second timeout and 1 MB read limit.
+- Longhand never fetches linked pages; a reference is only the address the writer typed. Published links open with rel="noopener nofollow ugc".
+- The server makes no outbound requests for links in a piece, so there is no URL-fetching code to lock down.
 
 ## Success metrics
 
@@ -161,7 +161,7 @@ The one number that decides whether to keep going: the share of published pieces
 | --- | --- | --- |
 | Unprompted sharing | Published pieces with ≥1 receipt view from an external referrer | ≥ 40% of pieces |
 | Return writing | Writers with sessions on ≥ 3 separate days in 14 days | ≥ 30% of writers |
-| Response pull | Share of published pieces in response mode | Tracked; tells you which mode to lead with |
+| Reference pull | Share of published pieces with at least one reference | Tracked; tells you which mode to lead with |
 | Receipt engagement | External viewers who open the replay | Tracked; tells you if replay is worth investing in |
 
 The bars are starting guesses to revise after the first cohort. If writers only share receipts when someone requires it, the product has drifted into the crowded compliance market.
@@ -186,12 +186,12 @@ Edits stream from the browser every 5 seconds; the server checks the chain and t
 | Table | Key fields |
 | --- | --- |
 | users | id, email, display_name, city, lat, lon, window_side (left / right), created_at |
-| pieces | id, user_id, title, mode (freewrite / response), source_url, source_title, source_site, status (draft / published), slug, final_text, final_text_hash, active_session_id, published_at |
+| pieces | id, user_id, title, status (draft / published), slug, final_text, final_text_hash, links (jsonb: start, end, url; computed by the server from the event log at publish), active_session_id, published_at |
 | sessions | id, piece_id, started_at, ended_at |
 | event_batches | id, session_id, seq, events (jsonb), prev_hash, hash, client_t_start, client_t_end, server_received_at, delayed |
 | receipts | piece_id, metrics (jsonb), chain_head_hash, version, computed_at |
 
-Each event in a batch is `{t, type, pos, len, text}`, where `t` is ms since session start and `type` is insert, delete or paste. Receipts store a `version` so the metric definitions can change later without breaking old receipts.
+Each event in a batch is `{t, type, pos, len, text}`, where `t` is ms since session start and `type` is insert, delete, paste or link (replaces a written-out address with its hostname and carries the url). Receipts store a `version` so the metric definitions can change later without breaking old receipts.
 
 ## Cursor build instructions
 

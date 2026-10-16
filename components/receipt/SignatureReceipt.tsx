@@ -22,7 +22,6 @@ type SignatureReceiptProps = {
   metrics: ReceiptMetrics;
   finalTextHash: string;
   chainHeadHash: string;
-  responseSite?: string | null;
   weatherNote?: string | null;
   locale?: string;
 };
@@ -46,7 +45,6 @@ export function SignatureReceipt({
   metrics,
   finalTextHash,
   chainHeadHash,
-  responseSite = null,
   weatherNote = null,
   locale,
 }: SignatureReceiptProps) {
@@ -56,11 +54,7 @@ export function SignatureReceipt({
   const detailsId = useId();
 
   const sittings = sittingRowsFor(metrics);
-  const sentence = formatSignatureSentence(
-    author,
-    metrics.typedShare,
-    responseSite,
-  );
+  const sentence = formatSignatureSentence(author, metrics.typedShare);
   const meta = formatSignatureMeta(
     metrics.activeWritingTimeMs,
     sittings.map((s) => s.startedAt),
@@ -70,7 +64,6 @@ export function SignatureReceipt({
     metrics.typedShare,
     metrics.pastedShare,
     metrics.quotedShare,
-    responseSite,
   );
   const percents = sharesToPercents(
     metrics.typedShare,

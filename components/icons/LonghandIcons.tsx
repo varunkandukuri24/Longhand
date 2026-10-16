@@ -41,15 +41,25 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
-/** Pair of curly quotation marks. */
+/** Pair of curly quotation marks (DESIGN.md References; drawn at 12 px). */
 export function QuoteIcon(props: IconProps) {
+  const size = props.size ?? 12;
   return (
-    <Svg {...props}>
-      <path {...stroke} d="M3.75 8.25c0-1.9 1-3.2 2.75-3.75" />
-      <path {...stroke} d="M3.75 8.25V13h3" />
-      <path {...stroke} d="M10.25 8.25c0-1.9 1-3.2 2.75-3.75" />
-      <path {...stroke} d="M10.25 8.25V13h3" />
-    </Svg>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={props.className}
+    >
+      <path d="M7.5 5C5 6 3.5 8.2 3.5 11v2.5H7V10H4" />
+      <path d="M14.5 5C12 6 10.5 8.2 10.5 11v2.5H14V10h-3" />
+    </svg>
   );
 }
 
@@ -61,7 +71,7 @@ export function BackIcon(props: IconProps) {
   );
 }
 
-/** Check mark for the receipt Verified button (12 px). */
+/** Check mark for the Verified button (12 px). */
 export function CheckIcon(props: IconProps) {
   return (
     <Svg {...props} size={props.size ?? 12}>

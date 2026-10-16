@@ -19,7 +19,7 @@ function parseCondition(raw: unknown): Condition | null {
 /**
  * Start a writing session for a piece. Ends any open session, claims
  * pieces.active_session_id so this session is the sole writer.
- * Stores the ambient condition at session start for the receipt note.
+ * Stores the ambient condition at session start for the weather note.
  */
 export async function POST(request: Request, context: RouteContext) {
   const session = await auth();

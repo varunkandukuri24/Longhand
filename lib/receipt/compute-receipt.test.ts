@@ -165,7 +165,7 @@ describe("origin shares", () => {
     expect(rebuilt.text).toBe("> cited\nmine.");
     expect(rebuilt.origins.slice(2, 7).every((o) => o === "quoted")).toBe(true);
 
-    const shares = originShares(rebuilt.origins, rebuilt.text.length);
+    const shares = originShares(rebuilt.origins, rebuilt.text);
     expect(shares.quotedShare).toBeCloseTo(5 / rebuilt.text.length);
     expect(shares.pastedShare).toBe(0);
     expect(shares.typedShare).toBeCloseTo(8 / rebuilt.text.length);
@@ -283,8 +283,77 @@ describe("delayedBatchCount", () => {
   });
 });
 
+describe("originShares with links", () => {
+  it("excludes link characters so a typed piece with a pasted URL stays handwritten", () => {
+    const url = `https://example.com/${"x".repeat(70)}`;
+    expect(url.length).toBe(90);
+    const typed = "I wrote every word here by hand. ";
+    const events: EditEvent[] = [
+      ...typedChars(typed, 0, 80),
+      {
+        t: typed.length * 80,
+        type: "paste",
+        pos: typed.length,
+        len: url.length,
+        text: url,
+      },
+    ];
+    const rebuilt = applyEvents(events);
+    expect(rebuilt.text).toBe(typed + url);
+    const shares = originShares(rebuilt.origins, rebuilt.text);
+    expect(shares.typedShare).toBe(1);
+    expect(shares.pastedShare).toBe(0);
+    const receipt = computeReceipt(
+      [batch({ sessionId: "s1", events, serverReceivedAt: 10_000 })],
+      rebuilt.text,
+    );
+    expect(receipt.typedShare).toBe(1);
+    expect(receipt.typedShare).toBeGreaterThanOrEqual(0.95);
+  });
+
+  it("excludes shortened link labels so a typed piece still reads handwritten", () => {
+    const url = "https://www.theatlantic.com/ideas/x";
+    const label = "theatlantic.com";
+    const typed = "I read this. ";
+    const events: EditEvent[] = [
+      ...typedChars(typed, 0, 50),
+      {
+        t: 1000,
+        type: "insert",
+        pos: typed.length,
+        len: url.length,
+        text: url,
+      },
+      {
+        t: 1100,
+        type: "insert",
+        pos: typed.length + url.length,
+        len: 1,
+        text: " ",
+      },
+      {
+        t: 1200,
+        type: "link",
+        pos: typed.length,
+        len: url.length,
+        text: label,
+        url,
+      },
+    ];
+    const rebuilt = applyEvents(events);
+    expect(rebuilt.text).toBe(`${typed}${label} `);
+    const shares = originShares(rebuilt.origins, rebuilt.text);
+    expect(shares.typedShare).toBe(1);
+    const receipt = computeReceipt(
+      [batch({ sessionId: "s1", events, serverReceivedAt: 10_000 })],
+      rebuilt.text,
+    );
+    expect(receipt.typedShare).toBeGreaterThanOrEqual(0.95);
+  });
+});
+
 describe("computeReceipt", () => {
-  it("returns version 1 with all metrics", () => {
+  it("returns version 2 with all metrics", () => {
     const events = typedChars("hi there", 0, 100);
     const finalText = applyEvents(events).text;
     const receipt = computeReceipt(
@@ -298,7 +367,7 @@ describe("computeReceipt", () => {
       ],
       finalText,
     );
-    expect(receipt.version).toBe(1);
+    expect(receipt.version).toBe(2);
     expect(receipt.wordCount).toBe(2);
     expect(receipt.sessionCount).toBe(1);
     expect(receipt.typedShare).toBe(1);

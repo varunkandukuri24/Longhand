@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { pieces } from "@/db/schema";
 import { requireUserWithDisplayName } from "@/lib/auth/display-name";
 import { and, eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 export default async function WritePage({
   params,
@@ -18,11 +18,6 @@ export default async function WritePage({
       status: pieces.status,
       slug: pieces.slug,
       title: pieces.title,
-      finalText: pieces.finalText,
-      mode: pieces.mode,
-      sourceUrl: pieces.sourceUrl,
-      sourceTitle: pieces.sourceTitle,
-      sourceSite: pieces.sourceSite,
     })
     .from(pieces)
     .where(and(eq(pieces.id, pieceId), eq(pieces.userId, user.id)))
@@ -32,38 +27,14 @@ export default async function WritePage({
     notFound();
   }
 
-  const source =
-    piece.mode === "response" &&
-    piece.sourceUrl &&
-    piece.sourceTitle &&
-    piece.sourceSite
-      ? {
-          url: piece.sourceUrl,
-          title: piece.sourceTitle,
-          site: piece.sourceSite,
-        }
-      : null;
-
   if (piece.status === "published" && piece.slug) {
-    return (
-      <FocusEditor
-        pieceId={piece.id}
-        source={source}
-        initialWindowSide={user.windowSide}
-        published={{
-          slug: piece.slug,
-          title: piece.title,
-          finalText: piece.finalText ?? "",
-        }}
-      />
-    );
+    redirect(`/p/${piece.slug}`);
   }
 
   return (
     <FocusEditor
       pieceId={piece.id}
       initialTitle={piece.title}
-      source={source}
       initialWindowSide={user.windowSide}
     />
   );

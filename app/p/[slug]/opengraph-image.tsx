@@ -9,7 +9,7 @@ import { loadGoogleFont } from "@/lib/og/fonts";
 import { eq } from "drizzle-orm";
 import { ImageResponse } from "next/og";
 
-export const alt = "Longhand effort receipt";
+export const alt = "Longhand";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -34,8 +34,6 @@ export default async function Image({ params }: ImageProps) {
     .select({
       title: pieces.title,
       authorName: users.name,
-      mode: pieces.mode,
-      sourceSite: pieces.sourceSite,
       metrics: receipts.metrics,
     })
     .from(pieces)
@@ -47,11 +45,9 @@ export default async function Image({ params }: ImageProps) {
   const title = row?.title ?? "Untitled";
   const author = row?.authorName?.trim() || "Anonymous";
   const metrics = row?.metrics;
-  const responseSite =
-    row?.mode === "response" ? row.sourceSite?.trim() || null : null;
 
   const sentence = metrics
-    ? formatSignatureSentence(author, metrics.typedShare, responseSite)
+    ? formatSignatureSentence(author, metrics.typedShare)
     : formatSignatureSentence(author, 1);
   const sittings = metrics ? sittingRowsFor(metrics) : [];
   const meta = metrics

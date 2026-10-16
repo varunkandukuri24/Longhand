@@ -15,7 +15,7 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   title: "Longhand",
-  description: "Focused writing with shareable effort receipts.",
+  description: "Focused writing with shareable proof of effort.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

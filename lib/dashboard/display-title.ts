@@ -1,6 +1,5 @@
 /**
- * Dashboard list title for a piece. Response pieces never show the source
- * article title — only the writer's title or the first line of their text.
+ * Dashboard list title for a piece: writer's title, else first-line preview.
  */
 
 function firstLinePreview(text: string, max = 60): string {
@@ -17,22 +16,11 @@ export type DashboardDisplayTitle = {
 };
 
 export function dashboardDisplayTitle(input: {
-  mode: "freewrite" | "response";
   title: string;
-  sourceTitle: string | null | undefined;
   bodyText: string;
 }): DashboardDisplayTitle {
   const title = input.title.trim();
-  const source = (input.sourceTitle ?? "").trim();
   const preview = firstLinePreview(input.bodyText);
-
-  if (input.mode === "response") {
-    if (title && title !== source) {
-      return { label: title, muted: false };
-    }
-    if (preview) return { label: preview, muted: true };
-    return { label: "Untitled", muted: true };
-  }
 
   if (title) return { label: title, muted: false };
   if (preview) return { label: preview, muted: true };

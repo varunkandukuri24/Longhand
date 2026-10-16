@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { pieces, receipts } from "@/db/schema";
 import { applyEvents } from "@/lib/receipt/apply-events";
 import { computeReceipt } from "@/lib/receipt/compute-receipt";
+import { shortenRemainingUrls } from "@/lib/receipt/shorten";
 import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import { makePieceSlug } from "@/lib/receipt/slug";
 import { eq } from "drizzle-orm";
@@ -32,7 +33,8 @@ export type PublishResult = PublishSuccess | PublishFailure;
 
 /**
  * Flush-verified publish: rebuild from stored batches, require byte-exact match
- * with finalText, then freeze the piece and store the receipt.
+ * with finalText, shorten any remaining full URLs for storage (not the log),
+ * then freeze the piece and store the receipt.
  */
 export async function publishPiece(input: PublishInput): Promise<PublishResult> {
   const title = input.title.trim();
@@ -67,11 +69,9 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
   }
 
   const { batches, chainHeadHash } = await loadReceiptBatches(input.pieceId);
-  const rebuilt = applyEvents(
-    batches.flatMap((batch) => batch.events),
-  ).text;
+  const rebuilt = applyEvents(batches.flatMap((batch) => batch.events));
 
-  if (rebuilt !== input.finalText) {
+  if (rebuilt.text !== input.finalText) {
     return {
       ok: false,
       status: 409,
@@ -80,8 +80,9 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
     };
   }
 
-  const finalTextHash = sha256HexNode(input.finalText);
-  const metrics = computeReceipt(batches, input.finalText);
+  const published = shortenRemainingUrls(rebuilt.text, rebuilt.links);
+  const finalTextHash = sha256HexNode(published.text);
+  const metrics = computeReceipt(batches, rebuilt.text);
   const publishedAt = new Date();
 
   let slug = makePieceSlug(title);
@@ -94,8 +95,9 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
             title,
             status: "published",
             slug,
-            finalText: input.finalText,
+            finalText: published.text,
             finalTextHash,
+            links: published.links,
             publishedAt,
             activeSessionId: null,
             updatedAt: publishedAt,

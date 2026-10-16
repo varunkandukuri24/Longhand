@@ -10,35 +10,27 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 describe("dashboardDisplayTitle", () => {
-  it("never uses the source article title for a response piece", () => {
-    const sourceTitle = "Roman Stanek becomes latest gaijin";
+  it("uses the title when set", () => {
     const shown = dashboardDisplayTitle({
-      mode: "response",
-      title: sourceTitle,
-      sourceTitle,
-      bodyText: "My own first line\nmore",
-    });
-    expect(shown.label).toBe("My own first line");
-    expect(shown.label).not.toBe(sourceTitle);
-    expect(shown.muted).toBe(true);
-  });
-
-  it("uses the writer's title when it differs from the source", () => {
-    const shown = dashboardDisplayTitle({
-      mode: "response",
       title: "Notes on the race",
-      sourceTitle: "Roman Stanek becomes latest gaijin",
       bodyText: "ignored when title is set",
     });
     expect(shown.label).toBe("Notes on the race");
     expect(shown.muted).toBe(false);
   });
 
-  it("falls back to Untitled for an empty response", () => {
+  it("uses the first line of the body when untitled", () => {
     const shown = dashboardDisplayTitle({
-      mode: "response",
-      title: "Article title",
-      sourceTitle: "Article title",
+      title: "",
+      bodyText: "My own first line\nmore",
+    });
+    expect(shown.label).toBe("My own first line");
+    expect(shown.muted).toBe(true);
+  });
+
+  it("falls back to Untitled for an empty piece", () => {
+    const shown = dashboardDisplayTitle({
+      title: "",
       bodyText: "",
     });
     expect(shown.label).toBe("Untitled");
@@ -50,10 +42,7 @@ describe("dashboard layout tokens", () => {
   it("heading top offset is 56 px in code and CSS", () => {
     expect(DASHBOARD_HEADING_TOP_PX).toBe(56);
     expect(PAGE_TOP_OFFSET_PX).toBe(56);
-    const css = readFileSync(
-      join(process.cwd(), "app/globals.css"),
-      "utf8",
-    );
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
     expect(css).toMatch(/padding-top:\s*var\(--paper-page-top\)/);
     expect(css).toMatch(/\.paper-column\s*\{[\s\S]*?margin-top:\s*0/);
   });
@@ -68,5 +57,11 @@ describe("dashboard layout tokens", () => {
     expect(controls).toContain("href={PAGES_HREF}");
     expect(controls).toContain("PAGES_ARIA_LABEL");
     expect(controls).toContain("Pages");
+    const ownerBack = readFileSync(
+      join(process.cwd(), "components/dashboard/PagesBackLink.tsx"),
+      "utf8",
+    );
+    expect(ownerBack).toContain("href={PAGES_HREF}");
+    expect(ownerBack).toContain("Pages");
   });
 });

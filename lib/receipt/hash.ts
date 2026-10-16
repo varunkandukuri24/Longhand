@@ -10,22 +10,27 @@ export type CanonicalEvent = {
   pos: number;
   len: number;
   text: string;
+  url?: string;
 };
 
 export function canonicalizeEvent(event: EditEvent): CanonicalEvent {
-  return {
+  const base: CanonicalEvent = {
     t: event.t,
     type: event.type,
     pos: event.pos,
     len: event.len,
     text: event.text,
   };
+  if (event.type === "link" && typeof event.url === "string") {
+    base.url = event.url;
+  }
+  return base;
 }
 
 /**
  * Canonical hash input:
  * `${prevHash}|${seq}|${JSON.stringify(events)}`
- * with every event keyed as t, type, pos, len, text.
+ * with every event keyed as t, type, pos, len, text (, url for link).
  */
 export function batchHashInput(
   prevHash: string,

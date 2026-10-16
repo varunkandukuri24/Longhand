@@ -9,25 +9,37 @@ import {
   PaperPage,
 } from "@/components/scene/PaperPage";
 import { useAmbientSceneContext } from "@/components/scene/ambient-context";
-import { ResponseLine } from "@/components/source/ResponseLine";
+import { WritingMirror } from "@/components/editor/WritingMirror";
+import { ReferencesRow } from "@/components/references/ReferencesRow";
 import {
-  applyDiffToOrigins,
-  diffText,
-  eventsFromDiff,
-} from "@/lib/editor/diff";
+  captureEdit,
+  type PendingLink,
+} from "@/lib/editor/capture-events";
+import { diffText } from "@/lib/editor/diff";
+import {
+  linkEndingAt,
+  replaceSelectionWithLabel,
+} from "@/lib/editor/link-edit";
 import {
   shouldBlockBeforeInput,
   shouldBlockKeydown,
 } from "@/lib/editor/no-backspace";
-import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
+import { labelForUrl, referencesFor } from "@/lib/references";
+import {
+  urlBeforeWhitespace,
+  urlsFollowedByWhitespaceInRange,
+} from "@/lib/receipt/shorten";
+import type { CharOrigin, EditEvent, TextLink } from "@/lib/receipt/types";
 import { captionFor, type WindowSide } from "@/lib/scene";
 import { SCENE_PRESET_KEY } from "@/lib/scene/use-ambient-scene";
 import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
+import { saveLabelFor } from "@/lib/sync/save-label";
 import type { SyncStatus } from "@/lib/sync/types";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -37,28 +49,14 @@ import {
   type PointerEvent as ReactPointerEvent,
   type PointerEventHandler,
 } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 
 const TIMER_OPTIONS = [10, 15, 25] as const;
 const IS_DEV = process.env.NODE_ENV === "development";
 
-type PublishedView = {
-  slug: string;
-  title: string;
-  finalText: string;
-};
-
-type ResponseSource = {
-  url: string;
-  title: string;
-  site: string;
-};
-
 type FocusEditorProps = {
   pieceId: string;
   initialTitle?: string;
-  published?: PublishedView;
-  source?: ResponseSource | null;
   initialWindowSide?: WindowSide;
 };
 
@@ -112,8 +110,6 @@ export function FocusEditor(props: FocusEditorProps) {
 function FocusEditorBody({
   pieceId,
   initialTitle = "",
-  published,
-  source = null,
   bindPaperPointerDown,
   chromeHost,
 }: FocusEditorProps & {
@@ -123,11 +119,12 @@ function FocusEditorBody({
   chromeHost: HTMLDivElement | null;
 }) {
   const router = useRouter();
-  const isPublished = Boolean(published);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevValueRef = useRef("");
   const originsRef = useRef<CharOrigin[]>([]);
+  const linksRef = useRef<TextLink[]>([]);
   const eventsRef = useRef<EditEvent[]>([]);
+  const pendingLinkRef = useRef<PendingLink | null>(null);
   const composingRef = useRef(false);
   const lastInputTypeRef = useRef<string | undefined>(undefined);
   const sessionStartRef = useRef<number | null>(null);
@@ -138,7 +135,9 @@ function FocusEditorBody({
   const readyRef = useRef(false);
   const lastLocalEventAtRef = useRef<number | null>(null);
 
-  const [value, setValue] = useState(published?.finalText ?? "");
+  const [value, setValue] = useState("");
+  const [links, setLinks] = useState<TextLink[]>([]);
+  const [scrollTop, setScrollTop] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [noBackspace, setNoBackspace] = useState(false);
@@ -162,8 +161,8 @@ function FocusEditorBody({
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
-  /** True after draft text has loaded (or published text is ready); drives autofocus. */
-  const [textLoaded, setTextLoaded] = useState(isPublished);
+  /** True after draft text has loaded; drives autofocus. */
+  const [textLoaded, setTextLoaded] = useState(false);
   const ambient = useAmbientSceneContext();
 
   useEffect(() => {
@@ -191,12 +190,6 @@ function FocusEditorBody({
   }, []);
 
   useEffect(() => {
-    if (isPublished) {
-      readyRef.current = false;
-      setTextLoaded(true);
-      return;
-    }
-
     let cancelled = false;
     readyRef.current = false;
     setTextLoaded(false);
@@ -220,8 +213,10 @@ function FocusEditorBody({
 
         prevValueRef.current = state.text;
         originsRef.current = state.origins.slice();
+        linksRef.current = (state.links ?? []).slice();
         eventsRef.current = state.events.slice();
         setValue(state.text);
+        setLinks((state.links ?? []).slice());
         setStoredDelayedCount(state.flags?.delayedCount ?? 0);
         exposeEvents();
         syncDebugSnapshot();
@@ -297,7 +292,20 @@ function FocusEditorBody({
     };
     // Intentionally omit ambient.condition: session starts once per boot; later
     // rotations read the latest condition via setSessionCondition.
-  }, [pieceId, bootAttempt, exposeEvents, isPublished, syncDebugSnapshot]);
+  }, [pieceId, bootAttempt, exposeEvents, syncDebugSnapshot]);
+
+  /** Grow the textarea to its content so REFERENCES sits under the last line. */
+  const syncTextareaHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const lineMin = 22 * 1.7 * 3;
+    el.style.height = `${Math.max(el.scrollHeight, lineMin)}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [value, syncTextareaHeight, textLoaded]);
 
   /** After text loads: focus editable pieces and put the caret at the end (once). */
   const placedCaretRef = useRef(false);
@@ -306,7 +314,7 @@ function FocusEditorBody({
   }, [pieceId, bootAttempt]);
 
   useEffect(() => {
-    if (!textLoaded || isPublished || superseded || bootError) return;
+    if (!textLoaded || superseded || bootError) return;
     if (placedCaretRef.current) return;
     const el = textareaRef.current;
     if (!el || el.readOnly) return;
@@ -314,6 +322,7 @@ function FocusEditorBody({
     const placeCaret = () => {
       if (placedCaretRef.current) return;
       placedCaretRef.current = true;
+      syncTextareaHeight();
       el.focus({ preventScroll: true });
       const len = el.value.length;
       el.setSelectionRange(len, len);
@@ -326,7 +335,14 @@ function FocusEditorBody({
       window.requestAnimationFrame(placeCaret);
     });
     return () => window.cancelAnimationFrame(id);
-  }, [textLoaded, isPublished, superseded, bootError, pieceId, bootAttempt]);
+  }, [
+    textLoaded,
+    superseded,
+    bootError,
+    pieceId,
+    bootAttempt,
+    syncTextareaHeight,
+  ]);
 
   const onPublish = useCallback(
     async (args: { title: string }) => {
@@ -334,6 +350,12 @@ function FocusEditorBody({
       setPublishError(null);
       try {
         await syncRef.current?.flush();
+        if (syncRef.current?.hasRefusedBatches()) {
+          setPublishError(
+            "Some of your writing didn't save, so this piece can't be published yet.",
+          );
+          return;
+        }
         const res = await fetch(`/api/pieces/${pieceId}/publish`, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -344,12 +366,13 @@ function FocusEditorBody({
         });
         const body = (await res.json().catch(() => null)) as {
           reason?: string;
+          slug?: string;
         } | null;
 
         if (!res.ok) {
           if (res.status === 409 && body?.reason === "text_mismatch") {
             setPublishError(
-              "The stored event log does not match this text. Try again after saving.",
+              "Some of your writing didn't save, so this piece can't be published yet.",
             );
           } else {
             setPublishError("Could not publish this piece.");
@@ -358,7 +381,11 @@ function FocusEditorBody({
         }
 
         setPublishOpen(false);
-        router.refresh();
+        if (body?.slug) {
+          router.push(`/p/${body.slug}`);
+        } else {
+          router.refresh();
+        }
       } catch {
         setPublishError("Could not publish this piece.");
       } finally {
@@ -386,8 +413,7 @@ function FocusEditorBody({
     }, 2000);
   }, []);
 
-  const holdControls =
-    isPublished || publishOpen || popoverOpen || debugOpen;
+  const holdControls = publishOpen || popoverOpen || debugOpen;
 
   useEffect(() => {
     if (!holdControls) {
@@ -420,6 +446,22 @@ function FocusEditorBody({
     });
   }, []);
 
+  const sessionT = useCallback(() => {
+    const now = Date.now();
+    const lastLocal = lastLocalEventAtRef.current;
+    if (lastLocal !== null && now - lastLocal >= IDLE_NEW_SESSION_MS) {
+      sessionStartRef.current = now;
+      setSessionStartedAt(now);
+    }
+    const start = sessionStartRef.current ?? now;
+    sessionStartRef.current = start;
+    if (sessionStartedAt === null) {
+      setSessionStartedAt(start);
+    }
+    lastLocalEventAtRef.current = now;
+    return now - start;
+  }, [sessionStartedAt]);
+
   const commitDiff = useCallback(
     (next: string, inputType: string | undefined) => {
       if (!readyRef.current || syncRef.current?.isSuperseded()) {
@@ -437,37 +479,67 @@ function FocusEditorBody({
         return;
       }
 
-      const now = Date.now();
-      const lastLocal = lastLocalEventAtRef.current;
-      if (
-        lastLocal !== null &&
-        now - lastLocal >= IDLE_NEW_SESSION_MS
-      ) {
-        sessionStartRef.current = now;
-        setSessionStartedAt(now);
+      const t = sessionT();
+      const captured = captureEdit({
+        prev,
+        next,
+        priorEvents: eventsRef.current,
+        pendingLink: pendingLinkRef.current,
+        t,
+        inputType,
+        diff,
+      });
+      pendingLinkRef.current = captured.pendingLink;
+
+      if (IS_DEV && captured.diverged) {
+        console.error(
+          "[longhand] event log diverged from textarea",
+          { rebuilt: captured.text, textarea: next },
+        );
       }
 
-      const start = sessionStartRef.current ?? now;
-      sessionStartRef.current = start;
-      if (sessionStartedAt === null) {
-        setSessionStartedAt(start);
-      }
-      const t = now - start;
-      const newEvents = eventsFromDiff(diff, inputType, t, prev);
-      eventsRef.current = [...eventsRef.current, ...newEvents];
-      originsRef.current = applyDiffToOrigins(
-        originsRef.current,
-        diff,
-        inputType,
-        prev,
-      );
+      const newEvents = captured.events.slice(eventsRef.current.length);
+      eventsRef.current = captured.events;
+      originsRef.current = captured.origins;
+      linksRef.current = captured.links;
+      setLinks(captured.links.slice());
       prevValueRef.current = next;
-      lastLocalEventAtRef.current = now;
       syncRef.current?.pushEvents(newEvents);
       exposeEvents();
       syncDebugSnapshot();
+
+      // After paste, shorten URLs already followed by whitespace (last → first).
+      if (inputType === "insertFromPaste" || inputType === "insertFromDrop") {
+        const el = textareaRef.current;
+        if (el) {
+          const pasteEnd = diff.pos + diff.inserted.length;
+          const targets = urlsFollowedByWhitespaceInRange(
+            next,
+            diff.pos,
+            pasteEnd,
+          ).sort((a, b) => b.start - a.start);
+          for (const target of targets) {
+            if (
+              linksRef.current.some(
+                (l) => l.start === target.start && l.url === target.url,
+              )
+            ) {
+              continue;
+            }
+            const label = labelForUrl(target.url);
+            pendingLinkRef.current = {
+              url: target.url,
+              label,
+              start: target.start,
+              end: target.end,
+            };
+            replaceSelectionWithLabel(el, target.start, target.end, target.url);
+            // input handler runs sync via execCommand and clears pendingLink
+          }
+        }
+      }
     },
-    [exposeEvents, sessionStartedAt, syncDebugSnapshot],
+    [exposeEvents, sessionT, syncDebugSnapshot],
   );
 
   useEffect(() => {
@@ -554,12 +626,21 @@ function FocusEditorBody({
     const next = event.currentTarget.value;
     setValue(next);
     commitDiff(next, lastInputTypeRef.current);
+    syncTextareaHeight();
     scheduleControlsFade();
   };
 
   const onInput = (event: FormEvent<HTMLTextAreaElement>) => {
     const next = event.currentTarget.value;
-    setValue(next);
+    // When shortening via execCommand in keydown, flush so React cannot
+    // overwrite the DOM before Space/Enter's default insert runs.
+    if (pendingLinkRef.current) {
+      flushSync(() => {
+        setValue(next);
+      });
+    } else {
+      setValue(next);
+    }
 
     if (composingRef.current) {
       return;
@@ -568,6 +649,7 @@ function FocusEditorBody({
     const native = event.nativeEvent as InputEvent;
     const inputType = native.inputType || lastInputTypeRef.current;
     commitDiff(next, inputType);
+    syncTextareaHeight();
     scheduleControlsFade();
   };
 
@@ -577,6 +659,10 @@ function FocusEditorBody({
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     enterFullscreenOnce();
+
+    const el = event.currentTarget;
+    const selStart = el.selectionStart;
+    const selEnd = el.selectionEnd;
 
     if (
       noBackspaceRef.current &&
@@ -590,9 +676,58 @@ function FocusEditorBody({
       return;
     }
 
+    // Shorten a URL just before Space or Enter via execCommand (normal input path).
+    if (
+      (event.key === " " || event.key === "Enter") &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      selStart === selEnd
+    ) {
+      const target = urlBeforeWhitespace(el.value, selStart);
+      if (target) {
+        const label = labelForUrl(target.url);
+        pendingLinkRef.current = {
+          url: target.url,
+          label,
+          start: target.start,
+          end: target.end,
+        };
+        const { caretAfter } = replaceSelectionWithLabel(
+          el,
+          target.start,
+          target.end,
+          target.url,
+        );
+        // flushSync in onInput already applied the label; put the caret after
+        // it and let Space/Enter insert normally (no preventDefault).
+        el.setSelectionRange(caretAfter, caretAfter);
+      }
+    }
+
+    // Backspace at the end of a label selects the whole label; let delete proceed.
+    if (
+      event.key === "Backspace" &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      selStart === selEnd
+    ) {
+      const link = linkEndingAt(selStart, linksRef.current);
+      if (link) {
+        el.setSelectionRange(link.start, link.end);
+        // no preventDefault — Backspace deletes the selection as one normal delete
+      }
+    }
+
     if (event.key === "Escape" && document.fullscreenElement) {
       void document.exitFullscreen();
     }
+  };
+
+  const onScroll = () => {
+    const el = textareaRef.current;
+    if (el) setScrollTop(el.scrollTop);
   };
 
   const onMouseDown = () => {
@@ -612,15 +747,17 @@ function FocusEditorBody({
   };
 
   const focusWritingArea = () => {
-    if (isPublished || superseded || bootError) return;
+    if (superseded || bootError) return;
     const el = textareaRef.current;
     if (!el || el.readOnly) return;
     el.focus({ preventScroll: true });
+    const len = el.value.length;
+    el.setSelectionRange(len, len);
   };
 
   useEffect(() => {
     const onPaperPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (isPublished || superseded || bootError) return;
+      if (superseded || bootError) return;
       const target = event.target as HTMLElement | null;
       if (!target) return;
       if (
@@ -635,14 +772,14 @@ function FocusEditorBody({
     };
     bindPaperPointerDown(onPaperPointerDown);
     return () => bindPaperPointerDown(null);
-  }, [bindPaperPointerDown, isPublished, superseded, bootError]);
+  }, [bindPaperPointerDown, superseded, bootError]);
 
   const chrome =
     chromeHost &&
     createPortal(
       <>
         <PublishSheet
-          open={publishOpen && !isPublished}
+          open={publishOpen}
           initialTitle={initialTitle}
           busy={publishBusy}
           error={publishError}
@@ -661,9 +798,7 @@ function FocusEditorBody({
           caption={captionFor(ambient.light, ambient.condition)}
           dateLabel={formatBarDate()}
           elapsedLabel={formatElapsed(elapsedMs)}
-          saveLabel={
-            syncStatus && syncStatus.queuedCount > 0 ? "saving" : "saved"
-          }
+          saveLabel={saveLabelFor(syncStatus)}
           timerMinutes={timerMinutes}
           timerRemainingLabel={
             timerMinutes !== null && timerRemainingMs !== null
@@ -676,7 +811,6 @@ function FocusEditorBody({
           currentCondition={ambient.condition}
           windowSide={ambient.windowSide}
           stillWindow={ambient.stillWindow}
-          isPublished={isPublished}
           onTimerChange={(minutes) => {
             setTimerMinutes(minutes);
             if (minutes === null) {
@@ -707,16 +841,9 @@ function FocusEditorBody({
             setPublishOpen(true);
             showControls();
           }}
-          onOpenPublic={
-            published
-              ? () => {
-                  window.location.href = `/p/${published.slug}`;
-                }
-              : undefined
-          }
           onPopoverChange={setPopoverOpen}
         />
-        {IS_DEV && debugOpen && !isPublished ? (
+        {IS_DEV && debugOpen ? (
           <EditorDebugPanel
             events={debugSnapshot.events}
             origins={debugSnapshot.origins}
@@ -767,38 +894,39 @@ function FocusEditorBody({
         </div>
       ) : (
         <>
-          {source ? (
-            <div className="mb-4">
-              <ResponseLine
-                title={source.title}
-                site={source.site}
-                url={source.url}
-              />
-            </div>
-          ) : null}
-          <textarea
-            ref={textareaRef}
-            value={value}
-            readOnly={isPublished || superseded}
-            onCompositionStart={onCompositionStart}
-            onCompositionEnd={onCompositionEnd}
-            onInput={onInput}
-            onChange={onChange}
-            onKeyDown={onKeyDown}
-            onMouseDown={onMouseDown}
-            spellCheck
-            autoCapitalize="off"
-            autoCorrect="off"
-            className={[
-              "writing-text font-writing text-[22px] leading-[1.7] text-ink",
-              isPublished || superseded ? "cursor-default" : "",
-            ].join(" ")}
-            style={{
-              caretColor:
-                isPublished || superseded ? "transparent" : "#C9772E",
-            }}
-            aria-label="Writing page"
-          />
+          <div className="writing-frame" data-writing-frame>
+            <WritingMirror
+              text={value}
+              links={links}
+              scrollTop={scrollTop}
+              className="font-writing text-[22px] leading-[1.7]"
+            />
+            <textarea
+              ref={textareaRef}
+              value={value}
+              rows={1}
+              readOnly={superseded}
+              onCompositionStart={onCompositionStart}
+              onCompositionEnd={onCompositionEnd}
+              onInput={onInput}
+              onChange={onChange}
+              onKeyDown={onKeyDown}
+              onScroll={onScroll}
+              onMouseDown={onMouseDown}
+              spellCheck
+              autoCapitalize="off"
+              autoCorrect="off"
+              className={[
+                "writing-text font-writing text-[22px] leading-[1.7] text-ink",
+                superseded ? "cursor-default" : "",
+              ].join(" ")}
+              style={{
+                caretColor: superseded ? "transparent" : "#C9772E",
+              }}
+              aria-label="Writing page"
+            />
+          </div>
+          <ReferencesRow references={referencesFor(value, links)} plain />
         </>
       )}
       {chrome}
