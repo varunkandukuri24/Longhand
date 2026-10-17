@@ -24,6 +24,19 @@ export const sceneConditionEnum = pgEnum("scene_condition", [
   "snow",
 ]);
 export const windowSideEnum = pgEnum("window_side", ["left", "right"]);
+export const writingFontEnum = pgEnum("writing_font", [
+  "literata",
+  "newsreader",
+  "instrument-sans",
+  "dm-mono",
+]);
+/** Stored as text enum labels so sizes stay 18/20/22/24. */
+export const writingFontSizeEnum = pgEnum("writing_font_size", [
+  "18",
+  "20",
+  "22",
+  "24",
+]);
 
 export const users = pgTable("users", {
   id: text("id")
@@ -42,6 +55,10 @@ export const users = pgTable("users", {
   longitude: doublePrecision("longitude"),
   /** Side window edge preference (DESIGN.md). */
   windowSide: windowSideEnum("window_side").notNull().default("left"),
+  /** Editor Type menu font (DESIGN.md); published pages stay Literata. */
+  font: writingFontEnum("font").notNull().default("literata"),
+  /** Editor Type menu size in px (DESIGN.md); published pages stay 20. */
+  fontSize: writingFontSizeEnum("font_size").notNull().default("20"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 

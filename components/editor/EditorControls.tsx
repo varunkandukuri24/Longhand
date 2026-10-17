@@ -1,5 +1,15 @@
 "use client";
 
+import { CheckIcon } from "@/components/icons/LonghandIcons";
+import {
+  WRITING_FONTS,
+  WRITING_FONT_LABEL,
+  WRITING_SIZES,
+  WRITING_SIZE_LABEL,
+  writingFontCssVar,
+  type WritingFont,
+  type WritingSize,
+} from "@/lib/editor/type-prefs";
 import {
   CONDITIONS,
   LIGHTS,
@@ -54,11 +64,17 @@ type EditorControlsProps = {
   onSceneChange: (preset: ScenePreset) => void;
   onWindowSideChange: (side: WindowSide) => void;
   onStillWindowChange: (still: boolean) => void;
+  writingFont: WritingFont;
+  writingSize: WritingSize;
+  onWritingTypeChange: (next: {
+    font: WritingFont;
+    fontSize: WritingSize;
+  }) => void;
   onPublish: () => void;
   onPopoverChange?: (open: boolean) => void;
 };
 
-type PopoverId = "timer" | "backspace" | "scene" | null;
+type PopoverId = "type" | "timer" | "backspace" | "scene" | null;
 
 export function EditorControls({
   visible,
@@ -81,6 +97,9 @@ export function EditorControls({
   onSceneChange,
   onWindowSideChange,
   onStillWindowChange,
+  writingFont,
+  writingSize,
+  onWritingTypeChange,
   onPublish,
   onPopoverChange,
 }: EditorControlsProps) {
@@ -212,6 +231,51 @@ export function EditorControls({
       </div>
 
       <div className="flex shrink-0 items-center gap-5">
+            <Popover
+              label="Type"
+              open={open === "type"}
+              onToggle={() => toggle("type")}
+              panelClassName="type-menu"
+            >
+              <p className="type-menu-label">Font</p>
+              {WRITING_FONTS.map((font) => (
+                <button
+                  key={font}
+                  type="button"
+                  className="type-menu-font"
+                  style={{ fontFamily: writingFontCssVar(font) }}
+                  onClick={() => {
+                    onWritingTypeChange({ font, fontSize: writingSize });
+                  }}
+                >
+                  <span>{WRITING_FONT_LABEL[font]}</span>
+                  {writingFont === font ? <CheckIcon /> : null}
+                </button>
+              ))}
+              <p className="type-menu-label mt-3">Size</p>
+              <div className="type-menu-sizes">
+                {WRITING_SIZES.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    className="type-menu-size"
+                    style={{ fontSize: `${size}px` }}
+                    aria-label={WRITING_SIZE_LABEL[size]}
+                    aria-pressed={writingSize === size}
+                    onClick={() => {
+                      onWritingTypeChange({ font: writingFont, fontSize: size });
+                    }}
+                  >
+                    A
+                  </button>
+                ))}
+              </div>
+              <p className="type-menu-note">
+                Only changes your writing screen. Published pieces are always
+                set in Literata.
+              </p>
+            </Popover>
+
             <Popover
               label={timerLabel}
               open={open === "timer"}
@@ -353,11 +417,13 @@ function Popover({
   open,
   onToggle,
   children,
+  panelClassName = "",
 }: {
   label: string;
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
+  panelClassName?: string;
 }) {
   const panelId = useId();
   return (
@@ -372,7 +438,11 @@ function Popover({
         {label}
       </button>
       {open ? (
-        <div id={panelId} role="dialog" className="editor-popover">
+        <div
+          id={panelId}
+          role="dialog"
+          className={["editor-popover", panelClassName].filter(Boolean).join(" ")}
+        >
           <div className="flex flex-col gap-1 font-ui text-[12px] text-ink">
             {children}
           </div>

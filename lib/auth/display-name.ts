@@ -1,6 +1,12 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import {
+  parseWritingFont,
+  parseWritingSize,
+  type WritingFont,
+  type WritingSize,
+} from "@/lib/editor/type-prefs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 export {
@@ -18,6 +24,8 @@ export async function requireUserWithDisplayName(): Promise<{
   email: string | null | undefined;
   cityName: string | null;
   windowSide: "left" | "right";
+  font: WritingFont;
+  fontSize: WritingSize;
 }> {
   const session = await auth();
   if (!session?.user?.id) {
@@ -30,6 +38,8 @@ export async function requireUserWithDisplayName(): Promise<{
       email: users.email,
       cityName: users.cityName,
       windowSide: users.windowSide,
+      font: users.font,
+      fontSize: users.fontSize,
     })
     .from(users)
     .where(eq(users.id, session.user.id))
@@ -46,6 +56,8 @@ export async function requireUserWithDisplayName(): Promise<{
     email: row?.email ?? session.user.email,
     cityName: row?.cityName?.trim() || null,
     windowSide: row?.windowSide === "right" ? "right" : "left",
+    font: parseWritingFont(row?.font),
+    fontSize: parseWritingSize(row?.fontSize),
   };
 }
 

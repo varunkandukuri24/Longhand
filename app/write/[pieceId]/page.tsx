@@ -36,6 +36,8 @@ export default async function WritePage({
       pieceId={piece.id}
       initialTitle={piece.title}
       initialWindowSide={user.windowSide}
+      initialFont={user.font}
+      initialFontSize={user.fontSize}
     />
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { saveWindowSide } from "@/app/actions/window-side";
+import { saveWritingType } from "@/app/actions/writing-type";
 import { PagesBackLink } from "@/components/dashboard/PagesBackLink";
 import { EditorControls } from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
@@ -40,6 +41,12 @@ import { captionFor, type WindowSide } from "@/lib/scene";
 import { SCENE_PRESET_KEY } from "@/lib/scene/use-ambient-scene";
 import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
 import {
+  phoneWritingSize,
+  writingFontCssVar,
+  type WritingFont,
+  type WritingSize,
+} from "@/lib/editor/type-prefs";
+import {
   formatWritingClock,
   liveSittingActiveMs,
 } from "@/lib/receipt/writing-time";
@@ -76,6 +83,8 @@ type FocusEditorProps = {
   pieceId: string;
   initialTitle?: string;
   initialWindowSide?: WindowSide;
+  initialFont?: WritingFont;
+  initialFontSize?: WritingSize;
 };
 
 function formatBarDate(d = new Date()): string {
@@ -128,6 +137,8 @@ export function FocusEditor(props: FocusEditorProps) {
 function FocusEditorBody({
   pieceId,
   initialTitle = "",
+  initialFont = "literata",
+  initialFontSize = 20,
   bindPaperPointerDown,
   chromeHost,
   columnRef,
@@ -168,6 +179,8 @@ function FocusEditorBody({
   const sittingEventsRef = useRef<EditEvent[]>([]);
   const [sittingActiveMs, setSittingActiveMs] = useState(0);
   const [totalActiveMs, setTotalActiveMs] = useState(0);
+  const [writingFont, setWritingFont] = useState<WritingFont>(initialFont);
+  const [writingSize, setWritingSize] = useState<WritingSize>(initialFontSize);
   const [noBackspace, setNoBackspace] = useState(false);
   const [timerMinutes, setTimerMinutes] = useState<
     (typeof TIMER_OPTIONS)[number] | null
@@ -331,9 +344,9 @@ function FocusEditorBody({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    const lineMin = 20 * 1.7 * 3;
+    const lineMin = writingSize * 1.7 * 3;
     el.style.height = `${Math.max(el.scrollHeight, lineMin)}px`;
-  }, []);
+  }, [writingSize]);
 
   const ensureCaretVisible = useCallback(() => {
     const scrollEl = columnRef.current;
@@ -371,11 +384,11 @@ function FocusEditorBody({
 
   useLayoutEffect(() => {
     syncTextareaHeight();
-  }, [value, syncTextareaHeight, textLoaded]);
+  }, [value, syncTextareaHeight, textLoaded, writingFont, writingSize]);
 
   useLayoutEffect(() => {
     ensureCaretVisible();
-  }, [value, caretIndex, textLoaded, ensureCaretVisible]);
+  }, [value, caretIndex, textLoaded, writingFont, writingSize, ensureCaretVisible]);
 
   const scheduleTitleSave = useCallback(
     (nextTitle: string) => {
@@ -933,6 +946,22 @@ function FocusEditorBody({
     showControls();
   };
 
+  const onWritingTypeChange = (next: {
+    font: WritingFont;
+    fontSize: WritingSize;
+  }) => {
+    setWritingFont(next.font);
+    setWritingSize(next.fontSize);
+    void saveWritingType(next);
+    showControls();
+  };
+
+  const writingTypeStyle = {
+    ["--writing-font" as string]: writingFontCssVar(writingFont),
+    ["--writing-size" as string]: `${writingSize}px`,
+    ["--writing-size-phone" as string]: `${phoneWritingSize(writingSize)}px`,
+  };
+
   const focusWritingArea = () => {
     if (superseded || bootError) return;
     const el = textareaRef.current;
@@ -1028,6 +1057,9 @@ function FocusEditorBody({
             ambient.setStillWindow(still);
             showControls();
           }}
+          writingFont={writingFont}
+          writingSize={writingSize}
+          onWritingTypeChange={onWritingTypeChange}
           onPublish={() => {
             setPublishError(null);
             setPublishOpen(true);
@@ -1065,6 +1097,9 @@ function FocusEditorBody({
     <div
       className="writing-scroll-inner"
       data-piece-id={pieceId}
+      data-writing-font={writingFont}
+      data-writing-size={writingSize}
+      style={writingTypeStyle}
       onMouseMove={onMouseMove}
     >
       {superseded ? (
