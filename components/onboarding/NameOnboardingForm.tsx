@@ -11,9 +11,9 @@ type NameOnboardingFormProps = {
 
 export function NameOnboardingForm({ next }: NameOnboardingFormProps) {
   const [name, setName] = useState("");
-  const [handle, setHandle] = useState("writer");
+  const [handleDraft, setHandleDraft] = useState("");
   const [handleTouched, setHandleTouched] = useState(false);
-  const [handleHint, setHandleHint] = useState("");
+  const [availability, setAvailability] = useState<string>("");
   const domain = (() => {
     try {
       return rootDomain();
@@ -22,48 +22,46 @@ export function NameOnboardingForm({ next }: NameOnboardingFormProps) {
     }
   })();
 
-  useEffect(() => {
-    if (!handleTouched) {
-      setHandle(suggestHandle(name));
-    }
-  }, [name, handleTouched]);
+  const handle = handleTouched ? handleDraft : suggestHandle(name);
+  const checked = validateHandle(handle);
+  const handleKey = checked.ok ? checked.handle : "";
+  const formatHint = !checked.ok
+    ? checked.error === "length"
+      ? "Use 3 to 30 characters."
+      : checked.error === "reserved"
+        ? "That address is reserved."
+        : "Lowercase letters, numbers and hyphens only."
+    : "";
 
   useEffect(() => {
-    const checked = validateHandle(handle);
-    if (!checked.ok) {
-      if (checked.error === "length") {
-        setHandleHint("Use 3 to 30 characters.");
-      } else if (checked.error === "reserved") {
-        setHandleHint("That address is reserved.");
-      } else {
-        setHandleHint("Lowercase letters, numbers and hyphens only.");
-      }
-      return;
-    }
+    if (!handleKey) return;
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       void (async () => {
         const res = await fetch(
-          `/api/handles/check?h=${encodeURIComponent(checked.handle)}`,
+          `/api/handles/check?h=${encodeURIComponent(handleKey)}`,
         );
         const body = (await res.json().catch(() => null)) as {
           available?: boolean;
           reason?: string | null;
         } | null;
-        if (!res.ok) {
-          setHandleHint("");
-          return;
-        }
+        if (cancelled || !res.ok) return;
         if (body?.available) {
-          setHandleHint("Available");
+          setAvailability("Available");
         } else if (body?.reason === "taken") {
-          setHandleHint("Taken");
+          setAvailability("Taken");
         } else {
-          setHandleHint("");
+          setAvailability("");
         }
       })();
     }, 400);
-    return () => window.clearTimeout(timer);
-  }, [handle]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [handleKey]);
+
+  const handleHint = formatHint || (handleKey ? availability : "");
 
   return (
     <form action={saveDisplayName} className="flex flex-col gap-6">
@@ -94,7 +92,7 @@ export function NameOnboardingForm({ next }: NameOnboardingFormProps) {
             value={handle}
             onChange={(e) => {
               setHandleTouched(true);
-              setHandle(e.target.value.toLowerCase());
+              setHandleDraft(e.target.value.toLowerCase());
             }}
             className="min-w-0 flex-1 bg-transparent py-2 text-ink outline-none"
           />

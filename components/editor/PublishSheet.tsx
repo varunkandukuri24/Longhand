@@ -96,9 +96,10 @@ export function PublishSheet({
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement;
+    const publishButton = publishButtonRef.current;
     return () => {
-      if (publishButtonRef.current) {
-        publishButtonRef.current.focus();
+      if (publishButton) {
+        publishButton.focus();
       } else if (previous instanceof HTMLElement) {
         previous.focus();
       }

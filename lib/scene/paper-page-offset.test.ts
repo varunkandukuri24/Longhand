@@ -71,24 +71,27 @@ describe("paper page top offsets", () => {
 
   it("public page uses PaperPage at 56 px with title/text/signature spacing", () => {
     const page = read("app/p/[slug]/page.tsx");
+    const view = read("components/pieces/PublishedPieceView.tsx");
     const pieceText = read("components/references/PieceText.tsx");
     const signature = read("components/receipt/SignatureReceipt.tsx");
-    expect(page).toContain("PaperPage");
-    expect(page).toContain("PAGE_TOP_OFFSET_PX");
-    expect(page).toContain("publicPage");
-    expect(page).toContain("data-paper-heading");
-    expect(page).toContain("PieceText");
-    expect(page).toContain("ReferencesRow");
-    expect(page).toContain("SignatureReceipt");
+    expect(page).toContain("PublishedPieceView");
+    expect(view).toContain("PaperPage");
+    expect(view).toContain("PAGE_TOP_OFFSET_PX");
+    expect(view).toContain("publicPage");
+    expect(view).toContain("data-paper-heading");
+    expect(view).toContain("PieceText");
+    expect(view).toContain("ReferencesRow");
+    expect(view).toContain("SignatureReceipt");
     expect(pieceText).toContain("mt-6");
     expect(signature).toContain("mt-[72px]");
-    expect(page).not.toMatch(/writing-column|dashboard-column|pt-\[120px\]|pt-\[140px\]|pt-10|pt-24/);
+    expect(view).not.toMatch(/writing-column|dashboard-column|pt-\[120px\]|pt-\[140px\]|pt-10|pt-24/);
   });
 
   it("every paper screen renders through PaperPage", () => {
     const files = [
       "app/dashboard/page.tsx",
-      "app/p/[slug]/page.tsx",
+      "components/pieces/PublishedPieceView.tsx",
+      "app/u/[handle]/page.tsx",
       "app/signin/page.tsx",
       "app/onboarding/name/page.tsx",
       "app/page.tsx",
@@ -100,6 +103,7 @@ describe("paper page top offsets", () => {
       expect(src, file).not.toMatch(/className="[^"]*\bpt-24\b/);
       expect(src, file).not.toMatch(/md:pt-\[140px\]/);
     }
+    expect(read("app/p/[slug]/page.tsx")).toContain("PublishedPieceView");
     expect(read("components/editor/FocusEditor.tsx")).toContain(
       "EDITOR_TOP_OFFSET_PX",
     );

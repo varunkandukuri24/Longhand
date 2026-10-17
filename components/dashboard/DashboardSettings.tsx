@@ -53,11 +53,10 @@ export function DashboardSettings({
   const [citySource, setCitySource] = useState(cityName ?? "");
   const [handle, setHandle] = useState(initialHandle);
   const [handleSource, setHandleSource] = useState(initialHandle);
-  const [handleStatus, setHandleStatus] = useState("");
+  const [availability, setAvailability] = useState("");
   const [savingHandle, setSavingHandle] = useState(false);
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
-  const checkTimer = useRef<number | null>(null);
   const domain = (() => {
     try {
       return rootDomain();
@@ -98,39 +97,41 @@ export function DashboardSettings({
     };
   }, [open]);
 
+  const handleUnchanged = handle === initialHandle;
+  const checked = validateHandle(handle);
+  const handleKey =
+    !handleUnchanged && checked.ok ? checked.handle : "";
+  const formatStatus = handleUnchanged
+    ? ""
+    : !checked.ok
+      ? handleMessage(checked.error, null)
+      : "";
+
   useEffect(() => {
-    if (handle === initialHandle) {
-      setHandleStatus("");
-      return;
-    }
-    const checked = validateHandle(handle);
-    if (!checked.ok) {
-      setHandleStatus(handleMessage(checked.error, null));
-      return;
-    }
-    if (checkTimer.current) {
-      window.clearTimeout(checkTimer.current);
-    }
-    checkTimer.current = window.setTimeout(() => {
+    if (!handleKey) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
       void (async () => {
         const res = await fetch(
-          `/api/handles/check?h=${encodeURIComponent(checked.handle)}`,
+          `/api/handles/check?h=${encodeURIComponent(handleKey)}`,
         );
         const body = (await res.json().catch(() => null)) as {
           available?: boolean;
           reason?: string | null;
         } | null;
-        setHandleStatus(
+        if (cancelled || !res.ok) return;
+        setAvailability(
           handleMessage(body?.reason ?? null, body?.available ?? null),
         );
       })();
     }, 400);
     return () => {
-      if (checkTimer.current) {
-        window.clearTimeout(checkTimer.current);
-      }
+      cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, [handle, initialHandle]);
+  }, [handleKey]);
+
+  const handleStatus = formatStatus || (handleKey ? availability : "");
 
   const onSide = (side: WindowSide) => {
     ambient.setWindowSide(side);
@@ -145,12 +146,12 @@ export function DashboardSettings({
       if (result.ok && result.handle) {
         setHandle(result.handle);
         setHandleSource(result.handle);
-        setHandleStatus("");
+        setAvailability("");
         window.location.reload();
       } else if (result.error === "taken") {
-        setHandleStatus("Taken");
+        setAvailability("Taken");
       } else if (result.error === "invalid") {
-        setHandleStatus(handleMessage("format", null));
+        setAvailability(handleMessage("format", null));
       }
     } finally {
       setSavingHandle(false);
