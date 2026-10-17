@@ -39,6 +39,7 @@ export default async function WritePage({
     <FocusEditor
       pieceId={piece.id}
       initialTitle={piece.title}
+      writerHandle={user.handle}
       initialWindowSide={user.windowSide}
       initialFont={user.font}
       initialFontSize={user.fontSize}

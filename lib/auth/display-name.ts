@@ -21,6 +21,7 @@ export {
 export async function requireUserWithDisplayName(): Promise<{
   id: string;
   name: string;
+  handle: string;
   email: string | null | undefined;
   cityName: string | null;
   windowSide: "left" | "right";
@@ -35,6 +36,7 @@ export async function requireUserWithDisplayName(): Promise<{
   const [row] = await db
     .select({
       name: users.name,
+      handle: users.handle,
       email: users.email,
       cityName: users.cityName,
       windowSide: users.windowSide,
@@ -50,9 +52,15 @@ export async function requireUserWithDisplayName(): Promise<{
     redirect("/onboarding/name");
   }
 
+  const handle = row?.handle?.trim() ?? "";
+  if (!handle) {
+    redirect("/onboarding/name");
+  }
+
   return {
     id: session.user.id,
     name,
+    handle,
     email: row?.email ?? session.user.email,
     cityName: row?.cityName?.trim() || null,
     windowSide: row?.windowSide === "right" ? "right" : "left",

@@ -161,6 +161,7 @@ describe.skipIf(!databaseUrl)("link batch + publish (route handlers)", () => {
       userId,
       title: "NYT link",
       finalText: rebuilt.text,
+      visibility: "public",
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;

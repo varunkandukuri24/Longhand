@@ -1,23 +1,35 @@
 import { db } from "@/db";
-import { pieces, receipts } from "@/db/schema";
+import { pieces, receipts, users } from "@/db/schema";
+import {
+  formatDuration,
+  formatSignatureSentence,
+  formatSittingCount,
+} from "@/lib/receipt/format";
 import { applyEvents } from "@/lib/receipt/apply-events";
 import { computeReceipt } from "@/lib/receipt/compute-receipt";
+import { pieceUrl } from "@/lib/piece-urls";
 import { shortenRemainingUrls } from "@/lib/receipt/shorten";
 import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import { makePieceSlug } from "@/lib/receipt/slug";
 import { eq } from "drizzle-orm";
 import { loadReceiptBatches } from "./load-batches";
 
+export type PieceVisibility = "public" | "private";
+
 export type PublishInput = {
   pieceId: string;
   userId: string;
   title: string;
   finalText: string;
+  visibility: PieceVisibility;
 };
 
 export type PublishSuccess = {
   ok: true;
   slug: string;
+  visibility: PieceVisibility;
+  url: string;
+  signatureLine: string;
   finalTextHash: string;
   chainHeadHash: string;
 };
@@ -44,6 +56,9 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
   if (typeof input.finalText !== "string") {
     return { ok: false, status: 400, error: "invalid_body" };
   }
+  if (input.visibility !== "public" && input.visibility !== "private") {
+    return { ok: false, status: 400, error: "invalid_body" };
+  }
 
   const [piece] = await db
     .select({
@@ -68,6 +83,16 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
     };
   }
 
+  const [author] = await db
+    .select({ name: users.name, handle: users.handle })
+    .from(users)
+    .where(eq(users.id, input.userId))
+    .limit(1);
+
+  if (!author?.handle) {
+    return { ok: false, status: 404, error: "not_found" };
+  }
+
   const { batches, chainHeadHash } = await loadReceiptBatches(input.pieceId);
   const rebuilt = applyEvents(batches.flatMap((batch) => batch.events));
 
@@ -84,6 +109,15 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
   const finalTextHash = sha256HexNode(published.text);
   const metrics = computeReceipt(batches, rebuilt.text);
   const publishedAt = new Date();
+  const visibility = input.visibility;
+
+  const authorName = author.name?.trim() || "Anonymous";
+  const sittingCount =
+    metrics.sittingRows?.length || metrics.sessionRows.length || 1;
+  const signatureLine = [
+    formatSignatureSentence(authorName, metrics.typedShare).replace(/\.$/, ""),
+    `${formatDuration(metrics.activeWritingTimeMs)} over ${formatSittingCount(sittingCount)}`,
+  ].join(" · ");
 
   let slug = makePieceSlug(title);
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -94,6 +128,7 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
           .set({
             title,
             status: "published",
+            visibility,
             slug,
             finalText: published.text,
             finalTextHash,
@@ -116,6 +151,9 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
       return {
         ok: true,
         slug,
+        visibility,
+        url: pieceUrl({ slug, visibility }, author.handle),
+        signatureLine,
         finalTextHash,
         chainHeadHash,
       };

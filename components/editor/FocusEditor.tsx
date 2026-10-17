@@ -5,7 +5,11 @@ import { saveWritingType } from "@/app/actions/writing-type";
 import { PagesBackLink } from "@/components/dashboard/PagesBackLink";
 import { EditorControls } from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
-import { PublishSheet } from "@/components/editor/PublishSheet";
+import {
+  PublishSheet,
+  type PublishResultState,
+} from "@/components/editor/PublishSheet";
+import type { PieceVisibility } from "@/lib/pieces/publish";
 import {
   EDITOR_TOP_OFFSET_PX,
   PaperPage,
@@ -82,6 +86,7 @@ function sanitizeTitle(raw: string): string {
 type FocusEditorProps = {
   pieceId: string;
   initialTitle?: string;
+  writerHandle: string;
   initialWindowSide?: WindowSide;
   initialFont?: WritingFont;
   initialFontSize?: WritingSize;
@@ -137,6 +142,7 @@ export function FocusEditor(props: FocusEditorProps) {
 function FocusEditorBody({
   pieceId,
   initialTitle = "",
+  writerHandle,
   initialFont = "literata",
   initialFontSize = 20,
   bindPaperPointerDown,
@@ -199,6 +205,10 @@ function FocusEditorBody({
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishResult, setPublishResult] = useState<PublishResultState | null>(
+    null,
+  );
+  const publishButtonRef = useRef<HTMLButtonElement | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   /** True after draft text has loaded; drives autofocus. */
   const [textLoaded, setTextLoaded] = useState(false);
@@ -518,7 +528,7 @@ function FocusEditorBody({
   };
 
   const onPublish = useCallback(
-    async (args: { title: string }) => {
+    async (args: { title: string; visibility: PieceVisibility }) => {
       setPublishBusy(true);
       setPublishError(null);
       try {
@@ -535,11 +545,14 @@ function FocusEditorBody({
           body: JSON.stringify({
             title: args.title,
             finalText: prevValueRef.current,
+            visibility: args.visibility,
           }),
         });
         const body = (await res.json().catch(() => null)) as {
           reason?: string;
-          slug?: string;
+          url?: string;
+          visibility?: PieceVisibility;
+          signatureLine?: string;
         } | null;
 
         if (!res.ok) {
@@ -553,11 +566,14 @@ function FocusEditorBody({
           return;
         }
 
-        setPublishOpen(false);
-        if (body?.slug) {
-          router.push(`/p/${body.slug}`);
+        if (body?.url && body.visibility && body.signatureLine) {
+          setPublishResult({
+            url: body.url,
+            visibility: body.visibility,
+            signatureLine: body.signatureLine,
+          });
         } else {
-          router.refresh();
+          setPublishError("Could not publish this piece.");
         }
       } catch {
         setPublishError("Could not publish this piece.");
@@ -565,7 +581,7 @@ function FocusEditorBody({
         setPublishBusy(false);
       }
     },
-    [pieceId, router],
+    [pieceId],
   );
 
   const showControls = useCallback(() => {
@@ -1000,16 +1016,26 @@ function FocusEditorBody({
         <PublishSheet
           open={publishOpen}
           initialTitle={title}
+          handle={writerHandle}
           busy={publishBusy}
           error={publishError}
+          published={publishResult}
+          publishButtonRef={publishButtonRef}
           onClose={() => {
             if (!publishBusy) {
               setPublishOpen(false);
               setPublishError(null);
+              setPublishResult(null);
             }
           }}
           onPublish={(args) => {
             void onPublish(args);
+          }}
+          onBackToPages={() => {
+            router.push("/dashboard");
+          }}
+          onOpenPage={(url) => {
+            window.location.href = url;
           }}
         />
         <EditorControls
@@ -1064,9 +1090,11 @@ function FocusEditorBody({
           onWritingTypeChange={onWritingTypeChange}
           onPublish={() => {
             setPublishError(null);
+            setPublishResult(null);
             setPublishOpen(true);
             showControls();
           }}
+          publishButtonRef={publishButtonRef}
           onPopoverChange={setPopoverOpen}
         />
         {IS_DEV && debugOpen ? (

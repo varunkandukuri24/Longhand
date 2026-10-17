@@ -25,6 +25,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
 
 const TIMER_OPTIONS = [10, 15, 25] as const;
@@ -71,6 +72,7 @@ type EditorControlsProps = {
     fontSize: WritingSize;
   }) => void;
   onPublish: () => void;
+  publishButtonRef?: RefObject<HTMLButtonElement | null>;
   onPopoverChange?: (open: boolean) => void;
 };
 
@@ -101,6 +103,7 @@ export function EditorControls({
   writingSize,
   onWritingTypeChange,
   onPublish,
+  publishButtonRef,
   onPopoverChange,
 }: EditorControlsProps) {
   const [open, setOpen] = useState<PopoverId>(null);
@@ -410,6 +413,7 @@ export function EditorControls({
             </Popover>
 
             <button
+              ref={publishButtonRef}
               type="button"
               className="editor-bar-btn"
               onClick={() => {

@@ -164,11 +164,14 @@ describe.skipIf(!databaseUrl)("publish piece", () => {
       userId,
       title: "Hello world",
       finalText: "hello!",
+      visibility: "public",
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
     expect(result.slug).toMatch(/^hello-world-[a-z0-9]{10}$/);
+    expect(result.visibility).toBe("public");
+    expect(result.url).toContain(result.slug);
 
     const [piece] = await db
       .select({
@@ -201,6 +204,7 @@ describe.skipIf(!databaseUrl)("publish piece", () => {
       userId,
       title: "Atlantic",
       finalText,
+      visibility: "private",
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -231,6 +235,7 @@ describe.skipIf(!databaseUrl)("publish piece", () => {
       userId,
       title: "Tampered",
       finalText: "hello! EXTRA",
+      visibility: "public",
     });
     expect(result).toEqual({
       ok: false,
@@ -310,6 +315,7 @@ describe.skipIf(!databaseUrl)("publish piece", () => {
         body: JSON.stringify({
           title: "No",
           finalText: "not the rebuilt text",
+          visibility: "public",
         }),
       }),
       { params: Promise.resolve({ id: tamperPieceId }) },
