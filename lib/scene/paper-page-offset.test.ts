@@ -31,9 +31,9 @@ function measureHeadingTop(
 }
 
 describe("paper page top offsets", () => {
-  it("uses 56 px for pages and 140 px for the editor", () => {
+  it("uses 56 px for pages and 120 px for the editor title line", () => {
     expect(PAGE_TOP_OFFSET_PX).toBe(56);
-    expect(EDITOR_TOP_OFFSET_PX).toBe(140);
+    expect(EDITOR_TOP_OFFSET_PX).toBe(120);
   });
 
   it("CSS paper-column owns top offset with no extra margin", () => {
@@ -66,7 +66,7 @@ describe("paper page top offsets", () => {
     expect(dashboard).toContain("PaperPage");
     expect(dashboard).toContain("PAGE_TOP_OFFSET_PX");
     expect(dashboard).toContain("data-paper-heading");
-    expect(dashboard).not.toMatch(/pt-\[140px\]|pt-24|writing-column|dashboard-column/);
+    expect(dashboard).not.toMatch(/pt-\[120px\]|pt-\[140px\]|pt-24|writing-column|dashboard-column/);
   });
 
   it("public page uses PaperPage at 56 px with title/text/signature spacing", () => {
@@ -82,7 +82,7 @@ describe("paper page top offsets", () => {
     expect(page).toContain("SignatureReceipt");
     expect(pieceText).toContain("mt-6");
     expect(signature).toContain("mt-[72px]");
-    expect(page).not.toMatch(/writing-column|dashboard-column|pt-\[140px\]|pt-10|pt-24/);
+    expect(page).not.toMatch(/writing-column|dashboard-column|pt-\[120px\]|pt-\[140px\]|pt-10|pt-24/);
   });
 
   it("every paper screen renders through PaperPage", () => {

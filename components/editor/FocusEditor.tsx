@@ -15,6 +15,11 @@ import {
   captureEdit,
   type PendingLink,
 } from "@/lib/editor/capture-events";
+import {
+  measureCaretProbe,
+  TYPEWRITER_MIN_ABOVE_BOTTOM_PX,
+  typewriterScrollTop,
+} from "@/lib/editor/caret-line";
 import { diffText } from "@/lib/editor/diff";
 import {
   linkEndingAt,
@@ -48,6 +53,7 @@ import {
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type PointerEventHandler,
+  type RefObject,
 } from "react";
 import { createPortal, flushSync } from "react-dom";
 
@@ -84,6 +90,7 @@ export function FocusEditor(props: FocusEditorProps) {
   const paperPointerDownRef = useRef<PointerEventHandler<HTMLDivElement> | null>(
     null,
   );
+  const columnRef = useRef<HTMLDivElement | null>(null);
   const [chromeHost, setChromeHost] = useState<HTMLDivElement | null>(null);
 
   return (
@@ -91,6 +98,12 @@ export function FocusEditor(props: FocusEditorProps) {
       topOffsetPx={EDITOR_TOP_OFFSET_PX}
       initialWindowSide={props.initialWindowSide ?? "left"}
       slide
+      editorScroll
+      columnRef={columnRef}
+      onColumnScroll={(event) => {
+        const scrolled = event.currentTarget.scrollTop > 0;
+        event.currentTarget.dataset.scrolled = scrolled ? "true" : "false";
+      }}
       onPointerDown={(event) => {
         paperPointerDownRef.current?.(event);
       }}
@@ -99,6 +112,7 @@ export function FocusEditor(props: FocusEditorProps) {
       <FocusEditorBody
         {...props}
         chromeHost={chromeHost}
+        columnRef={columnRef}
         bindPaperPointerDown={(handler) => {
           paperPointerDownRef.current = handler;
         }}
@@ -112,14 +126,17 @@ function FocusEditorBody({
   initialTitle = "",
   bindPaperPointerDown,
   chromeHost,
+  columnRef,
 }: FocusEditorProps & {
   bindPaperPointerDown: (
     handler: PointerEventHandler<HTMLDivElement> | null,
   ) => void;
   chromeHost: HTMLDivElement | null;
+  columnRef: RefObject<HTMLDivElement | null>;
 }) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mirrorRef = useRef<HTMLDivElement | null>(null);
   const prevValueRef = useRef("");
   const originsRef = useRef<CharOrigin[]>([]);
   const linksRef = useRef<TextLink[]>([]);
@@ -137,7 +154,7 @@ function FocusEditorBody({
 
   const [value, setValue] = useState("");
   const [links, setLinks] = useState<TextLink[]>([]);
-  const [scrollTop, setScrollTop] = useState(0);
+  const [caretIndex, setCaretIndex] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [noBackspace, setNoBackspace] = useState(false);
@@ -299,13 +316,51 @@ function FocusEditorBody({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    const lineMin = 22 * 1.7 * 3;
+    const lineMin = 20 * 1.7 * 3;
     el.style.height = `${Math.max(el.scrollHeight, lineMin)}px`;
+  }, []);
+
+  const ensureCaretVisible = useCallback(() => {
+    const scrollEl = columnRef.current;
+    const textarea = textareaRef.current;
+    const mirrorRoot = mirrorRef.current;
+    if (!scrollEl || !textarea || !mirrorRoot) return;
+
+    const probe = mirrorRoot.querySelector(
+      "[data-caret-probe]",
+    ) as HTMLElement | null;
+    if (!probe) return;
+
+    const caret = measureCaretProbe(scrollEl, probe);
+    const next = typewriterScrollTop(
+      scrollEl,
+      caret,
+      TYPEWRITER_MIN_ABOVE_BOTTOM_PX,
+    );
+    if (next === null) return;
+
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    scrollEl.scrollTo({
+      top: next,
+      behavior: reduced ? "auto" : "smooth",
+    });
+  }, [columnRef]);
+
+  const syncCaretIndex = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    setCaretIndex(el.selectionStart);
   }, []);
 
   useLayoutEffect(() => {
     syncTextareaHeight();
   }, [value, syncTextareaHeight, textLoaded]);
+
+  useLayoutEffect(() => {
+    ensureCaretVisible();
+  }, [value, caretIndex, textLoaded, ensureCaretVisible]);
 
   /** After text loads: focus editable pieces and put the caret at the end (once). */
   const placedCaretRef = useRef(false);
@@ -326,8 +381,8 @@ function FocusEditorBody({
       el.focus({ preventScroll: true });
       const len = el.value.length;
       el.setSelectionRange(len, len);
-      el.scrollTop = el.scrollHeight;
-      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+      setCaretIndex(len);
+      ensureCaretVisible();
     };
 
     // Wait a frame so the controlled value has painted.
@@ -342,6 +397,7 @@ function FocusEditorBody({
     pieceId,
     bootAttempt,
     syncTextareaHeight,
+    ensureCaretVisible,
   ]);
 
   const onPublish = useCallback(
@@ -625,6 +681,7 @@ function FocusEditorBody({
     composingRef.current = false;
     const next = event.currentTarget.value;
     setValue(next);
+    setCaretIndex(event.currentTarget.selectionStart);
     commitDiff(next, lastInputTypeRef.current);
     syncTextareaHeight();
     scheduleControlsFade();
@@ -632,14 +689,17 @@ function FocusEditorBody({
 
   const onInput = (event: FormEvent<HTMLTextAreaElement>) => {
     const next = event.currentTarget.value;
+    const caret = event.currentTarget.selectionStart;
     // When shortening via execCommand in keydown, flush so React cannot
     // overwrite the DOM before Space/Enter's default insert runs.
     if (pendingLinkRef.current) {
       flushSync(() => {
         setValue(next);
+        setCaretIndex(caret);
       });
     } else {
       setValue(next);
+      setCaretIndex(caret);
     }
 
     if (composingRef.current) {
@@ -655,6 +715,15 @@ function FocusEditorBody({
 
   const onChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setValue(event.target.value);
+    setCaretIndex(event.target.selectionStart);
+  };
+
+  const onSelect = () => {
+    syncCaretIndex();
+  };
+
+  const onKeyUp = () => {
+    syncCaretIndex();
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -723,11 +792,6 @@ function FocusEditorBody({
     if (event.key === "Escape" && document.fullscreenElement) {
       void document.exitFullscreen();
     }
-  };
-
-  const onScroll = () => {
-    const el = textareaRef.current;
-    if (el) setScrollTop(el.scrollTop);
   };
 
   const onMouseDown = () => {
@@ -870,7 +934,11 @@ function FocusEditorBody({
     );
 
   return (
-    <div data-piece-id={pieceId} onMouseMove={onMouseMove}>
+    <div
+      className="writing-scroll-inner"
+      data-piece-id={pieceId}
+      onMouseMove={onMouseMove}
+    >
       {superseded ? (
         <p className="mb-4 font-ui text-[12px] text-label">
           Open in another window. Refresh to continue here.
@@ -895,12 +963,14 @@ function FocusEditorBody({
       ) : (
         <>
           <div className="writing-frame" data-writing-frame>
-            <WritingMirror
-              text={value}
-              links={links}
-              scrollTop={scrollTop}
-              className="font-writing text-[22px] leading-[1.7]"
-            />
+            <div ref={mirrorRef}>
+              <WritingMirror
+                text={value}
+                links={links}
+                caretIndex={caretIndex}
+                className="font-writing leading-[1.7]"
+              />
+            </div>
             <textarea
               ref={textareaRef}
               value={value}
@@ -911,13 +981,15 @@ function FocusEditorBody({
               onInput={onInput}
               onChange={onChange}
               onKeyDown={onKeyDown}
-              onScroll={onScroll}
+              onKeyUp={onKeyUp}
+              onSelect={onSelect}
+              onClick={syncCaretIndex}
               onMouseDown={onMouseDown}
               spellCheck
               autoCapitalize="off"
               autoCorrect="off"
               className={[
-                "writing-text font-writing text-[22px] leading-[1.7] text-ink",
+                "writing-text font-writing leading-[1.7] text-ink",
                 superseded ? "cursor-default" : "",
               ].join(" ")}
               style={{

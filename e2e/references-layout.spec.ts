@@ -2,10 +2,9 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const globalsCss = readFileSync(
-  join(process.cwd(), "app/globals.css"),
-  "utf8",
-);
+const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8")
+  .replace(/@import\s+"tailwindcss";?\n?/, "")
+  .replace(/@theme\s+inline\s*\{[\s\S]*?\}\n?/, "");
 
 test("REFERENCES sits above the bottom bar when the text is short", async ({
   page,
@@ -26,25 +25,31 @@ test("REFERENCES sits above the bottom bar when the text is short", async ({
         --bar-from-window: 120px;
         --bar-other-edge: 40px;
         --column-shift: 40px;
-        --paper-page-top: 140px;
+        --paper-page-top: 120px;
         --window-inset: 20px;
         --window-w: 72px;
       }
-      html, body { margin: 0; padding: 0; background: var(--paper); }
+      html, body { margin: 0; padding: 0; background: var(--paper); overflow: hidden; }
       ${globalsCss}
     </style>
   </head>
   <body>
     <div class="relative min-h-dvh w-full bg-paper text-ink writing-shell-left">
       <div class="relative z-[2]">
-        <div class="paper-column" data-paper-page data-top-offset="140" style="padding-top: 140px;">
+        <div
+          class="paper-column paper-column-scroll"
+          data-paper-page
+          data-writing-scroll
+          data-top-offset="120"
+          style="box-sizing: border-box; padding-top: 120px;"
+        >
           <div data-piece-id="fixture">
             <div class="writing-frame" data-writing-frame>
-              <div class="writing-mirror font-writing text-[22px] leading-[1.7]" aria-hidden>
+              <div class="writing-mirror font-writing text-[20px] leading-[1.7]" aria-hidden>
                 hi nytimes.com there
               </div>
               <textarea
-                class="writing-text font-writing text-[22px] leading-[1.7] text-ink"
+                class="writing-text font-writing text-[20px] leading-[1.7] text-ink"
                 rows="1"
                 aria-label="Writing page"
               >hi nytimes.com there</textarea>
@@ -77,14 +82,13 @@ test("REFERENCES sits above the bottom bar when the text is short", async ({
       const el = document.querySelector(".writing-text");
       if (el) {
         el.style.height = "auto";
-        const lineMin = 22 * 1.7 * 3;
+        const lineMin = 20 * 1.7 * 3;
         el.style.height = Math.max(el.scrollHeight, lineMin) + "px";
       }
     </script>
   </body>
 </html>`);
 
-  // Tailwind utility classes used in the fixture (mt-14, flex, etc.)
   await page.addStyleTag({
     content: `
       .mt-14 { margin-top: 3.5rem; }
@@ -97,7 +101,7 @@ test("REFERENCES sits above the bottom bar when the text is short", async ({
       .min-h-dvh { min-height: 100dvh; }
       .z-\\[2\\] { z-index: 2; }
       .text-\\[11px\\] { font-size: 11px; }
-      .text-\\[22px\\] { font-size: 22px; }
+      .text-\\[20px\\] { font-size: 20px; }
       .leading-\\[1.7\\] { line-height: 1.7; }
       .tracking-\\[0.14em\\] { letter-spacing: 0.14em; }
       .uppercase { text-transform: uppercase; }

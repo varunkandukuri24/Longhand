@@ -12,6 +12,7 @@
   --bar-other-edge: 40px;
   --column-shift: 74px;
   --paper-page-top: 56px;
+  --writing-size: 20px;
 }
 
 @theme inline {
@@ -69,7 +70,7 @@ body {
   outline: none;
   font: inherit;
   font-family: var(--font-writing), serif;
-  font-size: 22px;
+  font-size: var(--writing-size);
   line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: break-word;
@@ -86,7 +87,7 @@ body {
   min-height: 100%;
   color: transparent;
   pointer-events: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .writing-mirror-link {
@@ -296,6 +297,57 @@ body {
   padding-bottom: 40px;
   padding-left: 0;
   padding-right: 0;
+}
+
+/* Editor: column scrolls; bar and window stay fixed. Ends 88 px above viewport bottom. */
+.paper-column-scroll {
+  box-sizing: border-box;
+  height: calc(100dvh - 88px);
+  max-height: calc(100dvh - 88px);
+  margin-bottom: 0;
+  padding-bottom: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 64px),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 64px),
+    transparent
+  );
+}
+
+.paper-column-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.paper-column-scroll[data-scrolled="true"] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 96px,
+    #000 calc(100% - 64px),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 96px,
+    #000 calc(100% - 64px),
+    transparent
+  );
+}
+
+/* Extra space below the text so typewriter scrolling can lift the caret line. */
+.writing-scroll-inner {
+  padding-bottom: calc(100dvh - 88px - 160px);
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 .writing-shell-left .paper-column {
@@ -516,12 +568,16 @@ a.reference-pill:hover svg {
     right: 20px;
   }
 
-  .writing-text {
-    font-size: 19px !important;
+  :root {
+    --writing-size: 18px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .paper-column-scroll {
+    scroll-behavior: auto;
+  }
+
   .side-window-slide,
   .writing-shell-slide .paper-column,
   .writing-shell-slide .editor-bar {

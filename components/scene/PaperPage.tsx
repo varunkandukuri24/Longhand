@@ -7,7 +7,12 @@ import {
   paperPageTopStyle,
 } from "@/lib/scene/paper-page-layout";
 import type { WindowSide } from "@/lib/scene";
-import type { PointerEventHandler, ReactNode } from "react";
+import type {
+  PointerEventHandler,
+  ReactNode,
+  Ref,
+  UIEventHandler,
+} from "react";
 
 export { EDITOR_TOP_OFFSET_PX, PAGE_TOP_OFFSET_PX };
 
@@ -18,13 +23,20 @@ type PaperPageProps = {
    * `position: fixed` breaks inside `.paper-column` because it uses transform.
    */
   chrome?: ReactNode;
-  /** Editor text: 140. Every other page's first heading: 56. */
+  /** Editor title line: 120. Every other page's first heading: 56. */
   topOffsetPx: typeof PAGE_TOP_OFFSET_PX | typeof EDITOR_TOP_OFFSET_PX;
   publicPage?: boolean;
   initialWindowSide?: WindowSide;
   hideWindow?: boolean;
   /** Smooth side-switch for the writing column (editor). */
   slide?: boolean;
+  /**
+   * Editor only: column is its own scroll area ending 88 px above the viewport
+   * bottom so text never runs under the bar.
+   */
+  editorScroll?: boolean;
+  columnRef?: Ref<HTMLDivElement>;
+  onColumnScroll?: UIEventHandler<HTMLDivElement>;
   onPointerDown?: PointerEventHandler<HTMLDivElement>;
   className?: string;
 };
@@ -41,6 +53,9 @@ export function PaperPage({
   initialWindowSide = "left",
   hideWindow = false,
   slide = false,
+  editorScroll = false,
+  columnRef,
+  onColumnScroll,
   onPointerDown,
   className = "",
 }: PaperPageProps) {
@@ -55,10 +70,18 @@ export function PaperPage({
       onPointerDown={onPointerDown}
     >
       <div
-        className="paper-column"
+        ref={columnRef}
+        className={[
+          "paper-column",
+          editorScroll ? "paper-column-scroll" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         data-paper-page
         data-top-offset={topOffsetPx}
+        data-writing-scroll={editorScroll ? "" : undefined}
         style={paperPageTopStyle(topOffsetPx)}
+        onScroll={onColumnScroll}
       >
         {children}
       </div>

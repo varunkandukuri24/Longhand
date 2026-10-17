@@ -79,7 +79,7 @@ export function PieceText({
   const resolved = displayLinksFor(text, links);
   const paragraphs = splitParagraphs(text);
   return (
-    <div className="mt-6 flex flex-col gap-[26px]">
+    <div className="mt-6 flex flex-col gap-[22px]">
       {paragraphs.map((para, bi) => {
         const lines = para.text.split("\n");
         let lineStart = para.start;
@@ -94,7 +94,7 @@ export function PieceText({
               const node = line.startsWith("> ") ? (
                 <p
                   key={li}
-                  className="pl-7 font-writing text-[22px] leading-[1.7] text-[#3A352E] italic"
+                  className="pl-7 font-writing text-[20px] leading-[1.7] text-[#3A352E] italic"
                 >
                   {renderInline(
                     line.slice(2),
@@ -110,7 +110,7 @@ export function PieceText({
               ) : (
                 <p
                   key={li}
-                  className="font-writing text-[22px] leading-[1.7] text-ink"
+                  className="font-writing text-[20px] leading-[1.7] text-ink"
                 >
                   {renderInline(line, lineLinks)}
                 </p>
