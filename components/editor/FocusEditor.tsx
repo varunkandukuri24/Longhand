@@ -49,6 +49,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type ClipboardEvent,
   type CompositionEvent,
   type FormEvent,
   type KeyboardEvent,
@@ -60,6 +61,12 @@ import { createPortal, flushSync } from "react-dom";
 
 const TIMER_OPTIONS = [10, 15, 25] as const;
 const IS_DEV = process.env.NODE_ENV === "development";
+const TITLE_MAX = 120;
+const TITLE_SAVE_DEBOUNCE_MS = 400;
+
+function sanitizeTitle(raw: string): string {
+  return raw.replace(/\r\n/g, "\n").split("\n")[0].slice(0, TITLE_MAX);
+}
 
 type FocusEditorProps = {
   pieceId: string;
@@ -154,9 +161,13 @@ function FocusEditorBody({
   const lastLocalEventAtRef = useRef<number | null>(null);
 
   const [value, setValue] = useState("");
+  const [title, setTitle] = useState(initialTitle);
   const [links, setLinks] = useState<TextLink[]>([]);
   const [caretIndex, setCaretIndex] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleSavedRef = useRef(initialTitle);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [noBackspace, setNoBackspace] = useState(false);
   const [timerMinutes, setTimerMinutes] = useState<
@@ -363,7 +374,36 @@ function FocusEditorBody({
     ensureCaretVisible();
   }, [value, caretIndex, textLoaded, ensureCaretVisible]);
 
-  /** After text loads: focus editable pieces and put the caret at the end (once). */
+  const scheduleTitleSave = useCallback(
+    (nextTitle: string) => {
+      if (titleSaveTimerRef.current) {
+        clearTimeout(titleSaveTimerRef.current);
+      }
+      titleSaveTimerRef.current = setTimeout(() => {
+        titleSaveTimerRef.current = null;
+        if (nextTitle === titleSavedRef.current) return;
+        titleSavedRef.current = nextTitle;
+        void fetch(`/api/pieces/${pieceId}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title: nextTitle }),
+        }).catch(() => {
+          /* keep local title; next edit retries */
+        });
+      }, TITLE_SAVE_DEBOUNCE_MS);
+    },
+    [pieceId],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (titleSaveTimerRef.current) {
+        clearTimeout(titleSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  /** After text loads: new empty pieces focus the title; others the text end. */
   const placedCaretRef = useRef(false);
   useEffect(() => {
     placedCaretRef.current = false;
@@ -372,13 +412,21 @@ function FocusEditorBody({
   useEffect(() => {
     if (!textLoaded || superseded || bootError) return;
     if (placedCaretRef.current) return;
-    const el = textareaRef.current;
-    if (!el || el.readOnly) return;
 
     const placeCaret = () => {
       if (placedCaretRef.current) return;
       placedCaretRef.current = true;
       syncTextareaHeight();
+
+      const isNewEmpty =
+        value.length === 0 && title.trim().length === 0;
+      if (isNewEmpty) {
+        titleRef.current?.focus({ preventScroll: true });
+        return;
+      }
+
+      const el = textareaRef.current;
+      if (!el || el.readOnly) return;
       el.focus({ preventScroll: true });
       const len = el.value.length;
       el.setSelectionRange(len, len);
@@ -399,7 +447,55 @@ function FocusEditorBody({
     bootAttempt,
     syncTextareaHeight,
     ensureCaretVisible,
+    value,
+    title,
   ]);
+
+  const focusTextStart = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el || el.readOnly) return;
+    el.focus({ preventScroll: true });
+    el.setSelectionRange(0, 0);
+    setCaretIndex(0);
+    ensureCaretVisible();
+  }, [ensureCaretVisible]);
+
+  const focusTitle = useCallback(() => {
+    titleRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  const onTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const next = sanitizeTitle(event.target.value);
+    setTitle(next);
+    scheduleTitleSave(next);
+  };
+
+  const onTitleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    enterFullscreenOnce();
+    if (event.key === "Enter" || event.key === "ArrowDown") {
+      event.preventDefault();
+      focusTextStart();
+    }
+  };
+
+  const onTitlePaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    const text = event.clipboardData.getData("text");
+    if (!text.includes("\n") && !text.includes("\r")) return;
+    event.preventDefault();
+    const input = event.currentTarget;
+    const start = input.selectionStart ?? title.length;
+    const end = input.selectionEnd ?? title.length;
+    const firstLine = sanitizeTitle(text);
+    const next = sanitizeTitle(
+      title.slice(0, start) + firstLine + title.slice(end),
+    );
+    setTitle(next);
+    scheduleTitleSave(next);
+    requestAnimationFrame(() => {
+      const pos = Math.min(start + firstLine.length, next.length);
+      input.setSelectionRange(pos, pos);
+    });
+  };
 
   const onPublish = useCallback(
     async (args: { title: string }) => {
@@ -735,6 +831,17 @@ function FocusEditorBody({
     const selEnd = el.selectionEnd;
 
     if (
+      selStart === 0 &&
+      selEnd === 0 &&
+      (event.key === "ArrowUp" ||
+        (event.key === "Tab" && event.shiftKey && !event.metaKey && !event.ctrlKey))
+    ) {
+      event.preventDefault();
+      focusTitle();
+      return;
+    }
+
+    if (
       noBackspaceRef.current &&
       shouldBlockKeydown({
         key: event.key,
@@ -846,7 +953,7 @@ function FocusEditorBody({
         <PagesBackLink visible={controlsShown} />
         <PublishSheet
           open={publishOpen}
-          initialTitle={initialTitle}
+          initialTitle={title}
           busy={publishBusy}
           error={publishError}
           onClose={() => {
@@ -964,6 +1071,22 @@ function FocusEditorBody({
         </div>
       ) : (
         <>
+          <input
+            ref={titleRef}
+            type="text"
+            value={title}
+            maxLength={TITLE_MAX}
+            placeholder="Title"
+            aria-label="Title"
+            readOnly={superseded}
+            onChange={onTitleChange}
+            onKeyDown={onTitleKeyDown}
+            onPaste={onTitlePaste}
+            onMouseDown={onMouseDown}
+            className="writing-title"
+            autoComplete="off"
+            spellCheck
+          />
           <div className="writing-frame" data-writing-frame>
             <div ref={mirrorRef}>
               <WritingMirror
