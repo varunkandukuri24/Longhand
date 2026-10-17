@@ -1,10 +1,5 @@
 "use client";
 
-import { BackIcon } from "@/components/icons/LonghandIcons";
-import {
-  PAGES_ARIA_LABEL,
-  PAGES_HREF,
-} from "@/lib/dashboard/layout";
 import {
   CONDITIONS,
   LIGHTS,
@@ -14,7 +9,6 @@ import {
   type WindowSide,
 } from "@/lib/scene";
 import type { ScenePreset } from "@/lib/scene/use-ambient-scene";
-import Link from "next/link";
 import {
   useEffect,
   useId,
@@ -144,14 +138,6 @@ export function EditorControls({
       aria-hidden={!visible}
     >
       <div className="flex shrink-0 items-center gap-4 font-ui text-[13px] text-label">
-        <Link
-          href={PAGES_HREF}
-          aria-label={PAGES_ARIA_LABEL}
-          className="editor-bar-btn pages-back min-h-0 shrink-0"
-        >
-          <BackIcon />
-          Pages
-        </Link>
         <p className="whitespace-nowrap">
           {caption}
           <span className="mx-2">·</span>

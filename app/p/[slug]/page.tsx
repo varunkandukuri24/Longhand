@@ -107,7 +107,7 @@ export default async function PublicPiecePage({ params }: PageProps) {
     <PaperPage
       topOffsetPx={PAGE_TOP_OFFSET_PX}
       publicPage
-      chrome={isOwner ? <PagesBackLink /> : null}
+      chrome={isOwner ? <PagesBackLink visible /> : null}
     >
       <article>
         <h1

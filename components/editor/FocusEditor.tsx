@@ -1,6 +1,7 @@
 "use client";
 
 import { saveWindowSide } from "@/app/actions/window-side";
+import { PagesBackLink } from "@/components/dashboard/PagesBackLink";
 import { EditorControls } from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
 import { PublishSheet } from "@/components/editor/PublishSheet";
@@ -842,6 +843,7 @@ function FocusEditorBody({
     chromeHost &&
     createPortal(
       <>
+        <PagesBackLink visible={controlsShown} />
         <PublishSheet
           open={publishOpen}
           initialTitle={initialTitle}

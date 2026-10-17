@@ -465,16 +465,33 @@ body {
   opacity: 1;
 }
 
-.pages-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+/* Top-left arrow-only back (DESIGN.md). Aligned with the bar's start. */
+.pages-back-arrow {
+  position: fixed;
+  top: 28px;
+  z-index: 6;
   text-decoration: none;
+  transition: opacity 300ms ease;
 }
 
-.pages-back:hover {
-  color: var(--ink);
-  text-decoration: none;
+.writing-shell-left .pages-back-arrow {
+  left: var(--bar-from-window);
+}
+
+.writing-shell-right .pages-back-arrow {
+  left: var(--bar-other-edge);
+}
+
+.writing-shell-slide .pages-back-arrow {
+  transition:
+    left 250ms ease-out,
+    opacity 300ms ease;
+}
+
+/* Tooltip below — the control sits near the top edge. */
+.pages-back-arrow[data-tooltip]::after {
+  top: calc(100% + 6px);
+  bottom: auto;
 }
 
 .reference-pill {
@@ -568,6 +585,11 @@ a.reference-pill:hover svg {
     right: 20px;
   }
 
+  .writing-shell-left .pages-back-arrow,
+  .writing-shell-right .pages-back-arrow {
+    left: 20px;
+  }
+
   :root {
     --writing-size: 18px;
   }
@@ -580,7 +602,8 @@ a.reference-pill:hover svg {
 
   .side-window-slide,
   .writing-shell-slide .paper-column,
-  .writing-shell-slide .editor-bar {
+  .writing-shell-slide .editor-bar,
+  .writing-shell-slide .pages-back-arrow {
     transition: none !important;
   }
 
