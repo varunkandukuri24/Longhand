@@ -13,6 +13,7 @@ describe("public page never contains location", () => {
     "app/p/[slug]/page.tsx",
     "app/p/layout.tsx",
     "app/p/[slug]/opengraph-image.tsx",
+    "components/pieces/PublishedPieceView.tsx",
     "components/receipt/SignatureReceipt.tsx",
   ];
 

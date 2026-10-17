@@ -1,133 +1,56 @@
-import { PagesBackLink } from "@/components/dashboard/PagesBackLink";
-import { SignatureReceipt } from "@/components/receipt/SignatureReceipt";
-import { PieceText } from "@/components/references/PieceText";
-import { ReferencesRow } from "@/components/references/ReferencesRow";
-import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
+import { PublishedPieceView } from "@/components/pieces/PublishedPieceView";
 import { auth } from "@/auth";
-import { db } from "@/db";
-import { eventBatches, pieces, receipts, sessions, users } from "@/db/schema";
-import { referencesFor } from "@/lib/references";
-import { displayLinksFor } from "@/lib/references/display-links";
-import { formatWeatherSessionsNote, type Condition } from "@/lib/scene";
-import { eq } from "drizzle-orm";
+import { writerPageUrl, publicUrl } from "@/lib/piece-urls";
+import { loadPublishedBySlug } from "@/lib/pieces/load-published";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-async function loadPublished(slug: string) {
-  const [row] = await db
-    .select({
-      id: pieces.id,
-      userId: pieces.userId,
-      title: pieces.title,
-      finalText: pieces.finalText,
-      finalTextHash: pieces.finalTextHash,
-      links: pieces.links,
-      publishedAt: pieces.publishedAt,
-      slug: pieces.slug,
-      authorName: users.name,
-      metrics: receipts.metrics,
-      chainHeadHash: receipts.chainHeadHash,
-    })
-    .from(pieces)
-    .innerJoin(receipts, eq(receipts.pieceId, pieces.id))
-    .innerJoin(users, eq(users.id, pieces.userId))
-    .where(eq(pieces.slug, slug))
-    .limit(1);
-
-  if (
-    !row ||
-    row.finalText === null ||
-    row.publishedAt === null ||
-    row.finalTextHash === null ||
-    row.slug === null
-  ) {
-    return null;
-  }
-
-  return {
-    ...row,
-    finalText: row.finalText,
-    publishedAt: row.publishedAt,
-    finalTextHash: row.finalTextHash,
-    slug: row.slug,
-  };
-}
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const piece = await loadPublished(slug);
+  const piece = await loadPublishedBySlug(slug);
   if (!piece) {
     return { title: "Longhand" };
   }
   const author = piece.authorName?.trim();
-  return {
+  const meta: Metadata = {
     title: `${piece.title} · Longhand`,
     description: author ? `${author} · Longhand` : "Longhand",
   };
+  if (piece.visibility === "private") {
+    meta.robots = { index: false, follow: false };
+  }
+  return meta;
 }
 
 export default async function PublicPiecePage({ params }: PageProps) {
   const { slug } = await params;
-  const piece = await loadPublished(slug);
+  const piece = await loadPublishedBySlug(slug);
   if (!piece) {
     notFound();
   }
 
   const session = await auth();
   const isOwner = session?.user?.id === piece.userId;
-  const author = piece.authorName?.trim() || "Anonymous";
-  const displayLinks = displayLinksFor(piece.finalText, piece.links);
-  const references = referencesFor(piece.finalText, displayLinks);
 
-  const sessionRows = await db
-    .select({
-      sessionId: sessions.id,
-      condition: sessions.condition,
-    })
-    .from(sessions)
-    .innerJoin(eventBatches, eq(eventBatches.sessionId, sessions.id))
-    .where(eq(sessions.pieceId, piece.id));
-
-  const seen = new Set<string>();
-  const conditions: Array<Condition | null> = [];
-  for (const row of sessionRows) {
-    if (seen.has(row.sessionId)) continue;
-    seen.add(row.sessionId);
-    conditions.push(row.condition);
+  if (piece.visibility === "public" && !isOwner) {
+    permanentRedirect(publicUrl(piece, piece.authorHandle));
   }
-  const weatherNote = formatWeatherSessionsNote(conditions);
 
   return (
-    <PaperPage
-      topOffsetPx={PAGE_TOP_OFFSET_PX}
-      publicPage
-      chrome={isOwner ? <PagesBackLink visible /> : null}
-    >
-      <article>
-        <h1
-          className="font-writing text-[32px] leading-snug text-ink"
-          data-paper-heading
-        >
-          {piece.title}
-        </h1>
-        <PieceText text={piece.finalText} links={displayLinks} />
-        <ReferencesRow references={references} />
-      </article>
-
-      <SignatureReceipt
-        author={author}
-        publishedAt={piece.publishedAt}
-        metrics={piece.metrics}
-        finalTextHash={piece.finalTextHash}
-        chainHeadHash={piece.chainHeadHash}
-        weatherNote={weatherNote}
-      />
-    </PaperPage>
+    <PublishedPieceView
+      piece={piece}
+      isOwner={isOwner}
+      authorHref={
+        piece.visibility === "public"
+          ? writerPageUrl(piece.authorHandle)
+          : undefined
+      }
+    />
   );
 }

@@ -18,6 +18,8 @@ import { useId, useState } from "react";
 
 type SignatureReceiptProps = {
   author: string;
+  /** When set, the author's name in the signature links to their page. */
+  authorHref?: string;
   publishedAt: Date;
   metrics: ReceiptMetrics;
   finalTextHash: string;
@@ -41,6 +43,7 @@ const SEGMENT_COLOR: Record<"typed" | "broughtIn" | "quoted", string> = {
 
 export function SignatureReceipt({
   author,
+  authorHref,
   publishedAt,
   metrics,
   finalTextHash,
@@ -54,7 +57,9 @@ export function SignatureReceipt({
   const detailsId = useId();
 
   const sittings = sittingRowsFor(metrics);
+  const who = author.trim() || "Anonymous";
   const sentence = formatSignatureSentence(author, metrics.typedShare);
+  const sentenceRest = sentence.slice(who.length);
   const meta = formatSignatureMeta(
     metrics.activeWritingTimeMs,
     sittings.map((s) => s.startedAt),
@@ -95,7 +100,19 @@ export function SignatureReceipt({
         <Seal />
         <div className="min-w-0">
           <p className="font-writing text-[19px] leading-snug text-ink">
-            {sentence}
+            {authorHref ? (
+              <>
+                <a
+                  href={authorHref}
+                  className="underline decoration-[#BDB6AA] underline-offset-4 hover:decoration-ink"
+                >
+                  {who}
+                </a>
+                {sentenceRest}
+              </>
+            ) : (
+              sentence
+            )}
           </p>
           <p className="mt-1 font-ui text-[12.5px] text-label">{meta}</p>
         </div>

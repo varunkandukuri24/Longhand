@@ -8,6 +8,10 @@ import {
   users,
   verificationTokens,
 } from "@/db/schema";
+import { sessionCookieOptions } from "@/lib/auth/session-cookie";
+
+const useSecureCookies =
+  process.env.AUTH_URL?.startsWith("https://") === true;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -26,6 +30,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/signin",
     verifyRequest: "/signin/verify",
+  },
+  cookies: {
+    sessionToken: sessionCookieOptions(useSecureCookies),
   },
   callbacks: {
     session({ session, user }) {

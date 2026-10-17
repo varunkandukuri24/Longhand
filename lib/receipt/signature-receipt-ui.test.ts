@@ -40,9 +40,12 @@ describe("signature receipt public copy", () => {
 
   it("does not include the library card, stamp, verify line or replay", () => {
     const page = read("app/p/[slug]/page.tsx");
+    const view = read("components/pieces/PublishedPieceView.tsx");
     const receipt = read("components/receipt/SignatureReceipt.tsx");
     expect(page).not.toMatch(/LibraryCard|VerifyLine|ReplayPlayer|replayPublic/);
-    expect(page).toMatch(/SignatureReceipt/);
+    expect(view).not.toMatch(/LibraryCard|VerifyLine|ReplayPlayer|replayPublic/);
+    expect(page).toMatch(/PublishedPieceView/);
+    expect(view).toMatch(/SignatureReceipt/);
     expect(receipt).toMatch(/Verified · See how it was written/);
     expect(receipt).not.toMatch(/Watch it being written/);
   });
