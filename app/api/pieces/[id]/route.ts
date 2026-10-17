@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { pieces } from "@/db/schema";
 import { getOwnedPiece } from "@/lib/pieces/ownership";
+import { isPieceId } from "@/lib/pieces/piece-id";
 import { and, eq } from "drizzle-orm";
 
 type RouteContext = {
@@ -21,6 +22,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const { id: pieceId } = await context.params;
+    if (!isPieceId(pieceId)) {
+      return Response.json({ error: "not_found" }, { status: 404 });
+    }
     const piece = await getOwnedPiece(pieceId, session.user.id);
     if (!piece) {
       return Response.json({ error: "not_found" }, { status: 404 });
@@ -49,12 +53,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     return Response.json({ title });
   } catch (err) {
     console.error("[piece PATCH] FAILED", err);
-    return Response.json(
-      {
-        error: "internal",
-        message: err instanceof Error ? err.message : String(err),
-      },
-      { status: 500 },
-    );
+    return Response.json({ error: "internal" }, { status: 500 });
   }
 }

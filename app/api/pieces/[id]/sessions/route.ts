@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { pieces, sessions } from "@/db/schema";
 import { getOwnedPiece } from "@/lib/pieces/ownership";
+import { isPieceId } from "@/lib/pieces/piece-id";
 import { CONDITIONS, type Condition } from "@/lib/scene";
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -22,12 +23,24 @@ function parseCondition(raw: unknown): Condition | null {
  * Stores the ambient condition at session start for the weather note.
  */
 export async function POST(request: Request, context: RouteContext) {
+  try {
+    return await postSession(request, context);
+  } catch (err) {
+    console.error("[sessions] FAILED", err);
+    return Response.json({ error: "internal" }, { status: 500 });
+  }
+}
+
+async function postSession(request: Request, context: RouteContext) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const { id: pieceId } = await context.params;
+  if (!isPieceId(pieceId)) {
+    return Response.json({ error: "not_found" }, { status: 404 });
+  }
   const piece = await getOwnedPiece(pieceId, session.user.id);
   if (!piece) {
     return Response.json({ error: "not_found" }, { status: 404 });

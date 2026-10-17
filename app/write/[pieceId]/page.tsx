@@ -2,6 +2,7 @@ import { FocusEditor } from "@/components/editor/FocusEditor";
 import { db } from "@/db";
 import { pieces } from "@/db/schema";
 import { requireUserWithDisplayName } from "@/lib/auth/display-name";
+import { isPieceId } from "@/lib/pieces/piece-id";
 import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 
@@ -11,6 +12,9 @@ export default async function WritePage({
   const user = await requireUserWithDisplayName();
 
   const { pieceId } = await params;
+  if (!isPieceId(pieceId)) {
+    notFound();
+  }
 
   const [piece] = await db
     .select({

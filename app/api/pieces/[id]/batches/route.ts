@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { eventBatches, pieces, sessions } from "@/db/schema";
 import { rebuildDraftTextFromBatches } from "@/lib/pieces/draft-text";
 import { getOwnedPiece } from "@/lib/pieces/ownership";
+import { isPieceId } from "@/lib/pieces/piece-id";
 import {
   clientBoundsFromEvents,
   decideBatchAcceptance,
@@ -35,6 +36,15 @@ type BatchBody = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
+  try {
+    return await postBatch(request, context);
+  } catch (err) {
+    console.error("[batches] FAILED", err);
+    return Response.json({ error: "internal" }, { status: 500 });
+  }
+}
+
+async function postBatch(request: Request, context: RouteContext) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
@@ -66,6 +76,9 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const { id: pieceId } = await context.params;
+  if (!isPieceId(pieceId)) {
+    return Response.json({ error: "not_found" }, { status: 404 });
+  }
   const piece = await getOwnedPiece(pieceId, session.user.id);
   if (!piece) {
     return Response.json({ error: "not_found" }, { status: 404 });

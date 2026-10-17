@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { isPieceId } from "@/lib/pieces/piece-id";
 import { publishPiece } from "@/lib/pieces/publish";
 
 type RouteContext = {
@@ -11,12 +12,24 @@ type PublishBody = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
+  try {
+    return await postPublish(request, context);
+  } catch (err) {
+    console.error("[publish] FAILED", err);
+    return Response.json({ error: "internal" }, { status: 500 });
+  }
+}
+
+async function postPublish(request: Request, context: RouteContext) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const { id: pieceId } = await context.params;
+  if (!isPieceId(pieceId)) {
+    return Response.json({ error: "not_found" }, { status: 404 });
+  }
 
   let body: PublishBody;
   try {
