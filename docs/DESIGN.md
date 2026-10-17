@@ -42,7 +42,7 @@ No other fonts, except the three extra writing fonts in the Type menu (Newsreade
 - SIZE: four "A" buttons in Literata at increasing sizes, the current one underlined: Small 18 px, Medium 20 px (default), Large 22 px, Extra large 24 px writing size. Each has an `aria-label` and `aria-pressed`.
 - A footnote: "Only changes your writing screen. Published pieces are always set in Literata."
 - The choice applies instantly, is saved per writer (`users.font`, `users.font_size`) and follows them to every piece and device. The title line uses the same font.
-- Load all four fonts from Google Fonts with `display=swap`; only Literata and DM Mono load on public pages.
+- Self-host all four fonts as local woff2 (`next/font/local`, `display=swap`); only Literata and DM Mono load on public pages. OG images use local TTF files, not a network fetch.
 
 ## The writing area
 

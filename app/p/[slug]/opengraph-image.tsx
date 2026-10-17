@@ -5,7 +5,7 @@ import {
   formatSignatureSentence,
 } from "@/lib/receipt/format";
 import type { ReceiptSessionRow } from "@/lib/receipt/types";
-import { loadGoogleFont } from "@/lib/og/fonts";
+import { dmMonoOg, literataOg } from "@/lib/og/fonts";
 import { eq } from "drizzle-orm";
 import { ImageResponse } from "next/og";
 
@@ -56,11 +56,6 @@ export default async function Image({ params }: ImageProps) {
         sittings.map((s) => s.startedAt),
       )
     : "";
-
-  const [literata, dmMono] = await Promise.all([
-    loadGoogleFont("Literata", 400, "normal"),
-    loadGoogleFont("DM Mono", 400, "normal"),
-  ]);
 
   return new ImageResponse(
     (
@@ -130,13 +125,13 @@ export default async function Image({ params }: ImageProps) {
       fonts: [
         {
           name: "Literata",
-          data: literata,
+          data: literataOg,
           style: "normal",
           weight: 400,
         },
         {
           name: "DM Mono",
-          data: dmMono,
+          data: dmMonoOg,
           style: "normal",
           weight: 400,
         },
