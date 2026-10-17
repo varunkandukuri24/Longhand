@@ -5,6 +5,7 @@ import {
   loadWriterPublicPieces,
 } from "@/lib/writers/page-data";
 import { ImageResponse } from "next/og";
+import { notFound } from "next/navigation";
 
 export const alt = "Longhand";
 export const size = { width: 1200, height: 630 };
@@ -17,25 +18,22 @@ type ImageProps = {
 export default async function Image({ params }: ImageProps) {
   const { handle } = await params;
   const resolved = await resolveHandle(handle);
-  const name =
-    resolved.kind === "user"
-      ? resolved.name?.trim() || resolved.handle
-      : handle;
-
-  let summary = "Longhand";
-  if (resolved.kind === "user") {
-    const { pieces, totalWritingTimeMs } = await loadWriterPublicPieces(
-      resolved.id,
-    );
-    summary =
-      pieces.length === 0
-        ? "Nothing published here yet."
-        : formatWriterSummary({
-            pieceCount: pieces.length,
-            totalWritingTimeMs,
-            since: resolved.createdAt,
-          });
+  if (resolved.kind !== "user") {
+    notFound();
   }
+
+  const name = resolved.name?.trim() || resolved.handle;
+  const { pieces, totalWritingTimeMs } = await loadWriterPublicPieces(
+    resolved.id,
+  );
+  const summary =
+    pieces.length === 0
+      ? "Nothing published here yet."
+      : formatWriterSummary({
+          pieceCount: pieces.length,
+          totalWritingTimeMs,
+          since: resolved.createdAt,
+        });
 
   return new ImageResponse(
     (

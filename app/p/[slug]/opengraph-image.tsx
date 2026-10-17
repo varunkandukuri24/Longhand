@@ -1,13 +1,12 @@
-import { db } from "@/db";
-import { pieces, receipts, users } from "@/db/schema";
 import {
   formatSignatureMeta,
   formatSignatureSentence,
 } from "@/lib/receipt/format";
 import type { ReceiptSessionRow } from "@/lib/receipt/types";
 import { dmMonoOg, literataOg } from "@/lib/og/fonts";
-import { eq } from "drizzle-orm";
+import { loadPublishedBySlug } from "@/lib/pieces/load-published";
 import { ImageResponse } from "next/og";
+import { notFound } from "next/navigation";
 
 export const alt = "Longhand";
 export const size = { width: 1200, height: 630 };
@@ -29,33 +28,21 @@ function sittingRowsFor(metrics: {
 
 export default async function Image({ params }: ImageProps) {
   const { slug } = await params;
+  const piece = await loadPublishedBySlug(slug);
+  if (!piece) {
+    notFound();
+  }
 
-  const [row] = await db
-    .select({
-      title: pieces.title,
-      authorName: users.name,
-      metrics: receipts.metrics,
-    })
-    .from(pieces)
-    .innerJoin(receipts, eq(receipts.pieceId, pieces.id))
-    .innerJoin(users, eq(users.id, pieces.userId))
-    .where(eq(pieces.slug, slug))
-    .limit(1);
+  const title = piece.title;
+  const author = piece.authorName?.trim() || "Anonymous";
+  const metrics = piece.metrics;
 
-  const title = row?.title ?? "Untitled";
-  const author = row?.authorName?.trim() || "Anonymous";
-  const metrics = row?.metrics;
-
-  const sentence = metrics
-    ? formatSignatureSentence(author, metrics.typedShare)
-    : formatSignatureSentence(author, 1);
-  const sittings = metrics ? sittingRowsFor(metrics) : [];
-  const meta = metrics
-    ? formatSignatureMeta(
-        metrics.activeWritingTimeMs,
-        sittings.map((s) => s.startedAt),
-      )
-    : "";
+  const sentence = formatSignatureSentence(author, metrics.typedShare);
+  const sittings = sittingRowsFor(metrics);
+  const meta = formatSignatureMeta(
+    metrics.activeWritingTimeMs,
+    sittings.map((s) => s.startedAt),
+  );
 
   return new ImageResponse(
     (
