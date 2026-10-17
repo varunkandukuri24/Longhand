@@ -20,6 +20,8 @@ export type PieceStateResponse = {
   origins: CharOrigin[];
   links: TextLink[];
   events: EditEvent[];
+  /** Active writing ms from stored batches before this sitting. */
+  priorActiveMs: number;
   lastAckSeq: number | null;
   lastSessionId: string | null;
   flags: {

@@ -39,6 +39,10 @@ import type { CharOrigin, EditEvent, TextLink } from "@/lib/receipt/types";
 import { captionFor, type WindowSide } from "@/lib/scene";
 import { SCENE_PRESET_KEY } from "@/lib/scene/use-ambient-scene";
 import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
+import {
+  formatWritingClock,
+  liveSittingActiveMs,
+} from "@/lib/receipt/writing-time";
 import { saveLabelFor } from "@/lib/sync/save-label";
 import type { SyncStatus } from "@/lib/sync/types";
 import { useRouter } from "next/navigation";
@@ -82,16 +86,8 @@ function formatBarDate(d = new Date()): string {
   }).format(d);
 }
 
-function formatElapsed(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSec / 60);
-  const seconds = totalSec % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
-
 function formatCountdown(ms: number): string {
-  const clamped = Math.max(0, ms);
-  return formatElapsed(clamped);
+  return formatWritingClock(Math.max(0, ms));
 }
 
 export function FocusEditor(props: FocusEditorProps) {
@@ -168,7 +164,10 @@ function FocusEditorBody({
   const titleRef = useRef<HTMLInputElement>(null);
   const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const titleSavedRef = useRef(initialTitle);
-  const [elapsedMs, setElapsedMs] = useState(0);
+  const [priorActiveMs, setPriorActiveMs] = useState(0);
+  const sittingEventsRef = useRef<EditEvent[]>([]);
+  const [sittingActiveMs, setSittingActiveMs] = useState(0);
+  const [totalActiveMs, setTotalActiveMs] = useState(0);
   const [noBackspace, setNoBackspace] = useState(false);
   const [timerMinutes, setTimerMinutes] = useState<
     (typeof TIMER_OPTIONS)[number] | null
@@ -246,6 +245,10 @@ function FocusEditorBody({
         eventsRef.current = state.events.slice();
         setValue(state.text);
         setLinks((state.links ?? []).slice());
+        setPriorActiveMs(state.priorActiveMs ?? 0);
+        setTotalActiveMs(state.priorActiveMs ?? 0);
+        setSittingActiveMs(0);
+        sittingEventsRef.current = [];
         setStoredDelayedCount(state.flags?.delayedCount ?? 0);
         exposeEvents();
         syncDebugSnapshot();
@@ -605,6 +608,14 @@ function FocusEditorBody({
     if (lastLocal !== null && now - lastLocal >= IDLE_NEW_SESSION_MS) {
       sessionStartRef.current = now;
       setSessionStartedAt(now);
+      // Long idle starts a new writing session; prior sittings stay in priorActiveMs.
+      setPriorActiveMs((prev) => prev + liveSittingActiveMs({
+        events: sittingEventsRef.current,
+        lastEventWallMs: lastLocal,
+        nowWallMs: lastLocal,
+      }));
+      sittingEventsRef.current = [];
+      setSittingActiveMs(0);
     }
     const start = sessionStartRef.current ?? now;
     sessionStartRef.current = start;
@@ -655,6 +666,7 @@ function FocusEditorBody({
       eventsRef.current = captured.events;
       originsRef.current = captured.origins;
       linksRef.current = captured.links;
+      sittingEventsRef.current = sittingEventsRef.current.concat(newEvents);
       setLinks(captured.links.slice());
       prevValueRef.current = next;
       syncRef.current?.pushEvents(newEvents);
@@ -698,10 +710,13 @@ function FocusEditorBody({
   useEffect(() => {
     exposeEvents();
     const id = window.setInterval(() => {
-      const start = sessionStartRef.current;
-      if (start !== null) {
-        setElapsedMs(Date.now() - start);
-      }
+      const sitting = liveSittingActiveMs({
+        events: sittingEventsRef.current,
+        lastEventWallMs: lastLocalEventAtRef.current,
+        nowWallMs: Date.now(),
+      });
+      setSittingActiveMs(sitting);
+      setTotalActiveMs(priorActiveMs + sitting);
       if (timerEndsAtRef.current !== null) {
         setTimerRemainingMs(timerEndsAtRef.current - Date.now());
       }
@@ -710,7 +725,7 @@ function FocusEditorBody({
       }
     }, 250);
     return () => window.clearInterval(id);
-  }, [debugOpen, exposeEvents, syncDebugSnapshot]);
+  }, [debugOpen, exposeEvents, priorActiveMs, syncDebugSnapshot]);
 
   useEffect(() => {
     return () => {
@@ -970,11 +985,15 @@ function FocusEditorBody({
           visible={controlsShown}
           caption={captionFor(ambient.light, ambient.condition)}
           dateLabel={formatBarDate()}
-          elapsedLabel={formatElapsed(elapsedMs)}
+          writingTimeLabel={formatWritingClock(totalActiveMs)}
+          sittingTimeLabel={formatWritingClock(sittingActiveMs)}
+          allSittingsLabel={formatWritingClock(totalActiveMs)}
           saveLabel={saveLabelFor(syncStatus)}
           timerMinutes={timerMinutes}
           timerRemainingLabel={
-            timerMinutes !== null && timerRemainingMs !== null
+            timerMinutes !== null &&
+            timerRemainingMs !== null &&
+            timerRemainingMs > 0
               ? formatCountdown(timerRemainingMs)
               : null
           }

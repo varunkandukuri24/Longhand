@@ -37,7 +37,9 @@ type EditorControlsProps = {
   visible: boolean;
   caption: string;
   dateLabel: string;
-  elapsedLabel: string;
+  writingTimeLabel: string;
+  sittingTimeLabel: string;
+  allSittingsLabel: string;
   saveLabel: string;
   timerMinutes: (typeof TIMER_OPTIONS)[number] | null;
   timerRemainingLabel: string | null;
@@ -62,7 +64,9 @@ export function EditorControls({
   visible,
   caption,
   dateLabel,
-  elapsedLabel,
+  writingTimeLabel,
+  sittingTimeLabel,
+  allSittingsLabel,
   saveLabel,
   timerMinutes,
   timerRemainingLabel,
@@ -81,21 +85,30 @@ export function EditorControls({
   onPopoverChange,
 }: EditorControlsProps) {
   const [open, setOpen] = useState<PopoverId>(null);
+  const [timeOpen, setTimeOpen] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
+  const timeWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    onPopoverChange?.(open !== null);
-  }, [open, onPopoverChange]);
+    onPopoverChange?.(open !== null || timeOpen);
+  }, [open, timeOpen, onPopoverChange]);
 
   useEffect(() => {
-    if (open === null) return;
+    if (open === null && !timeOpen) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (rowRef.current && !rowRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (rowRef.current && !rowRef.current.contains(target)) {
         setOpen(null);
+      }
+      if (timeWrapRef.current && !timeWrapRef.current.contains(target)) {
+        setTimeOpen(false);
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(null);
+      if (event.key === "Escape") {
+        setOpen(null);
+        setTimeOpen(false);
+      }
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -103,7 +116,7 @@ export function EditorControls({
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, timeOpen]);
 
   const toggle = (id: PopoverId) => {
     setOpen((prev) => (prev === id ? null : id));
@@ -143,7 +156,56 @@ export function EditorControls({
           <span className="mx-2">·</span>
           {dateLabel}
           <span className="mx-2">·</span>
-          {elapsedLabel}
+          <span
+            ref={timeWrapRef}
+            className="relative inline-block"
+            onMouseEnter={() => {
+              if (!timerRemainingLabel) setTimeOpen(true);
+            }}
+            onMouseLeave={() => setTimeOpen(false)}
+          >
+            <button
+              type="button"
+              className="editor-bar-btn min-h-0"
+              aria-expanded={timeOpen}
+              aria-label={
+                timerRemainingLabel
+                  ? `${timerRemainingLabel} left`
+                  : `Writing time ${writingTimeLabel}`
+              }
+              onFocus={() => {
+                if (!timerRemainingLabel) setTimeOpen(true);
+              }}
+              onBlur={(event) => {
+                if (
+                  timeWrapRef.current &&
+                  !timeWrapRef.current.contains(event.relatedTarget as Node)
+                ) {
+                  setTimeOpen(false);
+                }
+              }}
+              onClick={() => {
+                if (!timerRemainingLabel) setTimeOpen((v) => !v);
+              }}
+            >
+              {timerRemainingLabel
+                ? `${timerRemainingLabel} left`
+                : writingTimeLabel}
+            </button>
+            {timeOpen && !timerRemainingLabel ? (
+              <div
+                className="editor-popover left-0 right-auto min-w-[200px]"
+                role="dialog"
+                aria-label="Writing time"
+              >
+                <p className="py-1">This sitting {sittingTimeLabel}</p>
+                <p className="py-1">All sittings {allSittingsLabel}</p>
+                <p className="mt-1 py-1 text-[11.5px] text-label">
+                  Writing time only. It pauses when you stop for a minute.
+                </p>
+              </div>
+            ) : null}
+          </span>
           <span className="mx-2">·</span>
           {saveLabel}
         </p>
