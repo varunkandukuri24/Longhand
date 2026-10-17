@@ -1,9 +1,9 @@
 /** Exact seal SVG from docs/DESIGN.md. Decorative only. */
-export function Seal() {
+export function Seal({ size = 44 }: { size?: number }) {
   return (
     <svg
-      width="44"
-      height="44"
+      width={size}
+      height={size}
       viewBox="0 0 44 44"
       fill="none"
       aria-hidden="true"
