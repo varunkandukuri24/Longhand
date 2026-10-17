@@ -42,6 +42,7 @@ describe.skipIf(!databaseUrl)("link batch + publish (route handlers)", () => {
       id: userId,
       email: `${userId}@example.test`,
       name: "Link Batch",
+      handle: `link-${userId.slice(-12)}`.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30),
     });
     authMock.userId = userId;
 
@@ -187,6 +188,7 @@ describe.skipIf(!databaseUrl)("link batch + publish (route handlers)", () => {
       id: pieceUser,
       email: `${pieceUser}@example.test`,
       name: "Bad Link",
+      handle: `bad-${pieceUser.slice(-12)}`.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30),
     });
     authMock.userId = pieceUser;
     const [piece] = await db

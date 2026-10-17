@@ -39,6 +39,7 @@ describe.skipIf(!databaseUrl)("GET /api/pieces/[id]/state (real route)", () => {
       id: userId,
       email: `${userId}@example.test`,
       name: "State Route Tester",
+      handle: `state-${userId.slice(-12)}`.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30),
     });
     authMock.userId = userId;
 

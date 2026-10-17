@@ -31,6 +31,7 @@ describe.skipIf(!databaseUrl)("single-writer guard", () => {
       id: userId,
       email: `${userId}@example.test`,
       name: "Single Writer",
+      handle: `sw-${userId.slice(-12)}`.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30),
     });
     const [piece] = await db
       .insert(schema.pieces)

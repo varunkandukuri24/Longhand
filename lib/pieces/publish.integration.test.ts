@@ -46,6 +46,7 @@ describe.skipIf(!databaseUrl)("publish piece", () => {
       id: userId,
       email: `${userId}@example.test`,
       name: "Publisher",
+      handle: `pub-${userId.slice(-12)}`.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30),
     });
     authMock.userId = userId;
 
@@ -167,7 +168,7 @@ describe.skipIf(!databaseUrl)("publish piece", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.slug).toMatch(/^hello-world-[a-z0-9]{6}$/);
+    expect(result.slug).toMatch(/^hello-world-[a-z0-9]{10}$/);
 
     const [piece] = await db
       .select({

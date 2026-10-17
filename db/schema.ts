@@ -17,6 +17,10 @@ import {
 import type { EditEvent, ReceiptMetrics, TextLink } from "@/lib/receipt/types";
 
 export const pieceStatusEnum = pgEnum("piece_status", ["draft", "published"]);
+export const pieceVisibilityEnum = pgEnum("piece_visibility", [
+  "public",
+  "private",
+]);
 export const sceneConditionEnum = pgEnum("scene_condition", [
   "clear",
   "cloudy",
@@ -44,6 +48,13 @@ export const users = pgTable("users", {
     .$defaultFn(() => crypto.randomUUID()),
   // Auth.js adapter field; stores the writer's display name (PRD: display_name).
   name: text("display_name"),
+  /** Unique page address; personal page at {handle}.{ROOT_DOMAIN}. */
+  handle: text("handle")
+    .notNull()
+    .unique()
+    .$defaultFn(
+      () => `u-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`,
+    ),
   email: text("email").notNull().unique(),
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
@@ -104,6 +115,14 @@ export const verificationTokens = pgTable(
   (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })],
 );
 
+export const handleRedirects = pgTable("handle_redirects", {
+  oldHandle: text("old_handle").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+});
+
 export const pieces = pgTable("pieces", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")
@@ -111,6 +130,7 @@ export const pieces = pgTable("pieces", {
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull().default(""),
   status: pieceStatusEnum("status").notNull().default("draft"),
+  visibility: pieceVisibilityEnum("visibility").notNull().default("public"),
   slug: text("slug").unique(),
   /**
    * Latest draft body after accepted batches (nullable until first validated
@@ -180,6 +200,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   pieces: many(pieces),
   accounts: many(accounts),
   authSessions: many(authSessions),
+  handleRedirects: many(handleRedirects),
+}));
+
+export const handleRedirectsRelations = relations(handleRedirects, ({ one }) => ({
+  user: one(users, {
+    fields: [handleRedirects.userId],
+    references: [users.id],
+  }),
 }));
 
 export const piecesRelations = relations(pieces, ({ one, many }) => ({

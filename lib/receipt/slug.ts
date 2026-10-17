@@ -1,7 +1,7 @@
 const SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-/** Six random a-z0-9 characters for slug uniqueness. */
-export function randomSlugSuffix(length = 6): string {
+/** Ten random a-z0-9 characters for slug uniqueness. */
+export function randomSlugSuffix(length = 10): string {
   const bytes = crypto.getRandomValues(new Uint8Array(length));
   let out = "";
   for (let i = 0; i < length; i += 1) {

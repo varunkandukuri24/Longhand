@@ -29,6 +29,7 @@ describe.skipIf(!databaseUrl)("batch store integration", () => {
       id: userId,
       email: `${userId}@example.test`,
       name: "Phase 2 Tester",
+      handle: `batch-${userId.slice(-12)}`.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30),
     });
     const [piece] = await db
       .insert(schema.pieces)
