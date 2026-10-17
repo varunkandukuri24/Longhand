@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { normalizeDisplayName } from "@/lib/auth/normalize-display-name";
+import { changeHandle } from "@/lib/handles/change";
+import { validateHandle } from "@/lib/handles";
 import { geocodeCity } from "@/lib/scene/geocode";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
@@ -54,6 +56,19 @@ export async function saveDisplayName(formData: FormData): Promise<void> {
     .update(users)
     .set({ name, ...locationUpdate })
     .where(eq(users.id, session.user.id));
+
+  if (formData.has("handle")) {
+    const handleRaw = String(formData.get("handle") ?? "");
+    const checked = validateHandle(handleRaw);
+    if (checked.ok) {
+      const result = await changeHandle(session.user.id, checked.handle);
+      if (!result.ok && result.error !== "unchanged") {
+        redirect("/onboarding/name");
+      }
+    } else {
+      redirect("/onboarding/name");
+    }
+  }
 
   redirect(next);
 }

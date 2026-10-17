@@ -520,6 +520,21 @@ body {
     opacity 300ms ease;
 }
 
+/* Owner visibility control (DESIGN.md): top right of the paper. */
+.visibility-control {
+  position: fixed;
+  top: 28px;
+  z-index: 6;
+}
+
+.writing-shell-left .visibility-control {
+  right: 40px;
+}
+
+.writing-shell-right .visibility-control {
+  right: var(--bar-from-window);
+}
+
 /* Tooltip below — the control sits near the top edge. */
 .pages-back-arrow[data-tooltip]::after {
   top: calc(100% + 6px);

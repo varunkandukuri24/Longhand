@@ -6,6 +6,8 @@ import { db } from "@/db";
 import { pieces } from "@/db/schema";
 import { requireUserWithDisplayName } from "@/lib/auth/display-name";
 import { dashboardDisplayTitle } from "@/lib/dashboard/display-title";
+import { rootDomain } from "@/lib/hosts";
+import { writerPageUrl } from "@/lib/piece-urls";
 import { loadPieceState } from "@/lib/pieces/load-state";
 import { wordCount } from "@/lib/receipt/compute-receipt";
 import { desc, eq } from "drizzle-orm";
@@ -13,12 +15,14 @@ import Link from "next/link";
 
 export default async function DashboardPage() {
   const user = await requireUserWithDisplayName();
+  const domain = rootDomain();
 
   const userPieces = await db
     .select({
       id: pieces.id,
       title: pieces.title,
       status: pieces.status,
+      visibility: pieces.visibility,
       slug: pieces.slug,
       finalText: pieces.finalText,
       updatedAt: pieces.updatedAt,
@@ -42,14 +46,13 @@ export default async function DashboardPage() {
         id: piece.id,
         display,
         status: piece.status,
+        visibility: piece.visibility,
         slug: piece.slug,
         words: wordCount(text),
         updatedAt: piece.updatedAt,
       };
     }),
   );
-
-  const cityLabel = user.cityName?.trim() || "No city";
 
   return (
     <PaperPage
@@ -66,10 +69,18 @@ export default async function DashboardPage() {
         <div className="mt-2 flex flex-wrap items-center font-ui text-[13px] text-label">
           <span>{user.name}</span>
           <span className="mx-2 text-label/40">·</span>
-          <span>{cityLabel}</span>
+          <a
+            href={writerPageUrl(user.handle)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ink underline decoration-ink underline-offset-4"
+          >
+            {user.handle}.{domain}
+          </a>
           <span className="mx-2 text-label/40">·</span>
           <DashboardSettings
             displayName={user.name}
+            handle={user.handle}
             cityName={user.cityName}
             email={user.email ?? ""}
           />
@@ -102,6 +113,12 @@ export default async function DashboardPage() {
                 piece.status === "published" && piece.slug
                   ? `/p/${piece.slug}`
                   : `/write/${piece.id}`;
+              const statusLabel =
+                piece.status === "published"
+                  ? piece.visibility === "private"
+                    ? "private"
+                    : "public"
+                  : "draft";
               return (
                 <li key={piece.id}>
                   <Link
@@ -126,9 +143,7 @@ export default async function DashboardPage() {
                       {piece.words} {piece.words === 1 ? "word" : "words"}
                     </span>
                     <span className="mx-2 text-label/40">·</span>
-                    <span>
-                      {piece.status === "published" ? "published" : "draft"}
-                    </span>
+                    <span>{statusLabel}</span>
                   </p>
                 </li>
               );

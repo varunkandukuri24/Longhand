@@ -1,4 +1,5 @@
 import { PagesBackLink } from "@/components/dashboard/PagesBackLink";
+import { VisibilityControl } from "@/components/pieces/VisibilityControl";
 import { SignatureReceipt } from "@/components/receipt/SignatureReceipt";
 import { PieceText } from "@/components/references/PieceText";
 import { ReferencesRow } from "@/components/references/ReferencesRow";
@@ -49,7 +50,17 @@ export async function PublishedPieceView({
     <PaperPage
       topOffsetPx={PAGE_TOP_OFFSET_PX}
       publicPage
-      chrome={isOwner ? <PagesBackLink visible /> : null}
+      chrome={
+        isOwner ? (
+          <>
+            <PagesBackLink visible />
+            <VisibilityControl
+              pieceId={piece.id}
+              initialVisibility={piece.visibility}
+            />
+          </>
+        ) : null
+      }
     >
       <article>
         <h1
