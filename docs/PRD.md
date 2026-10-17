@@ -137,7 +137,7 @@ The receipt is credible because time is witnessed by the server as it passes, no
 **Integrity**
 
 - **Live streaming.** Batches arrive every ~5 s and the server stamps each with its own receive time. A 50-minute session can't be fabricated in 5 minutes.
-- **Hash chain.** Each batch carries `hash = sha256(prevHash + seq + JSON(events))`. The server rejects gaps in `seq` or a broken chain.
+- **Hash chain.** Each batch carries `hash = sha256(prevHash + seq + JSON(events))`. The server rejects gaps in `seq` or a broken chain. It also checks every event before storing a batch: positions and lengths are whole numbers inside the current text, a batch holds at most 2,000 events and 1 MB, and a link event must replace exactly its own http(s) address with exactly that address's hostname label. Anything else refuses the whole batch, so link events can't be used to slip in text that the receipt doesn't count.
 - **Rebuild check.** On publish, the server replays all events and requires the result to match the submitted final text byte for byte.
 - **Clock sanity.** Client timestamps within a batch must be increasing, and the batch's span must roughly match the server gap since the last batch (±20%). Suspect batches are flagged, never rejected, so no writing is lost.
 - **One writer at a time.** A piece can be written from only one session at a time: opening it in a new tab or on another device takes over, and the newest session always wins. The server rejects batches from a superseded session (409, "superseded"), and the old tab becomes read-only with a note to refresh. Without this, edits made against stale text in two places would scramble the piece on replay.
