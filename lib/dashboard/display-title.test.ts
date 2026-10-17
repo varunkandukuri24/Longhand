@@ -60,10 +60,12 @@ describe("dashboard layout tokens", () => {
       join(process.cwd(), "components/dashboard/PagesBackLink.tsx"),
       "utf8",
     );
-    expect(ownerBack).toContain("href={PAGES_HREF}");
-    expect(ownerBack).toContain("PAGES_ARIA_LABEL");
-    expect(ownerBack).toContain('data-tooltip="Pages"');
+    expect(ownerBack).toContain("href = PAGES_HREF");
+    expect(ownerBack).toContain("label = PAGES_ARIA_LABEL");
+    expect(ownerBack).toContain('"Pages"');
     expect(ownerBack).toContain("pages-back-arrow");
+    expect(ownerBack).toContain("href?: string");
+    expect(ownerBack).toContain("label?: string");
     const editor = readFileSync(
       join(process.cwd(), "components/editor/FocusEditor.tsx"),
       "utf8",

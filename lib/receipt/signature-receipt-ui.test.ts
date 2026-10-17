@@ -25,17 +25,11 @@ describe("signature receipt public copy", () => {
     }
   });
 
-  it("only renders hashes inside the fingerprints toggle", () => {
+  it("never shows fingerprints or hash values on the public receipt", () => {
     const src = read("components/receipt/SignatureReceipt.tsx");
-    const toggle = src.indexOf("fingerprintsOpen ?");
-    expect(toggle).toBeGreaterThan(-1);
-    const before = src.slice(0, toggle);
-    const after = src.slice(toggle);
-    // Full hash values are only interpolated in the open fingerprints panel.
-    expect(before).not.toMatch(/\{finalTextHash\}/);
-    expect(before).not.toMatch(/\{chainHeadHash\}/);
-    expect(after).toMatch(/\{finalTextHash\}/);
-    expect(after).toMatch(/\{chainHeadHash\}/);
+    expect(src).not.toMatch(/fingerprint/i);
+    expect(src).not.toMatch(/finalTextHash|chainHeadHash/);
+    expect(src).not.toMatch(/Technical fingerprints/);
   });
 
   it("does not include the library card, stamp, verify line or replay", () => {

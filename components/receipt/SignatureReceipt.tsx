@@ -22,8 +22,6 @@ type SignatureReceiptProps = {
   authorHref?: string;
   publishedAt: Date;
   metrics: ReceiptMetrics;
-  finalTextHash: string;
-  chainHeadHash: string;
   weatherNote?: string | null;
   locale?: string;
 };
@@ -46,14 +44,10 @@ export function SignatureReceipt({
   authorHref,
   publishedAt,
   metrics,
-  finalTextHash,
-  chainHeadHash,
   weatherNote = null,
   locale,
 }: SignatureReceiptProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [fingerprintsOpen, setFingerprintsOpen] = useState(false);
-  const [copied, setCopied] = useState<"text" | "log" | null>(null);
   const detailsId = useId();
 
   const sittings = sittingRowsFor(metrics);
@@ -81,16 +75,6 @@ export function SignatureReceipt({
     ...(weatherNote ? [weatherNote] : []),
   ];
   const verified = formatVerifiedCopy(publishedAt, locale);
-
-  async function copy(kind: "text" | "log", value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(kind);
-      window.setTimeout(() => setCopied(null), 1500);
-    } catch {
-      /* clipboard may be unavailable */
-    }
-  }
 
   return (
     <div className="mt-[72px] w-full">
@@ -250,43 +234,6 @@ export function SignatureReceipt({
               </ul>
             </section>
           ) : null}
-
-          <div className="mt-[30px]">
-            <button
-              type="button"
-              className="font-ui text-[11.5px] text-[#9A9387] underline-offset-2 hover:underline"
-              aria-expanded={fingerprintsOpen}
-              onClick={() => setFingerprintsOpen((open) => !open)}
-            >
-              Technical fingerprints, for anyone who wants to check
-            </button>
-            {fingerprintsOpen ? (
-              <ul className="mt-3 space-y-2 font-ui text-[11.5px] break-all text-[#9A9387]">
-                <li className="flex flex-wrap items-baseline gap-2">
-                  <span className="shrink-0">Text</span>
-                  <code className="min-w-0">{finalTextHash}</code>
-                  <button
-                    type="button"
-                    className="shrink-0 underline-offset-2 hover:underline"
-                    onClick={() => void copy("text", finalTextHash)}
-                  >
-                    {copied === "text" ? "Copied" : "Copy"}
-                  </button>
-                </li>
-                <li className="flex flex-wrap items-baseline gap-2">
-                  <span className="shrink-0">Writing log</span>
-                  <code className="min-w-0">{chainHeadHash}</code>
-                  <button
-                    type="button"
-                    className="shrink-0 underline-offset-2 hover:underline"
-                    onClick={() => void copy("log", chainHeadHash)}
-                  >
-                    {copied === "log" ? "Copied" : "Copy"}
-                  </button>
-                </li>
-              </ul>
-            ) : null}
-          </div>
         </div>
       ) : null}
     </div>

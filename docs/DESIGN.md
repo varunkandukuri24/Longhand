@@ -123,28 +123,69 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 - The back arrow is not in the bar. It's an arrow-only button at the top left (see Layout): the back icon at 18 px in a 44 × 44 px hit area, `#736C61` (`#1C1A16` on hover), `aria-label="Back to your pages"`, with a DM Mono 12 px "Pages" tooltip on hover and keyboard focus. It fades out and back in together with the bar.
 - Left: `{caption} · {weekday, Mon D} · {time} · {status}`, where time is the piece's total writing time (see "Writing time"), status is `saved`, `saving` (only while a batch is in flight) or `not saved` (the server refused a batch; same color, no red), and caption is the scene in words: Clear morning, Sunny, Sunset, Clear night, Overcast, Raining, Snowing.
 - **Writing time.** The clock counts writing time for the whole piece, across every sitting, exactly the way the receipt counts active time (gaps under 60 s count; longer pauses don't). It carries on from where the piece left off instead of restarting at 0:00, and stops ticking while you pause. Format `m:ss` under an hour, `h:mm:ss` from an hour. It's a button: hover or keyboard focus shows a small popover with two rows, "This sitting {m:ss}" and "All sittings {h:mm:ss}", and the note "Writing time only. It pauses when you stop for a minute." While a countdown from Timer runs, the clock shows `{m:ss} left` instead and goes back to the total when it ends. Reference mockup: "Time: this sitting and the whole piece", option A.
-- Right: Type, Timer, No backspace, Scene, Publish. These are plain DM Mono 13 px text buttons in `#736C61`, 44 px tall hit areas, 20 px apart, with a 1 px underline on hover and a visible focus ring. No boxes, checkboxes or native dropdowns.
+- Right: Type, Timer, No backspace, Scene, Publish. These are plain DM Mono 13 px text buttons in `#736C61`, 44 px tall hit areas, 20 px apart, with a 1 px underline on hover and a visible focus ring. No boxes, checkboxes or native dropdowns. (The one filled button in the app is the main action inside a dialog; see "Publishing and your page".)
 - The bar fades out after 2 s of typing and fades back in over 300 ms when the mouse moves.
 - Popovers open above their button: a `#FFFFFF` card, 1 px `#E6E0D4` border, 6 px radius, shadow `0 8px 24px rgba(28,26,22,0.10)`, DM Mono 12–13 px options as text.
   - Timer: 10, 15 or 25 min, or off.
   - No backspace: on or off.
   - Scene: Auto, or pin a light and a condition; Window: Left / Right; Still window: on or off.
-  - Publish: the existing publish sheet, restyled as a popover card.
+  - Publish: not a popover. It opens the centred publish dialog (see "Publishing and your page").
 
 ## Other screens
 
 - **Sign-in, name and city screens:** the same paper and grain, with the side window on the writer's chosen side. Content top-aligned, never vertically centered.
 - **Dashboard:** the same paper, grain and side window as the editor, with the same 680 px column. The top of the "Longhand" heading sits exactly 56 px from the top of the viewport: one wrapper sets this, with no other top padding, margin or vertical centering above it.
-  - Header: "Longhand" in Literata 32 px, then one DM Mono 13 px `#736C61` line: `{display name} · {city} · Settings · Sign out`.
-  - Settings opens a popover with the display name, city, window side, Still window, and the email address (read-only). The email never appears on the page itself.
+  - Header: "Longhand" in Literata 32 px, then one DM Mono 13 px `#736C61` line: `{display name} · {handle}.{domain} · Settings · Sign out`, where the address is an ink link (1 px underline, 4 px offset) to the writer's page, opening in a new tab. The city moves into Settings.
+  - Settings opens a popover (380 px) with, first, YOUR PAGE: an inline field reading `[handle].{domain}` (DM Mono 14 px, the handle editable, the domain in `#736C61`, 1 px `#CFC9BE` bottom rule), with the help line "Lowercase letters, numbers and hyphens. Changing it later moves your page; old links redirect for 90 days." While typing it checks availability (debounced 400 ms) and says "Available", "Taken" or what's wrong, in the same grey (never red). It saves on Enter or blur. Below a 1 px `#EEEAE3` rule: display name, city, window side, Still window, and the email address (read-only). The email never appears on the page itself. Reference mockup: "Pages · your address, and public or private on each piece".
   - Then one action row, 24 px below the header, left-aligned, with a single icon button (no text label): **plus** (new page, `aria-label="New page"`), with a small DM Mono 12 px tooltip on hover and focus. There is no quote button and no other way to start a piece.
-  - Then the pieces, newest first, 32 px below the actions, 28 px apart: the title in Literata 24 px, line-height 1.3, at most 2 lines with an ellipsis; below it a DM Mono 12.5 px meta line, `{date} · {words} words · draft` or `{date} · {words} words · published` (never "receipt"). An untitled draft shows its first 60 characters as the title, in `#736C61`. A draft opens the editor; a published piece opens its piece page (`/p/[slug]`).
+  - Then the pieces, newest first, 32 px below the actions, 28 px apart: the title in Literata 24 px, line-height 1.3, at most 2 lines with an ellipsis; below it a DM Mono 12.5 px meta line, `{date} · {words} words · draft`, `· public` or `· private` (never "receipt" or "published"). An untitled draft shows its first 60 characters as the title, in `#736C61`. A draft opens the editor; a published piece opens the writer's own view of its piece page on the main domain (`/p/[slug]`).
   - Every piece looks the same on the dashboard: no icons, site names or modes.
   - No cards, dividers or boxes.
 - **Icons:** inline SVG, 1.5 px stroke, round caps and joins, `currentColor` (`#736C61`, `#1C1A16` on hover), 18 px inside a 44 × 44 px button. Only four exist: plus, quote (a pair of curly quotation marks, used only in reference pills, 12 px), back (a left arrow) and check (used only in the receipt's Verified button, 12 px). No icon library.
 - **Focus:** keyboard focus only (`:focus-visible`): a 1.5 px `#1C1A16` outline, offset 3 px, 3 px radius. A mouse click never leaves a box around a button.
 - **One shared layout:** the editor, dashboard, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's title line starts 120 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
 - **Piece page (`/p/[slug]`):** the only page for a published piece, the same for readers and the writer. There is no separate receipt page, and no link anywhere says "receipt". Paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it (Literata 20 px, line-height 1.7, 22 px between paragraphs), then References (if any), then the receipt (see "References" and "The receipt"). When the signed-in writer views their own piece, the same arrow-only back button sits fixed at the top left, exactly where it sits in the editor; readers never see it. Reference mockup: "A published piece · read it, the receipt is at the end".
+
+## Publishing and your page
+
+Reference mockups: "Publish · centred, with who can read it", "Published · the link, ready to share", "anon24.longhand.com · your public page" and "Pages · your address, and public or private on each piece". The domain in mockups is a placeholder; use `ROOT_DOMAIN` everywhere.
+
+### The publish dialog
+
+- Publish opens a modal dialog centred in the viewport (not anchored to the bar): `role="dialog"`, `aria-modal="true"`, focus moves to the title field, Tab stays inside, Esc or Cancel closes it and returns focus to the Publish button.
+- Behind it, a scrim over the whole screen (window included): `rgba(255,255,255,0.74)`. No blur.
+- The card: 520 px wide (`min(520px, 100vw - 32px)`), padding 32 px 32 px 24 px, `#FFFFFF`, 1 px `#E6E0D4` border, 8 px radius, shadow `0 16px 48px rgba(28,26,22,0.12)`.
+- Contents, top to bottom: "Publish" (Literata 26 px); TITLE label (DM Mono 11 px, letter-spacing 0.14em, `#9A9387`) and the title input (Literata 20 px, 1 px `#CFC9BE` bottom rule, pre-filled from the title line); WHO CAN READ IT, two radio rows 10 px apart, each a 1 px bordered box (`#1C1A16` when selected, `#E6E0D4` otherwise, 6 px radius, padding 14px 16px) with a custom 16 px radio, the option in Literata 18 px and a DM Mono 12 px line under it:
+  - **Public** (default): "On your page, {handle}.{domain}, and for anyone with the link."
+  - **Private**: "Only people you send the link to. Not on your page, not in search."
+- Then the note (DM Mono 12 px `#736C61`): "Publishing freezes the text and adds its receipt. You can change who can read it later."
+- Buttons, right-aligned, 12 px apart: "Cancel" (text button) and "Publish". Publish is the app's one filled button style, used only for the main action in a dialog: 44 px tall, padding 0 22 px, `#1C1A16` fill, white DM Mono 13 px text, 4 px radius.
+- Errors (title missing, writing not saved) appear as one DM Mono 12 px line above the buttons, in `#736C61`, never red.
+- **After publishing**, the same card becomes: the 44 px seal beside "Published." (Literata 26 px) and the signature line in short form (DM Mono 12.5 px: `{name} wrote this by hand · 52 min over 3 sittings`); a label `ON YOUR PAGE · PUBLIC` or `PRIVATE · ONLY PEOPLE WITH THE LINK`; a 48 px bordered row with the full link in DM Mono 13 px (ellipsis if long) and a "Copy link" text button that reads "Copied" for 2 s; then "Back to pages" (text button) and "Open the page" (filled). Esc goes back to Pages.
+
+### Addresses
+
+- A public piece's address is `{handle}.{ROOT_DOMAIN}/{slug}`. A private piece's is `{ROOT_DOMAIN}/p/{slug}`. Slugs get a 10-character random suffix.
+- `{ROOT_DOMAIN}/p/{slug}` for a public piece redirects (308) to its subdomain address, except for the signed-in owner, who stays on the main domain and sees their own view (back arrow, visibility control).
+- `{handle}.{ROOT_DOMAIN}/{slug}` for a private piece, a draft, or another writer's piece is a plain 404.
+- An old handle redirects (308) to the new one for 90 days, then 404s.
+- Writers' subdomains serve only their page, their public pieces and those pieces' share images. Everything else (sign-in, Pages, writing) lives on the main domain. Sign-in cookies are host-only on the main domain.
+- Private pieces carry `<meta name="robots" content="noindex">`.
+
+### The writer's own view of a piece
+
+- On the main domain, the owner's piece page shows, at the top right of the paper (28 px from the top, 40 px from the right edge, or from the window when it's on the right), a DM Mono 13 px text button `Public` or `Private`. It opens a small popover with the same two radio rows; choosing one saves immediately and shows the new link with Copy link. Readers never see it.
+
+### The writer's page (`{handle}.{ROOT_DOMAIN}`)
+
+- The shared paper layout, the side window on the left showing the reader's own time with a clear sky (like piece pages).
+- The writer's display name in Literata 40 px, line-height 1.15, its top edge 56 px from the viewport top. 12 px below, one DM Mono 13 px `#736C61` line: `{n} pieces · {total writing time} of writing · since {Month YYYY}` (writing time summed from their public pieces' receipts, formatted like the receipt; "1 piece" for one). Facts only: never "by hand" here, since pieces differ.
+- 48 px below, their public pieces, newest first, 36 px apart. Each is one link: title (Literata 24 px, line-height 1.3), then the first two lines of the text (Literata 16.5 px, line-height 1.6, `#5C564C`, clamped to 2 lines; links shown as hostnames, quote marks removed), then a DM Mono 12.5 px meta line: `{date} · {words} words · {duration} over {n} sittings` (or `in 1 sitting`).
+- With no public pieces: the name, then "Nothing published here yet." in Literata 17 px `#5C564C`. No summary line.
+- 72 px after the list: the 72 px rule, then a row with the seal at 22 px and "Every piece here was written on Longhand, with a record of how." (DM Mono 12 px `#736C61`), "Longhand" linking to the main domain.
+- On a public piece page, the writer's name in the signature sentence links to their page.
+- **Back from a piece on a writer's page.** Every piece page served on `{handle}.{ROOT_DOMAIN}` shows the same arrow-only back button at the top left (same position, size and color as everywhere else), linking to `{handle}.{ROOT_DOMAIN}/`. Its tooltip and `aria-label` use the writer's display name ("Back to anon24"). It shows for everyone, signed in or not. A private piece at `/p/{slug}` shows no back button to readers (only to its owner, back to Pages).
+- Share image for the writer's page: the name and the summary line on paper, in the existing share-image style.
 
 ## References
 
@@ -199,13 +240,13 @@ The receipt answers one question: did a person write this? It sits on the paper 
 ### How this was written (opens inline on click)
 
 - 44 px below the links: a 1 px `#E8E3DA` top rule, 36 px padding, then "How this was written" in Literata 24 px.
-- Section labels: DM Mono 11 px, letter-spacing 0.14em, uppercase, `#9A9387`, 30 px above each section. The order is VERIFIED, SITTINGS, WHAT'S IN IT, REVISIONS, NOTES, then the fingerprints toggle. Verified comes first because it's what the reader clicked.
+- Section labels: DM Mono 11 px, letter-spacing 0.14em, uppercase, `#9A9387`, 30 px above each section. The order is VERIFIED, SITTINGS, WHAT'S IN IT, REVISIONS, NOTES. Verified comes first because it's what the reader clicked.
   - **SITTINGS:** one row per sitting, DM Mono 13 px, three columns (`{weekday, Mon D} · {start time}`, `{minutes}`, `{words} words`), 9 px vertical padding, 1 px `#EEEAE3` rule between rows.
   - **WHAT'S IN IT:** a single 8 px tall bar with a 2 px gap between segments: typed `#1C1A16`, brought in `#BDB6AA`, quoted `#3D5A8A`. Below it, a DM Mono 12.5 px legend with 8 px swatches, listing only non-zero parts: `94% typed here`, `4% brought in`, `2% quoted`. Percentages are whole numbers that add up to 100. Link characters are left out of all three shares.
   - **REVISIONS:** Literata 17 px: `{ratio} words written for every word kept.`
   - **NOTES:** only when there are timing flags or offline stretches, in plain words: `2 stretches of unusually fast typing`, `1 stretch written offline and synced later`.
   - **VERIFIED:** Literata 17 px: "Longhand recorded this piece as it was written, keystroke by keystroke, on its own clock. The published text matches that record exactly, and neither has changed since it was published on {date}." Then, in `#5C564C`: "It shows how the words got onto the page. It can't see what happened off the page, like what the writer read or talked through first."
-  - **Fingerprints:** a collapsed DM Mono 11.5 px `#9A9387` toggle, "Technical fingerprints, for anyone who wants to check". When opened, it shows the full SHA-256 of the published text ("Text") and of the writing log head ("Writing log"), each with a copy button.
+  - **No fingerprints.** The text and writing-log hashes are stored but never shown on public pages or in share images, until readers have a real way to check them (see the PRD roadmap).
 - Language rules: facts, never verdicts (no scores, "only", red or warnings); effort always leads; percentages only in the details; say "brought in", never "pasted"; never say "AI".
 - Removed: the library card, the rotated stamp, the "Verify · text · chain" line, and the public replay ("Watch it being written", the "Show replay" toggle and the public replay endpoint). The canvas mockups still show three links under the signature; this spec supersedes them.
 
@@ -234,7 +275,7 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] Every paper page renders through the one shared layout component; no page sets its own top padding, margin or vertical centering.
 - [ ] A public piece ends with the signature line (rule, seal, sentence, meta line, links) on the paper, with no card, box or background.
 - [ ] The signature sentence matches the typed-share tier; links never change it.
-- [ ] Under the signature there is exactly one link, "Verified · See how it was written"; it opens and closes the details inline, with Verified first; hashes only appear inside the fingerprints toggle.
+- [ ] Under the signature there is exactly one link, "Verified · See how it was written"; it opens and closes the details inline, with Verified first; no hash appears anywhere on a public page or share image.
 - [ ] The seal is the exact SVG in this spec.
 - [ ] No public page offers a replay, and no public endpoint serves events.
 - [ ] Sittings merge sessions less than 30 minutes apart by real clock time, so a piece written in one sitting with reloads shows "1 sitting".
@@ -249,6 +290,13 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] There is one page per published piece (`/p/[slug]`); any old receipt-only route redirects to it. The writer sees the back arrow there; readers don't.
 - [ ] Links in a piece show as hostnames in the text and as pills under REFERENCES, one per unique address, above the receipt; the same row shows live under the text while writing.
 - [ ] Pasting a long URL into an otherwise typed piece still reads "wrote this by hand."
+- [ ] Publish opens a centred dialog with a scrim, Public selected by default, keyboard-trapped, Esc closes; after publishing it shows the right link with Copy link.
+- [ ] A public piece lives at `{handle}.{ROOT_DOMAIN}/{slug}` and is listed on the writer's page; a private one lives only at `/p/{slug}`, is never listed, 404s on the subdomain and has noindex.
+- [ ] The owner can switch Public and Private from their own view of the piece, and the writer's page updates at once.
+- [ ] A writer with no public pieces has a page showing their name and "Nothing published here yet."
+- [ ] Every piece opened from a writer's page has a back arrow to that page, signed in or not.
+- [ ] Changing the handle in Settings moves the page, and the old address redirects.
+- [ ] Sign-in cookies are never sent to a writer's subdomain.
 - [ ] Typing a URL and then a space turns it into its underlined hostname in the editor at once, with the caret after the space; Cmd/Ctrl+Z right after brings the full URL back; Backspace after a shortened link removes it whole; reloading the draft keeps it shortened; the piece still publishes.
 - [ ] After every edit, rebuilding the event log gives exactly the text on screen.
 - [ ] On every piece page (old and new), no full URL is ever shown in the text.

@@ -17,12 +17,18 @@ type PublishedPieceViewProps = {
   isOwner: boolean;
   /** When set, the signature author name links to the writer's page. */
   authorHref?: string;
+  /**
+   * Back arrow for pieces on a writer's subdomain page (everyone).
+   * Owner's main-domain view uses the default Pages link instead.
+   */
+  backLink?: { href: string; label: string };
 };
 
 export async function PublishedPieceView({
   piece,
   isOwner,
   authorHref,
+  backLink,
 }: PublishedPieceViewProps) {
   const author = piece.authorName?.trim() || "Anonymous";
   const displayLinks = displayLinksFor(piece.finalText, piece.links);
@@ -51,15 +57,23 @@ export async function PublishedPieceView({
       topOffsetPx={PAGE_TOP_OFFSET_PX}
       publicPage
       chrome={
-        isOwner ? (
-          <>
+        <>
+          {backLink ? (
+            <PagesBackLink
+              visible
+              href={backLink.href}
+              label={backLink.label}
+            />
+          ) : isOwner ? (
             <PagesBackLink visible />
+          ) : null}
+          {isOwner && !backLink ? (
             <VisibilityControl
               pieceId={piece.id}
               initialVisibility={piece.visibility}
             />
-          </>
-        ) : null
+          ) : null}
+        </>
       }
     >
       <article>
@@ -78,8 +92,6 @@ export async function PublishedPieceView({
         authorHref={authorHref}
         publishedAt={piece.publishedAt}
         metrics={piece.metrics}
-        finalTextHash={piece.finalTextHash}
-        chainHeadHash={piece.chainHeadHash}
         weatherNote={weatherNote}
       />
     </PaperPage>

@@ -48,11 +48,17 @@ export default async function WriterPiecePage({ params }: PageProps) {
     notFound();
   }
 
+  const displayName = piece.authorName?.trim() || piece.authorHandle;
+
   return (
     <PublishedPieceView
       piece={piece}
       isOwner={false}
       authorHref={writerPageUrl(piece.authorHandle)}
+      backLink={{
+        href: "/",
+        label: `Back to ${displayName}`,
+      }}
     />
   );
 }
