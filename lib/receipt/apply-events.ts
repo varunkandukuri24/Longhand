@@ -26,6 +26,7 @@ function originForInsertOrPaste(
  * Insert at `pos`: spans after/at start shift right. An insert strictly
  * inside a span (not at its edges) drops that link.
  */
+/** Exported for strict apply. */
 export function shiftLinksForInsert(
   links: readonly TextLink[],
   pos: number,

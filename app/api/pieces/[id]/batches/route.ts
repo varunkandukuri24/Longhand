@@ -1,11 +1,18 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventBatches, pieces, sessions } from "@/db/schema";
+import { rebuildDraftTextFromBatches } from "@/lib/pieces/draft-text";
 import { getOwnedPiece } from "@/lib/pieces/ownership";
 import {
   clientBoundsFromEvents,
   decideBatchAcceptance,
 } from "@/lib/receipt/accept-batch";
+import {
+  applyEventsStrict,
+  InvalidEventError,
+  MAX_BATCH_BODY_BYTES,
+  MAX_EVENTS_PER_BATCH,
+} from "@/lib/receipt/apply-events-strict";
 import { isEditEvent } from "@/lib/receipt/edit-event";
 import { hashBatch } from "@/lib/receipt/hash";
 import { sha256HexNode } from "@/lib/receipt/sha256-node";
@@ -33,6 +40,31 @@ export async function POST(request: Request, context: RouteContext) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const contentLength = request.headers.get("content-length");
+  if (
+    contentLength !== null &&
+    Number.parseInt(contentLength, 10) > MAX_BATCH_BODY_BYTES
+  ) {
+    return Response.json({ error: "too_large" }, { status: 413 });
+  }
+
+  let raw: string;
+  try {
+    raw = await request.text();
+  } catch {
+    return Response.json({ error: "invalid_body" }, { status: 400 });
+  }
+  if (raw.length > MAX_BATCH_BODY_BYTES) {
+    return Response.json({ error: "too_large" }, { status: 413 });
+  }
+
+  let body: BatchBody;
+  try {
+    body = JSON.parse(raw) as BatchBody;
+  } catch {
+    return Response.json({ error: "invalid_json" }, { status: 400 });
+  }
+
   const { id: pieceId } = await context.params;
   const piece = await getOwnedPiece(pieceId, session.user.id);
   if (!piece) {
@@ -44,13 +76,6 @@ export async function POST(request: Request, context: RouteContext) {
       { error: "conflict", reason: "published" },
       { status: 409 },
     );
-  }
-
-  let body: BatchBody;
-  try {
-    body = (await request.json()) as BatchBody;
-  } catch {
-    return Response.json({ error: "invalid_json" }, { status: 400 });
   }
 
   const {
@@ -77,6 +102,13 @@ export async function POST(request: Request, context: RouteContext) {
     return Response.json({ error: "invalid_body" }, { status: 400 });
   }
 
+  if (events.length > MAX_EVENTS_PER_BATCH) {
+    return Response.json(
+      { error: "invalid_event", reason: "invalid_event" },
+      { status: 422 },
+    );
+  }
+
   const boundsFromEvents = clientBoundsFromEvents(events);
   const clientTStart =
     typeof body.clientTStart === "number"
@@ -95,6 +127,7 @@ export async function POST(request: Request, context: RouteContext) {
       .select({
         id: pieces.id,
         activeSessionId: pieces.activeSessionId,
+        draftText: pieces.draftText,
       })
       .from(pieces)
       .where(eq(pieces.id, pieceId))
@@ -167,6 +200,21 @@ export async function POST(request: Request, context: RouteContext) {
       return { kind: "conflict" as const, reason: decision.reason };
     }
 
+    let draftText = pieceRow.draftText;
+    if (draftText === null) {
+      draftText = await rebuildDraftTextFromBatches(tx, pieceId);
+    }
+
+    let nextDraft: string;
+    try {
+      nextDraft = applyEventsStrict(draftText, events).text;
+    } catch (err) {
+      if (err instanceof InvalidEventError) {
+        return { kind: "invalid_event" as const };
+      }
+      throw err;
+    }
+
     const [stored] = await tx
       .insert(eventBatches)
       .values({
@@ -190,11 +238,23 @@ export async function POST(request: Request, context: RouteContext) {
         serverReceivedAt: eventBatches.serverReceivedAt,
       });
 
+    await tx
+      .update(pieces)
+      .set({ draftText: nextDraft, updatedAt: serverNow })
+      .where(eq(pieces.id, pieceId));
+
     return { kind: "stored" as const, batch: stored };
   });
 
   if (result.kind === "not_found") {
     return Response.json({ error: "session_not_found" }, { status: 404 });
+  }
+
+  if (result.kind === "invalid_event") {
+    return Response.json(
+      { error: "invalid_event", reason: "invalid_event" },
+      { status: 422 },
+    );
   }
 
   if (result.kind === "conflict") {

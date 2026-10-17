@@ -186,7 +186,7 @@ Edits stream from the browser every 5 seconds; the server checks the chain and t
 | Table | Key fields |
 | --- | --- |
 | users | id, email, display_name, city, lat, lon, window_side (left / right), font (literata / newsreader / instrument-sans / dm-mono), font_size (18 / 20 / 22 / 24), created_at |
-| pieces | id, user_id, title, status (draft / published), slug, final_text, final_text_hash, links (jsonb: start, end, url; computed by the server from the event log at publish), active_session_id, published_at |
+| pieces | id, user_id, title, status (draft / published), slug, draft_text (nullable; latest accepted draft body for batch checks), final_text, final_text_hash, links (jsonb: start, end, url; computed by the server from the event log at publish), active_session_id, published_at |
 | sessions | id, piece_id, started_at, ended_at |
 | event_batches | id, session_id, seq, events (jsonb), prev_hash, hash, client_t_start, client_t_end, server_received_at, delayed |
 | receipts | piece_id, metrics (jsonb), chain_head_hash, version, computed_at |

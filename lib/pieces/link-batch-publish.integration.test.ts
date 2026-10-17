@@ -178,4 +178,99 @@ describe.skipIf(!url)("link batch + publish (route handlers)", () => {
     ]);
     expect(piece.finalText).not.toContain("https://");
   });
+
+  it("refuses a link event whose label does not match the url hostname", async () => {
+    const pieceUser = `bad-link-${crypto.randomUUID()}`;
+    await db.insert(schema.users).values({
+      id: pieceUser,
+      email: `${pieceUser}@example.test`,
+      name: "Bad Link",
+    });
+    authMock.userId = pieceUser;
+    const [piece] = await db
+      .insert(schema.pieces)
+      .values({ userId: pieceUser, title: "bad" })
+      .returning({ id: schema.pieces.id });
+    const [sess] = await db
+      .insert(schema.sessions)
+      .values({ pieceId: piece.id })
+      .returning({ id: schema.sessions.id });
+    await db
+      .update(schema.pieces)
+      .set({ activeSessionId: sess.id })
+      .where(eq(schema.pieces.id, piece.id));
+
+    const url = "https://example.com/x";
+    const typed: EditEvent[] = [
+      { t: 0, type: "insert", pos: 0, len: 0, text: url },
+    ];
+    const hash1 = await hashBatch(
+      GENESIS_PREV_HASH,
+      1,
+      typed,
+      sha256HexNode,
+    );
+    const res1 = await POST_batches(
+      new Request("http://localhost/api/batches", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sess.id,
+          seq: 1,
+          events: typed,
+          prevHash: GENESIS_PREV_HASH,
+          hash: hash1,
+          delayed: false,
+        }),
+      }),
+      { params: Promise.resolve({ id: piece.id }) },
+    );
+    expect(res1.status).toBe(200);
+
+    const forged: EditEvent[] = [
+      {
+        t: 10,
+        type: "link",
+        pos: 0,
+        len: url.length,
+        text: "a".repeat(5000),
+        url,
+      },
+    ];
+    const hash2 = await hashBatch(hash1, 2, forged, sha256HexNode);
+    const res2 = await POST_batches(
+      new Request("http://localhost/api/batches", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sess.id,
+          seq: 2,
+          events: forged,
+          prevHash: hash1,
+          hash: hash2,
+          delayed: false,
+        }),
+      }),
+      { params: Promise.resolve({ id: piece.id }) },
+    );
+    expect(res2.status).toBe(422);
+    const body = (await res2.json()) as { reason?: string };
+    expect(body.reason).toBe("invalid_event");
+
+    await db.delete(schema.users).where(eq(schema.users.id, pieceUser));
+    authMock.userId = userId;
+  });
+
+  it("keeps draft_text equal to the state route rebuild", async () => {
+    const [row] = await db
+      .select({ draftText: schema.pieces.draftText })
+      .from(schema.pieces)
+      .where(eq(schema.pieces.id, pieceId));
+    const { loadPieceState } = await import("./load-state");
+    const state = await loadPieceState(pieceId);
+    // Piece was published in the first test; final text is frozen. draft_text
+    // should still match the last accepted rebuild before publish.
+    expect(row.draftText).toBe(state.text);
+    expect(state.text).toBe("hi nytimes.com there");
+  });
 });

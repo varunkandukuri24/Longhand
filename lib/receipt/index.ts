@@ -1,5 +1,15 @@
 export { applyEvents, isQuoteLineAt } from "./apply-events";
 export type { ApplyResult } from "./apply-events";
+export {
+  applyEventsStrict,
+  assertHttpUrl,
+  InvalidEventError,
+  MAX_BATCH_BODY_BYTES,
+  MAX_EVENTS_PER_BATCH,
+  MAX_INSERT_CHARS,
+  MAX_LINK_URL_CHARS,
+  rebuildTextFromEvents,
+} from "./apply-events-strict";
 export { isEditEvent } from "./edit-event";
 export {
   GENESIS_PREV_HASH,

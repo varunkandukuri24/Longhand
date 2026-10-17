@@ -27,11 +27,10 @@ export function displayLinksFor(
   return [...fromStored, ...fromRaw].sort((a, b) => a.start - b.start);
 }
 
-/** Visible label for a display span (hostname, never the raw URL). */
-export function displayLabelFor(text: string, link: DocLink): string {
-  const slice = text.slice(link.start, link.end);
-  if (/^https?:\/\//i.test(slice)) {
-    return labelForUrl(link.url);
-  }
-  return slice || labelForUrl(link.url);
+/**
+ * Visible label for a display span. Always derived from the url with
+ * labelForUrl — never from stored/event text (hardened against crafted labels).
+ */
+export function displayLabelFor(_text: string, link: DocLink): string {
+  return labelForUrl(link.url);
 }

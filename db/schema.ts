@@ -112,6 +112,11 @@ export const pieces = pgTable("pieces", {
   title: text("title").notNull().default(""),
   status: pieceStatusEnum("status").notNull().default("draft"),
   slug: text("slug").unique(),
+  /**
+   * Latest draft body after accepted batches (nullable until first validated
+   * batch or backfill). Source for strict event checks; event log remains SoT.
+   */
+  draftText: text("draft_text"),
   finalText: text("final_text"),
   finalTextHash: text("final_text_hash"),
   /** Shortened link spans; computed from the event log at publish. */
