@@ -169,65 +169,67 @@ export function EditorControls({
       }}
       aria-hidden={!visible}
     >
-      <div className="flex shrink-0 items-center gap-4 font-ui text-[13px] text-label">
-        <p className="whitespace-nowrap">
-          {caption}
-          <span className="mx-2">·</span>
-          {dateLabel}
-          <span className="mx-2">·</span>
-          <span
-            ref={timeWrapRef}
-            className="relative inline-block"
-            onMouseEnter={() => {
+      <div className="flex shrink-0 items-center font-ui text-[13px] text-label whitespace-nowrap">
+        <span>{caption}</span>
+        <span className="mx-2">·</span>
+        <span>{dateLabel}</span>
+        <span className="mx-2">·</span>
+        <span
+          ref={timeWrapRef}
+          className="relative inline-flex"
+          onMouseEnter={() => {
+            if (!timerRemainingLabel) setTimeOpen(true);
+          }}
+          onMouseLeave={() => setTimeOpen(false)}
+        >
+          <button
+            type="button"
+            className="editor-bar-btn min-h-0"
+            aria-expanded={timeOpen}
+            aria-label={
+              timerRemainingLabel
+                ? `${timerRemainingLabel} left`
+                : `Writing time ${writingTimeLabel}`
+            }
+            onFocus={() => {
               if (!timerRemainingLabel) setTimeOpen(true);
             }}
-            onMouseLeave={() => setTimeOpen(false)}
-          >
-            <button
-              type="button"
-              className="editor-bar-btn min-h-0"
-              aria-expanded={timeOpen}
-              aria-label={
-                timerRemainingLabel
-                  ? `${timerRemainingLabel} left`
-                  : `Writing time ${writingTimeLabel}`
+            onBlur={(event) => {
+              if (
+                timeWrapRef.current &&
+                !timeWrapRef.current.contains(event.relatedTarget as Node)
+              ) {
+                setTimeOpen(false);
               }
-              onFocus={() => {
-                if (!timerRemainingLabel) setTimeOpen(true);
-              }}
-              onBlur={(event) => {
-                if (
-                  timeWrapRef.current &&
-                  !timeWrapRef.current.contains(event.relatedTarget as Node)
-                ) {
-                  setTimeOpen(false);
-                }
-              }}
-              onClick={() => {
-                if (!timerRemainingLabel) setTimeOpen((v) => !v);
-              }}
+            }}
+            onClick={() => {
+              if (!timerRemainingLabel) setTimeOpen((v) => !v);
+            }}
+          >
+            {timerRemainingLabel
+              ? `${timerRemainingLabel} left`
+              : writingTimeLabel}
+          </button>
+          {timeOpen && !timerRemainingLabel ? (
+            <div
+              className="editor-popover writing-time-popover"
+              role="dialog"
+              aria-label="Writing time"
             >
-              {timerRemainingLabel
-                ? `${timerRemainingLabel} left`
-                : writingTimeLabel}
-            </button>
-            {timeOpen && !timerRemainingLabel ? (
-              <div
-                className="editor-popover left-0 right-auto min-w-[200px]"
-                role="dialog"
-                aria-label="Writing time"
-              >
-                <p className="py-1">This sitting {sittingTimeLabel}</p>
-                <p className="py-1">All sittings {allSittingsLabel}</p>
-                <p className="mt-1 py-1 text-[11.5px] text-label">
-                  Writing time only. It pauses when you stop for a minute.
-                </p>
-              </div>
-            ) : null}
-          </span>
-          <span className="mx-2">·</span>
-          {saveLabel}
-        </p>
+              <p className="writing-time-row">
+                This sitting {sittingTimeLabel}
+              </p>
+              <p className="writing-time-row">
+                All sittings {allSittingsLabel}
+              </p>
+              <p className="writing-time-note">
+                Writing time only. It pauses when you stop for a minute.
+              </p>
+            </div>
+          ) : null}
+        </span>
+        <span className="mx-2">·</span>
+        <span>{saveLabel}</span>
       </div>
 
       <div className="flex shrink-0 items-center gap-5">
@@ -238,21 +240,28 @@ export function EditorControls({
               panelClassName="type-menu"
             >
               <p className="type-menu-label">Font</p>
-              {WRITING_FONTS.map((font) => (
-                <button
-                  key={font}
-                  type="button"
-                  className="type-menu-font"
-                  style={{ fontFamily: writingFontCssVar(font) }}
-                  onClick={() => {
-                    onWritingTypeChange({ font, fontSize: writingSize });
-                  }}
-                >
-                  <span>{WRITING_FONT_LABEL[font]}</span>
-                  {writingFont === font ? <CheckIcon /> : null}
-                </button>
-              ))}
-              <p className="type-menu-label mt-3">Size</p>
+              <div className="type-menu-fonts">
+                {WRITING_FONTS.map((font) => (
+                  <button
+                    key={font}
+                    type="button"
+                    className="type-menu-font"
+                    style={{ fontFamily: writingFontCssVar(font) }}
+                    aria-pressed={writingFont === font}
+                    onClick={() => {
+                      onWritingTypeChange({ font, fontSize: writingSize });
+                    }}
+                  >
+                    <span className="type-menu-check-slot" aria-hidden>
+                      {writingFont === font ? <CheckIcon /> : null}
+                    </span>
+                    <span className="type-menu-font-name">
+                      {WRITING_FONT_LABEL[font]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="type-menu-label">Size</p>
               <div className="type-menu-sizes">
                 {WRITING_SIZES.map((size) => (
                   <button
@@ -263,7 +272,10 @@ export function EditorControls({
                     aria-label={WRITING_SIZE_LABEL[size]}
                     aria-pressed={writingSize === size}
                     onClick={() => {
-                      onWritingTypeChange({ font: writingFont, fontSize: size });
+                      onWritingTypeChange({
+                        font: writingFont,
+                        fontSize: size,
+                      });
                     }}
                   >
                     A
