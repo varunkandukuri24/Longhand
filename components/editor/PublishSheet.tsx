@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type PublishSheetProps = {
   open: boolean;
@@ -20,12 +20,14 @@ export function PublishSheet({
   onPublish,
 }: PublishSheetProps) {
   const [title, setTitle] = useState(initialTitle);
+  const [wasOpen, setWasOpen] = useState(open);
 
-  useEffect(() => {
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setTitle(initialTitle);
     }
-  }, [open, initialTitle]);
+  }
 
   if (!open) {
     return null;

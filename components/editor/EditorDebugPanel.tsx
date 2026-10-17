@@ -14,6 +14,7 @@ import {
   type WindowSide,
 } from "@/lib/scene";
 import type { SyncStatus } from "@/lib/sync/types";
+import { useEffect, useState } from "react";
 
 type EditorDebugPanelProps = {
   events: readonly EditEvent[];
@@ -81,12 +82,17 @@ export function EditorDebugPanel({
   fastTransitions,
   onFastTransitionsChange,
 }: EditorDebugPanelProps) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const recent = events.slice(-10);
   const counts = countOrigins(origins);
   const rebuild = applyEvents(events).text;
   const match = rebuild === value;
 
-  const now = Date.now();
   const batches = liveBatchesFromEvents(events, {
     sessionStartedAt: sessionStartedAt ?? now,
     now,

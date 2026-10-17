@@ -13,16 +13,18 @@ import { GENESIS_PREV_HASH, hashBatch } from "./hash";
 import { sha256HexNode } from "./sha256-node";
 import type { EditEvent } from "./types";
 
-const url = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
-describe.skipIf(!url)("batch store integration", () => {
-  const client = postgres(url!, { max: 1 });
-  const db = drizzle(client, { schema });
+describe.skipIf(!databaseUrl)("batch store integration", () => {
+  let client: ReturnType<typeof postgres>;
+  let db: ReturnType<typeof drizzle>;
   const userId = `test-user-${crypto.randomUUID()}`;
   let pieceId = "";
   let sessionId = "";
 
   beforeAll(async () => {
+    client = postgres(databaseUrl!, { max: 1 });
+    db = drizzle(client, { schema });
     await db.insert(schema.users).values({
       id: userId,
       email: `${userId}@example.test`,

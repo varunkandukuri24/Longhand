@@ -8,7 +8,7 @@ import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import type { EditEvent } from "@/lib/receipt/types";
 import { applyEvents } from "@/lib/receipt/apply-events";
 
-const url = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 const authMock = vi.hoisted(() => ({
   userId: "" as string,
@@ -21,9 +21,9 @@ vi.mock("@/auth", () => ({
       : null,
 }));
 
-describe.skipIf(!url)("link batch + publish (route handlers)", () => {
-  const client = postgres(url!, { max: 1 });
-  const db = drizzle(client, { schema });
+describe.skipIf(!databaseUrl)("link batch + publish (route handlers)", () => {
+  let client: ReturnType<typeof postgres>;
+  let db: ReturnType<typeof drizzle>;
   const userId = `link-batch-${crypto.randomUUID()}`;
   let pieceId = "";
   let sessionId = "";
@@ -31,6 +31,8 @@ describe.skipIf(!url)("link batch + publish (route handlers)", () => {
   let publishPiece: typeof import("./publish").publishPiece;
 
   beforeAll(async () => {
+    client = postgres(databaseUrl!, { max: 1 });
+    db = drizzle(client, { schema });
     ({ POST: POST_batches } = await import(
       "@/app/api/pieces/[id]/batches/route"
     ));

@@ -70,7 +70,7 @@ import {
 } from "react";
 import { createPortal, flushSync } from "react-dom";
 
-const TIMER_OPTIONS = [10, 15, 25] as const;
+type TimerMinutes = 10 | 15 | 25;
 const IS_DEV = process.env.NODE_ENV === "development";
 const TITLE_MAX = 120;
 const TITLE_SAVE_DEBOUNCE_MS = 400;
@@ -182,9 +182,7 @@ function FocusEditorBody({
   const [writingFont, setWritingFont] = useState<WritingFont>(initialFont);
   const [writingSize, setWritingSize] = useState<WritingSize>(initialFontSize);
   const [noBackspace, setNoBackspace] = useState(false);
-  const [timerMinutes, setTimerMinutes] = useState<
-    (typeof TIMER_OPTIONS)[number] | null
-  >(null);
+  const [timerMinutes, setTimerMinutes] = useState<TimerMinutes | null>(null);
   const timerEndsAtRef = useRef<number | null>(null);
   const [timerRemainingMs, setTimerRemainingMs] = useState<number | null>(null);
   const [debugOpen, setDebugOpen] = useState(false);
@@ -230,16 +228,21 @@ function FocusEditorBody({
     });
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    readyRef.current = false;
+  const loadKey = `${pieceId}:${bootAttempt}`;
+  const [activeLoadKey, setActiveLoadKey] = useState(loadKey);
+  if (loadKey !== activeLoadKey) {
+    setActiveLoadKey(loadKey);
     setTextLoaded(false);
     setBootError(null);
     setSuperseded(false);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    readyRef.current = false;
 
     const sync = new EventSync(pieceId);
     syncRef.current = sync;
-    sync.setSessionCondition(ambient.condition);
     const unsubscribe = sync.subscribe(setSyncStatus);
     const unsubSuperseded = sync.onSuperseded(() => {
       setSuperseded(true);
@@ -335,8 +338,9 @@ function FocusEditorBody({
       sync.stop();
       syncRef.current = null;
     };
-    // Intentionally omit ambient.condition: session starts once per boot; later
-    // rotations read the latest condition via setSessionCondition.
+    // ambient.condition is read inside the async boot path once; later updates
+    // go through the dedicated setSessionCondition effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once per loadKey
   }, [pieceId, bootAttempt, exposeEvents, syncDebugSnapshot]);
 
   /** Grow the textarea to its content so REFERENCES sits under the last line. */
@@ -585,10 +589,8 @@ function FocusEditorBody({
   const holdControls = publishOpen || popoverOpen || debugOpen;
 
   useEffect(() => {
-    if (!holdControls) {
-      return;
-    }
-    setControlsVisible(true);
+    if (!holdControls) return;
+    queueMicrotask(() => setControlsVisible(true));
     if (fadeTimerRef.current) {
       clearTimeout(fadeTimerRef.current);
       fadeTimerRef.current = null;
@@ -962,14 +964,14 @@ function FocusEditorBody({
     ["--writing-size-phone" as string]: `${phoneWritingSize(writingSize)}px`,
   };
 
-  const focusWritingArea = () => {
+  const focusWritingArea = useCallback(() => {
     if (superseded || bootError) return;
     const el = textareaRef.current;
     if (!el || el.readOnly) return;
     el.focus({ preventScroll: true });
     const len = el.value.length;
     el.setSelectionRange(len, len);
-  };
+  }, [superseded, bootError]);
 
   useEffect(() => {
     const onPaperPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -988,7 +990,7 @@ function FocusEditorBody({
     };
     bindPaperPointerDown(onPaperPointerDown);
     return () => bindPaperPointerDown(null);
-  }, [bindPaperPointerDown, superseded, bootError]);
+  }, [bindPaperPointerDown, superseded, bootError, focusWritingArea]);
 
   const chrome =
     chromeHost &&

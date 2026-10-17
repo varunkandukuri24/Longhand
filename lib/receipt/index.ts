@@ -49,16 +49,6 @@ export type { CompositionLegendPart, SharePercents } from "./format";
 export { groupSessionsIntoSittings, SITTING_GAP_MS } from "./sittings";
 export type { SessionSpan } from "./sittings";
 export { makePieceSlug, randomSlugSuffix } from "./slug";
-export {
-  COMPRESSED_IDLE_MS,
-  REPLAY_IDLE_GAP_MS,
-  REPLAY_SNAPSHOT_EVERY,
-  buildReplayTimeline,
-  eventIndexAtPlaybackTime,
-  replayMatchesPublished,
-  textAtEventIndex,
-} from "./replay-timeline";
-export type { ReplaySnapshot, ReplayTimeline } from "./replay-timeline";
 export type {
   CharOrigin,
   EditEvent,

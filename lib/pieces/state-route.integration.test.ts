@@ -8,7 +8,7 @@ import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import type { EditEvent } from "@/lib/receipt/types";
 import { getTableColumns } from "drizzle-orm";
 
-const url = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 const authMock = vi.hoisted(() => ({
   userId: "" as string,
@@ -21,15 +21,17 @@ vi.mock("@/auth", () => ({
       : null,
 }));
 
-describe.skipIf(!url)("GET /api/pieces/[id]/state (real route)", () => {
-  const client = postgres(url!, { max: 1 });
-  const db = drizzle(client, { schema });
+describe.skipIf(!databaseUrl)("GET /api/pieces/[id]/state (real route)", () => {
+  let client: ReturnType<typeof postgres>;
+  let db: ReturnType<typeof drizzle>;
   const userId = `state-route-${crypto.randomUUID()}`;
   let emptyPieceId = "";
   let withBatchesPieceId = "";
   let GET: typeof import("@/app/api/pieces/[id]/state/route").GET;
 
   beforeAll(async () => {
+    client = postgres(databaseUrl!, { max: 1 });
+    db = drizzle(client, { schema });
     // Schema module must expose clock_suspect (the live bug was this missing).
     expect(getTableColumns(schema.eventBatches).clockSuspect).toBeDefined();
 

@@ -138,21 +138,32 @@ export function useAmbientScene(options?: {
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [now, setNow] = useState(() => new Date());
 
+  const initialSide = normalizeWindowSide(options?.initialWindowSide);
+  const [sideSource, setSideSource] = useState(initialSide);
+  if (!publicPage && initialSide !== sideSource) {
+    setSideSource(initialSide);
+    setWindowSideState(initialSide);
+  }
+
   useEffect(() => {
-    if (publicPage) {
-      setWindowSideState("left");
-      return;
-    }
-    setPresetState(loadPreset());
-    setWindowSideState(normalizeWindowSide(options?.initialWindowSide));
-    setStillWindowState(loadStill());
+    if (publicPage) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setPresetState(loadPreset());
+      setStillWindowState(loadStill());
+    });
     // Server owns window side; drop any stale browser copy.
     try {
       window.localStorage.removeItem(WINDOW_SIDE_KEY);
     } catch {
       /* ignore */
     }
-  }, [publicPage, options?.initialWindowSide]);
+    return () => {
+      cancelled = true;
+    };
+  }, [publicPage]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), LIGHT_POLL_MS);

@@ -21,17 +21,21 @@ export function DashboardSettings({
   const ambient = useAmbientSceneContext();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(displayName);
+  const [nameSource, setNameSource] = useState(displayName);
   const [city, setCity] = useState(cityName ?? "");
+  const [citySource, setCitySource] = useState(cityName ?? "");
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  if (displayName !== nameSource) {
+    setNameSource(displayName);
     setName(displayName);
-  }, [displayName]);
-
-  useEffect(() => {
-    setCity(cityName ?? "");
-  }, [cityName]);
+  }
+  const cityProp = cityName ?? "";
+  if (cityProp !== citySource) {
+    setCitySource(cityProp);
+    setCity(cityProp);
+  }
 
   useEffect(() => {
     if (!open) return;

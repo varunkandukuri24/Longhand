@@ -7,7 +7,7 @@ import { GENESIS_PREV_HASH, hashBatch } from "@/lib/receipt/hash";
 import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import type { EditEvent } from "@/lib/receipt/types";
 
-const url = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 const authMock = vi.hoisted(() => ({
   userId: "" as string,
@@ -20,9 +20,9 @@ vi.mock("@/auth", () => ({
       : null,
 }));
 
-describe.skipIf(!url)("publish piece", () => {
-  const client = postgres(url!, { max: 1 });
-  const db = drizzle(client, { schema });
+describe.skipIf(!databaseUrl)("publish piece", () => {
+  let client: ReturnType<typeof postgres>;
+  let db: ReturnType<typeof drizzle>;
   const userId = `publish-${crypto.randomUUID()}`;
   let draftPieceId = "";
   let tamperPieceId = "";
@@ -32,6 +32,8 @@ describe.skipIf(!url)("publish piece", () => {
   let POST_publish: typeof import("@/app/api/pieces/[id]/publish/route").POST;
 
   beforeAll(async () => {
+    client = postgres(databaseUrl!, { max: 1 });
+    db = drizzle(client, { schema });
     ({ publishPiece } = await import("./publish"));
     ({ POST: POST_batches } = await import(
       "@/app/api/pieces/[id]/batches/route"

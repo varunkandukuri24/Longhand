@@ -12,19 +12,21 @@ import { GENESIS_PREV_HASH, hashBatch } from "@/lib/receipt/hash";
 import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import type { EditEvent } from "@/lib/receipt/types";
 
-const url = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 /**
  * Two sessions on one piece: the older session's batch is rejected as
  * superseded, and replaying stored batches equals the newer session's text.
  */
-describe.skipIf(!url)("single-writer guard", () => {
-  const client = postgres(url!, { max: 1 });
-  const db = drizzle(client, { schema });
+describe.skipIf(!databaseUrl)("single-writer guard", () => {
+  let client: ReturnType<typeof postgres>;
+  let db: ReturnType<typeof drizzle>;
   const userId = `writer-${crypto.randomUUID()}`;
   let pieceId = "";
 
   beforeAll(async () => {
+    client = postgres(databaseUrl!, { max: 1 });
+    db = drizzle(client, { schema });
     await db.insert(schema.users).values({
       id: userId,
       email: `${userId}@example.test`,

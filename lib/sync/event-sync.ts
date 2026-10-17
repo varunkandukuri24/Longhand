@@ -277,7 +277,8 @@ export class EventSync {
    * Become read-only: discard this session's unsent queue after confirmation,
    * and stop accepting new events.
    */
-  async markSuperseded(_source: "broadcast" | "server" = "server"): Promise<void> {
+  async markSuperseded(source: "broadcast" | "server" = "server"): Promise<void> {
+    void source;
     if (this.superseded) return;
     this.superseded = true;
     this.pending = [];
