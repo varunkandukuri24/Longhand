@@ -54,14 +54,21 @@ describe("dashboard layout tokens", () => {
       join(process.cwd(), "components/editor/EditorControls.tsx"),
       "utf8",
     );
-    expect(controls).toContain("href={PAGES_HREF}");
-    expect(controls).toContain("PAGES_ARIA_LABEL");
-    expect(controls).toContain("Pages");
+    expect(controls).not.toContain("PAGES_HREF");
+    expect(controls).not.toContain("PagesBackLink");
     const ownerBack = readFileSync(
       join(process.cwd(), "components/dashboard/PagesBackLink.tsx"),
       "utf8",
     );
     expect(ownerBack).toContain("href={PAGES_HREF}");
-    expect(ownerBack).toContain("Pages");
+    expect(ownerBack).toContain("PAGES_ARIA_LABEL");
+    expect(ownerBack).toContain('data-tooltip="Pages"');
+    expect(ownerBack).toContain("pages-back-arrow");
+    const editor = readFileSync(
+      join(process.cwd(), "components/editor/FocusEditor.tsx"),
+      "utf8",
+    );
+    expect(editor).toContain("PagesBackLink");
   });
 });
+
