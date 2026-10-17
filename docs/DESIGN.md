@@ -12,7 +12,8 @@ The whole screen is paper. It's just you and your thoughts, with a few quiet opt
 | --- | --- |
 | Background | The whole viewport is paper (see Paper). No other surface behind it. |
 | Side window | 112 px wide, inset 36 px from the top, bottom and its side edge. Left by default. |
-| Writing column | Up to 680 px wide, centered in the space beside the window (left window: `left: calc(50% + 74px); transform: translateX(-50%)`). Text starts 140 px from the top. The column scrolls; the window and bar stay fixed. |
+| Writing column | Up to 680 px wide, centered in the space beside the window (left window: `left: calc(50% + 74px); transform: translateX(-50%)`). The title line's top sits 120 px from the top, the text 24 px below it. The column is its own scroll area ending 88 px above the viewport bottom, so text never runs under the bar; the window, back arrow and bar stay fixed. |
+| Back arrow | Top left of the paper: 28 px from the top, horizontally aligned with the bar's start (184 px from the window's side; 40 px from the left edge when the window is on the right). |
 | Bottom bar | 20 px from the bottom. Starts 184 px from the window's side (36 + 112 + 36), ends 40 px from the other edge. |
 
 ## Paper
@@ -25,18 +26,38 @@ The whole screen is paper. It's just you and your thoughts, with a few quiet opt
 
 | Use | Spec |
 | --- | --- |
-| Writing | Literata 400, 22 px, line-height 1.7, color `#1C1A16` (about 16:1 on paper). Paragraph spacing 26 px. |
+| Writing | Literata 400, 20 px by default, line-height 1.7, color `#1C1A16` (about 16:1 on paper). Paragraph spacing 22 px. The writer can change the font and size for their own writing screen (see "Type menu"). |
+| Published text | Always Literata 400, 20 px, line-height 1.7, 22 px between paragraphs, whatever the writer picked for their screen. |
+| Title line (editor) | Same font as the writing, 30 px, line-height 1.3. |
 | Cursor (caret) | `#C9772E`, 2 px wide (`caret-color`). |
 | Labels, bar, popovers | DM Mono 400, 13 px (11.5–12 px for small captions), color `#736C61` (meets 4.5:1 on paper). |
 | Headings (dashboard, public page title) | Literata 400, 28–32 px, `#1C1A16`. |
 
-No other fonts. No bold in the writing column.
+No other fonts, except the three extra writing fonts in the Type menu (Newsreader, Instrument Sans, DM Mono), which only ever apply to the writer's own editor. No bold in the writing column.
+
+### Type menu
+
+- A "Type" text button, first in the bar's right group, opens a popover (the standard popover card), 280 px wide.
+- FONT: four rows, each name set in its own font at 17 px, a check mark on the current one: Literata (default), Newsreader, Instrument Sans, DM Mono.
+- SIZE: four "A" buttons in Literata at increasing sizes, the current one underlined: Small 18 px, Medium 20 px (default), Large 22 px, Extra large 24 px writing size. Each has an `aria-label` and `aria-pressed`.
+- A footnote: "Only changes your writing screen. Published pieces are always set in Literata."
+- The choice applies instantly, is saved per writer (`users.font`, `users.font_size`) and follows them to every piece and device. The title line uses the same font.
+- Load all four fonts from Google Fonts with `display=swap`; only Literata and DM Mono load on public pages.
 
 ## The writing area
 
 - The text area is invisible: no border, no outline (focused or not), no resize handle, transparent background, `appearance: none`. Only the words and the caret show.
-- It fills the writing column from the 140 px top offset to the bottom bar, and grows with the text.
-- Opening any editable piece focuses it automatically, with the caret blinking at the end of the existing text and that spot scrolled into view, so you can start typing with no click. This happens after the piece's text has loaded, not before.
+- It sits below the title line and grows with the text. The whole column (title, text, References row) scrolls together inside the column's scroll area.
+- **Never under the bar.** The scroll area stops 88 px above the viewport bottom. Its last 64 px fade the text to paper (`mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent)`), and once the column has scrolled, its first 96 px fade in the same way at the top. This is a mask on the text, not a colored overlay.
+- **Typewriter scrolling.** While typing, the caret's line is always kept at least 160 px above the bottom of the scroll area: when it would go lower, the column scrolls smoothly (instantly under reduced motion) so the line sits there. Measure the caret position with the mirror layer.
+- Opening any editable piece focuses it automatically, with the caret blinking at the end of the existing text and that spot scrolled into view, so you can start typing with no click. This happens after the piece's text has loaded, not before. Exception: a brand-new, empty piece opens with the caret on the title line.
+
+### The title line
+
+- A single-line input above the text, no border or underline, placeholder "Title" in `#A8A196`. Optional.
+- A brand-new piece opens with the caret here. Enter or ↓ moves to the start of the text; ↑ or Shift+Tab at the very start of the text moves back to the title. Pasting a newline into it keeps only the first line. At most 120 characters.
+- The title is saved with the piece (`pieces.title`, debounced) but is not part of the writing record: no events, no effect on the receipt, word count or typed share.
+- The publish sheet pre-fills it. An empty title still falls back to the publish sheet asking for one, and the dashboard shows the first 60 characters of the text, as today.
 - Clicking anywhere on the paper outside the controls and the window puts focus back in the text area.
 - Read-only (published) pieces never show a caret.
 
@@ -99,8 +120,10 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 
 ## Bottom bar and popovers
 
-- Left: a back button (the back icon and "Pages", DM Mono 13 px, returns to the dashboard, `aria-label="Back to your pages"`), then `{caption} · {weekday, Mon D} · {elapsed} · {status}`, where status is `saved`, `saving` (only while a batch is in flight) or `not saved` (the server refused a batch; same color, no red), and caption is the scene in words: Clear morning, Sunny, Sunset, Clear night, Overcast, Raining, Snowing.
-- Right: Timer, No backspace, Scene, Publish. These are plain DM Mono 13 px text buttons in `#736C61`, 44 px tall hit areas, 20 px apart, with a 1 px underline on hover and a visible focus ring. No boxes, checkboxes or native dropdowns.
+- The back arrow is not in the bar. It's an arrow-only button at the top left (see Layout): the back icon at 18 px in a 44 × 44 px hit area, `#736C61` (`#1C1A16` on hover), `aria-label="Back to your pages"`, with a DM Mono 12 px "Pages" tooltip on hover and keyboard focus. It fades out and back in together with the bar.
+- Left: `{caption} · {weekday, Mon D} · {time} · {status}`, where time is the piece's total writing time (see "Writing time"), status is `saved`, `saving` (only while a batch is in flight) or `not saved` (the server refused a batch; same color, no red), and caption is the scene in words: Clear morning, Sunny, Sunset, Clear night, Overcast, Raining, Snowing.
+- **Writing time.** The clock counts writing time for the whole piece, across every sitting, exactly the way the receipt counts active time (gaps under 60 s count; longer pauses don't). It carries on from where the piece left off instead of restarting at 0:00, and stops ticking while you pause. Format `m:ss` under an hour, `h:mm:ss` from an hour. It's a button: hover or keyboard focus shows a small popover with two rows, "This sitting {m:ss}" and "All sittings {h:mm:ss}", and the note "Writing time only. It pauses when you stop for a minute." While a countdown from Timer runs, the clock shows `{m:ss} left` instead and goes back to the total when it ends. Reference mockup: "Time: this sitting and the whole piece", option A.
+- Right: Type, Timer, No backspace, Scene, Publish. These are plain DM Mono 13 px text buttons in `#736C61`, 44 px tall hit areas, 20 px apart, with a 1 px underline on hover and a visible focus ring. No boxes, checkboxes or native dropdowns.
 - The bar fades out after 2 s of typing and fades back in over 300 ms when the mouse moves.
 - Popovers open above their button: a `#FFFFFF` card, 1 px `#E6E0D4` border, 6 px radius, shadow `0 8px 24px rgba(28,26,22,0.10)`, DM Mono 12–13 px options as text.
   - Timer: 10, 15 or 25 min, or off.
@@ -120,8 +143,8 @@ The reference implementation below draws exactly these. Port it; don't redesign 
   - No cards, dividers or boxes.
 - **Icons:** inline SVG, 1.5 px stroke, round caps and joins, `currentColor` (`#736C61`, `#1C1A16` on hover), 18 px inside a 44 × 44 px button. Only four exist: plus, quote (a pair of curly quotation marks, used only in reference pills, 12 px), back (a left arrow) and check (used only in the receipt's Verified button, 12 px). No icon library.
 - **Focus:** keyboard focus only (`:focus-visible`): a 1.5 px `#1C1A16` outline, offset 3 px, 3 px radius. A mouse click never leaves a box around a button.
-- **One shared layout:** the editor, dashboard, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's text starts 140 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
-- **Piece page (`/p/[slug]`):** the only page for a published piece, the same for readers and the writer. There is no separate receipt page, and no link anywhere says "receipt". Paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it (Literata 22 px, line-height 1.7, 26 px between paragraphs), then References (if any), then the receipt (see "References" and "The receipt"). When the signed-in writer views their own piece, a "Pages" back link (back icon + "Pages", DM Mono 13 px `#736C61`) sits fixed at the bottom left, exactly where it sits in the editor's bar; readers never see it. Reference mockup: "A published piece · read it, the receipt is at the end".
+- **One shared layout:** the editor, dashboard, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's title line starts 120 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
+- **Piece page (`/p/[slug]`):** the only page for a published piece, the same for readers and the writer. There is no separate receipt page, and no link anywhere says "receipt". Paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it (Literata 20 px, line-height 1.7, 22 px between paragraphs), then References (if any), then the receipt (see "References" and "The receipt"). When the signed-in writer views their own piece, the same arrow-only back button sits fixed at the top left, exactly where it sits in the editor; readers never see it. Reference mockup: "A published piece · read it, the receipt is at the end".
 
 ## References
 
@@ -189,7 +212,7 @@ The receipt answers one question: did a person write this? It sits on the paper 
 ## Small screens
 
 - Under 1024 px wide: the window shrinks to 72 px, and the insets and bar offsets shrink to match (window side offset = 24 + 72 + 24).
-- Under 768 px (phones): the window is hidden. The scene caption stays in the bar, the column fills the width with 20 px margins, and the writing size drops to 19 px.
+- Under 768 px (phones): the window is hidden. The scene caption stays in the bar, the column fills the width with 20 px margins, the writing size drops one step (Medium becomes 18 px), and the back arrow sits 20 px from the left.
 
 ## Removed from v1
 
@@ -217,9 +240,13 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] Sittings merge sessions less than 30 minutes apart by real clock time, so a piece written in one sitting with reloads shows "1 sitting".
 - [ ] In every light change (morning → afternoon → golden → night → morning), at most one sun is ever visible; a sun and moon show together only from golden hour to night.
 - [ ] No public text says "pasted" or "AI".
-- [ ] Every piece (draft, published or read-only) has a working "Pages" back button.
+- [ ] Every piece (draft, published or read-only) has the arrow-only back button at the top left, with a "Pages" tooltip, and nothing about it remains in the bottom bar.
+- [ ] Typing past the bottom of the screen never puts text under the bar: the caret line stays at least 160 px above the scroll area's bottom, and text fades out above the bar.
+- [ ] Writing text defaults to Literata 20 px; the Type menu switches font and size instantly and remembers it on another device; published pages stay Literata 20 px.
+- [ ] A new piece opens with the caret on "Title"; Enter moves to the text; the title pre-fills the publish sheet and never changes the receipt.
+- [ ] Reopening a piece continues its clock from its previous total; hovering the clock shows this sitting and all sittings; the total matches the receipt's active time.
 - [ ] The dashboard has only the plus button; published pieces say "published" (never "receipt") and open their piece page.
-- [ ] There is one page per published piece (`/p/[slug]`); any old receipt-only route redirects to it. The writer sees a "Pages" back link there; readers don't.
+- [ ] There is one page per published piece (`/p/[slug]`); any old receipt-only route redirects to it. The writer sees the back arrow there; readers don't.
 - [ ] Links in a piece show as hostnames in the text and as pills under REFERENCES, one per unique address, above the receipt; the same row shows live under the text while writing.
 - [ ] Pasting a long URL into an otherwise typed piece still reads "wrote this by hand."
 - [ ] Typing a URL and then a space turns it into its underlined hostname in the editor at once, with the caret after the space; Cmd/Ctrl+Z right after brings the full URL back; Backspace after a shortened link removes it whole; reloading the draft keeps it shortened; the piece still publishes.
