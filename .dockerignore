@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+!.env.production.example
+backups
+test-results
+playwright-report
+coverage
+*.md
+!README.md
+e2e
+.cursor
+AGENTS.md
+tsconfig.tsbuildinfo
