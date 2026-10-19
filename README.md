@@ -21,3 +21,7 @@ npm run dev
 ```bash
 npm test
 ```
+
+## Production
+
+Production runs on a DigitalOcean droplet with Docker Compose. Copy [`.env.production.example`](./.env.production.example) to `.env` on the server, then use [`docker-compose.prod.yml`](./docker-compose.prod.yml) with [`scripts/deploy.sh`](./scripts/deploy.sh) to pull, build, and restart. Restore a nightly dump with [`scripts/restore.sh`](./scripts/restore.sh) `<file>`.
