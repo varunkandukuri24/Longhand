@@ -5,6 +5,9 @@
 {$ROOT_DOMAIN}, *.{$ROOT_DOMAIN} {
 	tls {
 		dns digitalocean {env.DO_AUTH_TOKEN}
+		propagation_delay 90s
+		propagation_timeout 10m
+		resolvers 1.1.1.1 8.8.8.8
 	}
 
 	encode zstd gzip
