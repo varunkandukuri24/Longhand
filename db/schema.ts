@@ -115,6 +115,14 @@ export const verificationTokens = pgTable(
   (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })],
 );
 
+/** Rolling-hour sign-in email attempts (per address and per IP). */
+export const signInAttempts = pgTable("sign_in_attempts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull(),
+  ip: text("ip").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+});
+
 export const handleRedirects = pgTable("handle_redirects", {
   oldHandle: text("old_handle").primaryKey(),
   userId: text("user_id")

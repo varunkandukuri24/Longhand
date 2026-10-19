@@ -1,4 +1,4 @@
-import { auth, signIn } from "@/auth";
+import { auth, emailProviderId, signIn } from "@/auth";
 import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
 import { redirect } from "next/navigation";
 
@@ -40,7 +40,7 @@ export default async function SignInPage({
           if (!email) {
             return;
           }
-          await signIn("nodemailer", {
+          await signIn(emailProviderId, {
             email,
             redirectTo: "/dashboard",
           });

@@ -85,6 +85,13 @@
       "when": 1792600000000,
       "tag": "0011_handles_and_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792700000000,
+      "tag": "0012_sign_in_attempts",
+      "breakpoints": true
     }
   ]
 }
