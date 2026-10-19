@@ -17,7 +17,7 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     AUTH_URL=http://localhost:3000 \
     ROOT_DOMAIN=localhost:3000 \
     EMAIL_SERVER=smtp://127.0.0.1:1025 \
-    EMAIL_FROM=Longhand <noreply@localhost>
+    EMAIL_FROM="Longhand <noreply@localhost>"
 
 RUN npm run build
 
