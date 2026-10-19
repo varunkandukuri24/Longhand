@@ -1,0 +1,16 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$ROOT_DOMAIN}, *.{$ROOT_DOMAIN} {
+	tls {
+		dns digitalocean {env.DO_AUTH_TOKEN}
+	}
+
+	encode zstd gzip
+
+	@www host www.{$ROOT_DOMAIN}
+	redir @www https://{$ROOT_DOMAIN}{uri} 308
+
+	reverse_proxy app:3000
+}
