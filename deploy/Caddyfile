@@ -2,7 +2,12 @@
 	email {$ACME_EMAIL}
 }
 
-{$ROOT_DOMAIN}, *.{$ROOT_DOMAIN} {
+{$ROOT_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
+
+*.{$ROOT_DOMAIN} {
 	tls {
 		dns digitalocean {env.DO_AUTH_TOKEN}
 		propagation_delay 90s
