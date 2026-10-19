@@ -1,5 +1,6 @@
 import { auth, emailProviderId, signIn } from "@/auth";
 import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function SignInPage({
@@ -60,6 +61,15 @@ export default async function SignInPage({
           Email me a link
         </button>
       </form>
+
+      <p className="mt-12 font-ui text-[12px] text-label">
+        <Link
+          href="/privacy"
+          className="underline decoration-[#BDB6AA] underline-offset-4 hover:decoration-ink"
+        >
+          Privacy
+        </Link>
+      </p>
     </PaperPage>
   );
 }

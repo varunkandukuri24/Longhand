@@ -125,6 +125,14 @@ export default async function WriterPage({ params }: PageProps) {
             , with a record of how.
           </p>
         </div>
+        <p className="mt-4 font-ui text-[12px] text-label">
+          <a
+            href={`${mainOrigin()}/privacy`}
+            className="underline decoration-[#BDB6AA] underline-offset-4 hover:decoration-ink"
+          >
+            Privacy
+          </a>
+        </p>
       </div>
     </PaperPage>
   );
