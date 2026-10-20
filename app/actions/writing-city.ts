@@ -13,7 +13,7 @@ function safeNext(raw: FormDataEntryValue | null): string {
   const nextRaw = String(raw ?? "").trim();
   return nextRaw.startsWith("/") && !nextRaw.startsWith("//")
     ? nextRaw
-    : "/dashboard";
+    : "/";
 }
 
 /** Save or clear the optional writing city (geocoded; never IP or browser geo). */

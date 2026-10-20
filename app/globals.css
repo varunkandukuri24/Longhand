@@ -13,6 +13,13 @@
   --column-shift: 74px;
   --paper-page-top: 56px;
   --writing-size: 20px;
+  /* Stacking: window under chrome; pane/dialogs above everything. */
+  --z-window: 10;
+  --z-bar: 20;
+  --z-scrim: 40;
+  --z-pane: 50;
+  --z-dialog: 60;
+  --z-popover: 70;
 }
 
 @theme inline {
@@ -75,6 +82,12 @@ body {
 
 .writing-title::placeholder {
   color: #a8a196;
+  opacity: 1;
+}
+
+.writing-title-greeting::placeholder,
+.writing-text-greeting::placeholder {
+  color: #b5aea2;
   opacity: 1;
 }
 
@@ -164,7 +177,7 @@ body {
   top: var(--window-inset);
   bottom: var(--window-inset);
   width: var(--window-w);
-  z-index: 5;
+  z-index: var(--z-window);
   container-type: size;
   border: 1.5px solid var(--ink);
   border-radius: 3px;
@@ -176,6 +189,15 @@ body {
 
 .side-window:active {
   cursor: grabbing;
+}
+
+.side-window-locked {
+  cursor: default;
+  pointer-events: none;
+}
+
+.side-window-locked:active {
+  cursor: default;
 }
 
 .side-window-left {
@@ -407,7 +429,7 @@ body {
 .editor-bar {
   position: fixed;
   bottom: 20px;
-  z-index: 6;
+  z-index: var(--z-bar);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -497,42 +519,162 @@ body {
   opacity: 1;
 }
 
-/* Top-left arrow-only back (DESIGN.md). Aligned with the bar's start. */
-.pages-back-arrow {
+/* Top-left back (readers on writer pages) and history icon (DESIGN.md). */
+.pages-back-arrow,
+.history-icon {
   position: fixed;
   top: 28px;
-  z-index: 6;
+  z-index: var(--z-bar);
   text-decoration: none;
   transition: opacity 300ms ease;
 }
 
-.writing-shell-left .pages-back-arrow {
+.writing-shell-left .pages-back-arrow,
+.writing-shell-left .history-icon {
   left: var(--bar-from-window);
 }
 
-.writing-shell-right .pages-back-arrow {
+.writing-shell-right .pages-back-arrow,
+.writing-shell-right .history-icon {
   left: var(--bar-other-edge);
 }
 
-.writing-shell-slide .pages-back-arrow {
+.writing-shell-slide .pages-back-arrow,
+.writing-shell-slide .history-icon {
   transition:
     left 250ms ease-out,
     opacity 300ms ease;
 }
 
-/* Owner visibility control (DESIGN.md): top right of the paper. */
-.visibility-control {
+/* Account chrome: Public/Private + account icon at top right. */
+.account-chrome {
   position: fixed;
   top: 28px;
-  z-index: 6;
+  z-index: var(--z-bar);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 300ms ease;
 }
 
-.writing-shell-left .visibility-control {
+.writing-shell-left .account-chrome {
   right: 40px;
 }
 
-.writing-shell-right .visibility-control {
+.writing-shell-right .account-chrome {
   right: var(--bar-from-window);
+}
+
+.writing-shell-slide .account-chrome {
+  transition:
+    right 250ms ease-out,
+    opacity 300ms ease;
+}
+
+.account-menu-root {
+  position: relative;
+}
+
+.account-icon[aria-expanded="true"] {
+  color: var(--ink);
+}
+
+.account-menu-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: var(--z-popover);
+  width: 260px;
+  padding: 0;
+}
+
+.account-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-menu-item:hover,
+.account-menu-item:focus-visible {
+  background: #f4f1eb;
+}
+
+.visibility-control {
+  position: relative;
+}
+
+.write-on-longhand {
+  position: fixed;
+  top: 28px;
+  z-index: var(--z-bar);
+  font-family: var(--font-ui), monospace;
+  font-size: 13px;
+  color: var(--label);
+  text-decoration: none;
+}
+
+.write-on-longhand:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.writing-shell-left .write-on-longhand {
+  right: 40px;
+}
+
+.writing-shell-right .write-on-longhand {
+  right: var(--bar-from-window);
+}
+
+/* Your pieces pane (DESIGN.md). */
+.your-pieces-root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-pane);
+}
+
+.your-pieces-scrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+.your-pieces-pane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 24px;
+  background: #ffffff;
+  border-right: 1px solid #e6e0d4;
+  box-shadow: 0 0 48px rgba(28, 26, 22, 0.1);
+  animation: your-pieces-slide 200ms ease-out;
+}
+
+@keyframes your-pieces-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .your-pieces-pane {
+    animation: none;
+  }
 }
 
 /* Tooltip below — the control sits near the top edge. */
@@ -599,6 +741,7 @@ a.reference-pill:hover svg {
   border-radius: 3px;
 }
 
+/* Bottom-bar popovers only (open upward). */
 .editor-popover {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -609,8 +752,35 @@ a.reference-pill:hover svg {
   border: 1px solid var(--popover-border);
   border-radius: 6px;
   box-shadow: var(--shadow-popover);
-  z-index: 7;
+  z-index: var(--z-popover);
   white-space: normal;
+}
+
+/* Downward popovers (account menu, Public/Private): surface only, no position. */
+.popover-surface {
+  background: #ffffff;
+  border: 1px solid var(--popover-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-popover);
+}
+
+/* Centred dialog card (publish, settings). */
+.dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.dialog-card {
+  background: #ffffff;
+  border: 1px solid #e6e0d4;
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(28, 26, 22, 0.12);
 }
 
 .writing-time-popover {
@@ -661,8 +831,15 @@ a.reference-pill:hover svg {
   }
 
   .writing-shell-left .pages-back-arrow,
-  .writing-shell-right .pages-back-arrow {
+  .writing-shell-right .pages-back-arrow,
+  .writing-shell-left .history-icon,
+  .writing-shell-right .history-icon {
     left: 20px;
+  }
+
+  .writing-shell-left .account-chrome,
+  .writing-shell-right .account-chrome {
+    right: 20px;
   }
 
   .writing-mirror,
@@ -776,7 +953,9 @@ a.reference-pill:hover svg {
   .side-window-slide,
   .writing-shell-slide .paper-column,
   .writing-shell-slide .editor-bar,
-  .writing-shell-slide .pages-back-arrow {
+  .writing-shell-slide .pages-back-arrow,
+  .writing-shell-slide .history-icon,
+  .writing-shell-slide .account-chrome {
     transition: none !important;
   }
 

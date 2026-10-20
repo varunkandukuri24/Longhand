@@ -1,5 +1,9 @@
-export default function VerifyRequestPage() {
-  const showMailpit = !process.env.AUTH_RESEND_KEY;
+import { connection } from "next/server";
+
+export default async function VerifyRequestPage() {
+  await connection();
+  const showMailpit =
+    process.env.NODE_ENV !== "production" && !process.env.AUTH_RESEND_KEY;
 
   return (
     <main className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-6 py-16">

@@ -30,7 +30,7 @@ async function mapRow(
     slug: string | null;
     visibility: "public" | "private";
     authorName: string | null;
-    authorHandle: string;
+    authorHandle: string | null;
     metrics: typeof receipts.$inferSelect.metrics;
     chainHeadHash: string;
   } | undefined,
@@ -40,7 +40,8 @@ async function mapRow(
     row.finalText === null ||
     row.publishedAt === null ||
     row.finalTextHash === null ||
-    row.slug === null
+    row.slug === null ||
+    !row.authorHandle
   ) {
     return null;
   }

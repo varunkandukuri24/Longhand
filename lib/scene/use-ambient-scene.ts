@@ -10,7 +10,7 @@ import {
   type Light,
   type WindowSide,
 } from "@/lib/scene";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const WEATHER_POLL_MS = 60 * 60 * 1000;
 const LIGHT_POLL_MS = 5 * 60 * 1000;
@@ -50,6 +50,12 @@ export type AmbientSceneState = {
   /** Dev-only: shorten scene transitions from 3 minutes to 5 seconds. */
   fastTransitions: boolean;
   setFastTransitions: (fast: boolean) => void;
+  /**
+   * True while a blocking overlay (Your pieces pane or a dialog) is open.
+   * The side window ignores drag and arrow keys then.
+   */
+  windowLocked: boolean;
+  setWindowLocked: (locked: boolean) => void;
 };
 
 type WeatherResponse = {
@@ -135,6 +141,16 @@ export function useAmbientScene(options?: {
     condition: Condition;
   } | null>(null);
   const [fastTransitions, setFastTransitions] = useState(false);
+  const [windowLocked, setWindowLockedState] = useState(false);
+  const windowLockCountRef = useRef(0);
+  const setWindowLocked = useCallback((locked: boolean) => {
+    if (locked) {
+      windowLockCountRef.current += 1;
+    } else {
+      windowLockCountRef.current = Math.max(0, windowLockCountRef.current - 1);
+    }
+    setWindowLockedState(windowLockCountRef.current > 0);
+  }, []);
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [now, setNow] = useState(() => new Date());
 
@@ -274,5 +290,7 @@ export function useAmbientScene(options?: {
     setDebugOverride,
     fastTransitions,
     setFastTransitions,
+    windowLocked: publicPage ? false : windowLocked,
+    setWindowLocked,
   };
 }

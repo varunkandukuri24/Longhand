@@ -13,7 +13,8 @@ The whole screen is paper. It's just you and your thoughts, with a few quiet opt
 | Background | The whole viewport is paper (see Paper). No other surface behind it. |
 | Side window | 112 px wide, inset 36 px from the top, bottom and its side edge. Left by default. |
 | Writing column | Up to 680 px wide, centered in the space beside the window (left window: `left: calc(50% + 74px); transform: translateX(-50%)`). The title line's top sits 120 px from the top, the text 24 px below it. The column is its own scroll area ending 88 px above the viewport bottom, so text never runs under the bar; the window, back arrow and bar stay fixed. |
-| Back arrow | Top left of the paper: 28 px from the top, horizontally aligned with the bar's start (184 px from the window's side; 40 px from the left edge when the window is on the right). |
+| History icon | Top left of the paper, 28 px from the top. With the window on the left it sits 184 px from the left edge, aligned with the bar's start; with the window on the right, 40 px from the left edge. It opens the Your pieces pane. |
+| Account icon | Top right of the paper, 28 px from the top. With the window on the left it sits 40 px from the right edge, aligned with the bar's end; with the window on the right, 184 px from the right edge, beside the window. The window always stays full height, and neither icon ever sits above it. |
 | Bottom bar | 20 px from the bottom. Starts 184 px from the window's side (36 + 112 + 36), ends 40 px from the other edge. |
 
 ## Paper
@@ -31,7 +32,7 @@ The whole screen is paper. It's just you and your thoughts, with a few quiet opt
 | Title line (editor) | Same font as the writing, 30 px, line-height 1.3. |
 | Cursor (caret) | `#C9772E`, 2 px wide (`caret-color`). |
 | Labels, bar, popovers | DM Mono 400, 13 px (11.5–12 px for small captions), color `#736C61` (meets 4.5:1 on paper). |
-| Headings (dashboard, public page title) | Literata 400, 28–32 px, `#1C1A16`. |
+| Headings (public page title, sign-in) | Literata 400, 28–32 px, `#1C1A16`. |
 
 No other fonts, except the three extra writing fonts in the Type menu (Newsreader, Instrument Sans, DM Mono), which only ever apply to the writer's own editor. No bold in the writing column.
 
@@ -57,7 +58,7 @@ No other fonts, except the three extra writing fonts in the Type menu (Newsreade
 - A single-line input above the text, no border or underline, placeholder "Title" in `#A8A196`. Optional.
 - A brand-new piece opens with the caret here. Enter or ↓ moves to the start of the text; ↑ or Shift+Tab at the very start of the text moves back to the title. Pasting a newline into it keeps only the first line. At most 120 characters.
 - The title is saved with the piece (`pieces.title`, debounced) but is not part of the writing record: no events, no effect on the receipt, word count or typed share.
-- The publish sheet pre-fills it. An empty title still falls back to the publish sheet asking for one, and the dashboard shows the first 60 characters of the text, as today.
+- The publish sheet pre-fills it. An empty title still falls back to the publish sheet asking for one, and the Your pieces pane shows the first 60 characters of the text, as today.
 - Clicking anywhere on the paper outside the controls and the window puts focus back in the text area.
 - Read-only (published) pieces never show a caret.
 
@@ -75,6 +76,8 @@ No other fonts, except the three extra writing fonts in the Type menu (Newsreade
 - Keyboard and accessibility: the Scene popover has "Window: Left / Right". The window has `aria-label="Window: {caption}"` and is focusable; Left and Right arrow keys move it.
 - The choice is saved per user (`users.window_side`, `left` | `right`) and applies on every device. It is stored locally until the server confirms.
 - With reduced motion, the window switches sides instantly, with no slide.
+- **Stacking:** the Your pieces pane, dialogs and their scrims sit above the window, always, including while the window is being dragged. While the pane or a dialog is open, the window can't be dragged.
+- **Coming back to the tab:** scene changes that happen while the tab is hidden apply instantly, with no crossfade. When the tab becomes visible again, the window jumps straight to the current scene, finishing any crossfade that was in progress. The 3-minute crossfade only plays while the writer is actually looking. The window never shows a half-blended sky after returning to a tab.
 
 ## Scenes: light × condition
 
@@ -120,7 +123,7 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 
 ## Bottom bar and popovers
 
-- The back arrow is not in the bar. It's an arrow-only button at the top left (see Layout): the back icon at 18 px in a 44 × 44 px hit area, `#736C61` (`#1C1A16` on hover), `aria-label="Back to your pages"`, with a DM Mono 12 px "Pages" tooltip on hover and keyboard focus. It fades out and back in together with the bar.
+- The history and account icons are not in the bar (see Layout). They fade out and back in together with the bar.
 - Left: `{caption} · {weekday, Mon D} · {time} · {status}`, where time is the piece's total writing time (see "Writing time"), status is `saved`, `saving` (only while a batch is in flight) or `not saved` (the server refused a batch; same color, no red), and caption is the scene in words: Clear morning, Sunny, Sunset, Clear night, Overcast, Raining, Snowing.
 - **Writing time.** The clock counts writing time for the whole piece, across every sitting, exactly the way the receipt counts active time (gaps under 60 s count; longer pauses don't). It carries on from where the piece left off instead of restarting at 0:00, and stops ticking while you pause. Format `m:ss` under an hour, `h:mm:ss` from an hour. It's a button: hover or keyboard focus shows a small popover with two rows, "This sitting {m:ss}" and "All sittings {h:mm:ss}", and the note "Writing time only. It pauses when you stop for a minute." While a countdown from Timer runs, the clock shows `{m:ss} left` instead and goes back to the total when it ends. Reference mockup: "Time: this sitting and the whole piece", option A.
 - Right: Type, Timer, No backspace, Scene, Publish. These are plain DM Mono 13 px text buttons in `#736C61`, 44 px tall hit areas, 20 px apart, with a 1 px underline on hover and a visible focus ring. No boxes, checkboxes or native dropdowns. (The one filled button in the app is the main action inside a dialog; see "Publishing and your page".)
@@ -130,21 +133,48 @@ The reference implementation below draws exactly these. Port it; don't redesign 
   - No backspace: on or off.
   - Scene: Auto, or pin a light and a condition; Window: Left / Right; Still window: on or off.
   - Publish: not a popover. It opens the centred publish dialog (see "Publishing and your page").
+- `.editor-popover` is only for popovers that open upward from the bottom bar. Anything that opens downward (account menu, Public/Private) uses `.popover-surface`: white background, 1 px `#E6E0D4` border, 6 px radius, the popover shadow, and no positioning of its own. Every popover and dialog has an opaque `#FFFFFF` background; nothing behind it ever shows through.
 
 ## Other screens
 
 - **Sign-in, name and city screens:** the same paper and grain, with the side window on the writer's chosen side. Content top-aligned, never vertically centered.
-- **Dashboard:** the same paper, grain and side window as the editor, with the same 680 px column. The top of the "Longhand" heading sits exactly 56 px from the top of the viewport: one wrapper sets this, with no other top padding, margin or vertical centering above it.
-  - Header: "Longhand" in Literata 32 px, then one DM Mono 13 px `#736C61` line: `{display name} · {handle}.{domain} · Settings · Sign out`, where the address is an ink link (1 px underline, 4 px offset) to the writer's page, opening in a new tab. The city moves into Settings.
-  - Settings opens a popover (380 px) with, first, YOUR PAGE: an inline field reading `[handle].{domain}` (DM Mono 14 px, the handle editable, the domain in `#736C61`, 1 px `#CFC9BE` bottom rule), with the help line "Lowercase letters, numbers and hyphens. Changing it later moves your page; old links redirect for 90 days." While typing it checks availability (debounced 400 ms) and says "Available", "Taken" or what's wrong, in the same grey (never red). It saves on Enter or blur. Below a 1 px `#EEEAE3` rule: display name, city, window side, Still window, and the email address (read-only). The email never appears on the page itself. Reference mockup: "Pages · your address, and public or private on each piece".
-  - Then one action row, 24 px below the header, left-aligned, with a single icon button (no text label): **plus** (new page, `aria-label="New page"`), with a small DM Mono 12 px tooltip on hover and focus. There is no quote button and no other way to start a piece.
-  - Then the pieces, newest first, 32 px below the actions, 28 px apart: the title in Literata 24 px, line-height 1.3, at most 2 lines with an ellipsis; below it a DM Mono 12.5 px meta line, `{date} · {words} words · draft`, `· public` or `· private` (never "receipt" or "published"). An untitled draft shows its first 60 characters as the title, in `#736C61`. A draft opens the editor; a published piece opens the writer's own view of its piece page on the main domain (`/p/[slug]`).
-  - Every piece looks the same on the dashboard: no icons, site names or modes.
-  - No cards, dividers or boxes.
-- **Icons:** inline SVG, 1.5 px stroke, round caps and joins, `currentColor` (`#736C61`, `#1C1A16` on hover), 18 px inside a 44 × 44 px button. Only four exist: plus, quote (a pair of curly quotation marks, used only in reference pills, 12 px), back (a left arrow) and check (used only in the receipt's Verified button, 12 px). No icon library.
+- **Home is a fresh page.** `/` for a signed-in writer opens the editor on the newest draft with no title and no text, or creates one. `/dashboard` redirects to `/`. There is no list page.
+- **The greeting.** On a piece with no title and no text, the title line's placeholder reads "Good morning, {first name}." (5:00 to 11:59), "Good afternoon, {first name}." (12:00 to 16:59) or "Good evening, {first name}." (any other time), in the reader's local time. The text's placeholder reads "What has been on your mind?" Both are `#B5AEA2`, in the writer's own font and size. They are placeholders only: they vanish on the first keystroke, never enter the event log, and come back if the piece is emptied again. {first name} is the first word of the display name. Reference mockup: "Sign in → a fresh page, already waiting".
+- **Your pieces pane.** The history icon (three lines of 12, 12 and 8 px, 1.5 px stroke, 20 px inside a 44 × 44 px button, `aria-label="Your pieces"`) opens a pane:
+  - Size and motion: 320 px wide, full height, from the left edge, over the window. It slides in over 200 ms ease-out (instant with reduced motion). The rest of the screen gets a `rgba(255,255,255,0.6)` scrim.
+  - Surface: `#FFFFFF`, a 1 px `#E6E0D4` right border, `0 0 48px rgba(28,26,22,0.10)` shadow, 28 px top and 24 px side padding.
+  - Contents, top to bottom:
+    1. "Your pieces" in Literata 22 px, with a close button (×) on the right.
+    2. A New piece button: full width, 44 px tall, 1 px `#E6E0D4` border, 6 px radius, plus icon and "New piece" in DM Mono 13 px.
+    3. A search field: DM Mono 13 px, placeholder "Search your pieces", 1 px `#E6E0D4` bottom rule. It filters by title and first line as you type.
+    4. The pieces, grouped under TODAY, THIS WEEK and EARLIER (DM Mono 11 px, 0.14em letter-spacing, `#9A9387`), by last edit in local time. Each row is the title in Literata 17 px (an untitled piece shows its first 60 characters in `#736C61`) over a DM Mono 11.5 px `#736C61` meta line, `draft · 159 words`, `public · 812 words` or `private · 640 words`. The piece on screen has a `#F4F1EB` background with a 6 px radius. Untouched empty drafts are hidden, except the one on screen.
+    5. Pinned to the bottom: `{n} pieces · {handle}.{domain}`, with the address as an ink link to the writer's page in a new tab.
+  - Behaviour: Esc, the close button or a click on the scrim closes it. Focus moves into the pane on open, is trapped while it's open, and returns to the icon on close.
+  - Reference mockups: "A · Your pieces in a left pane" and "P1 · Pane slides over the window".
+- **Account menu.** The account icon is a line icon in the same family as the history icon: a 7 px circle for the head (centre 10,7) and a shoulder arc (`M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5`). It uses a 1.5 px stroke, round caps, `currentColor` (`#736C61`, `#1C1A16` on hover or while the menu is open), and is 20 px inside a 44 × 44 px button with `aria-label="Account"`. It sits at exactly the same top (28 px) as the history icon, so the two centres share one horizontal line. There is no circle, fill or initial.
+  - The menu opens 8 px below the icon, right-aligned to it: 260 px wide, the standard popover style (`.popover-surface`).
+  - Header: display name (Literata 18 px) over the email (DM Mono 12 px `#736C61`), then a 1 px `#EEEAE3` rule.
+  - Items: **Your page** (with `{handle}.{domain}` as a second line, opens the writer's page in a new tab), **Settings** (no second line), then a rule, then **Sign out**.
+  - Keyboard: `role="menu"`, arrow keys move between items, Esc closes.
+  - The email appears only here and in Settings, never on a page.
+  - Reference mockup: "One icon, top right: page, settings, sign out".
+- **Settings dialog.** A centred 560 px dialog with the same scrim, card and keyboard behaviour as the publish dialog. Title "Settings" in Literata 22 px, with a close button. No tabs. Changes apply on **Save**; Cancel or Esc discards them.
+  - Fields, top to bottom:
+    1. YOUR PAGE: the handle field reading `[handle].{domain}`, with the same availability check and help line as before.
+    2. NAME, with the help line "Signs your receipts: “{name} wrote this by hand.”"
+    3. CITY, with the help line "Sets the weather in your window. City-level only, never shown on your pages."
+    4. SIGN-IN: "Google — connected" (or a "Connect Google" text button that links Google to this account), and "Email link · {email} — on".
+  - Save and Cancel. Window side and Still window stay in the Scene menu, and font and size stay in the Type menu. They are not repeated here.
+  - Reference mockup: "Settings, centred".
+- **Sign in.**
+  - Content: "Longhand" (Literata 36 px), the line "A quiet place to write, and a record of how you wrote it." (Literata 18 px `#5C564C`), then **Continue with Google** (full width, 48 px, 1 px `#CFC9BE` border, 6 px radius, the Google "G" mark, DM Mono 14 px). Under that, an "or" divider, the EMAIL field, **Email me a sign-in link** as the primary button, and "No password. New here? Either way makes your account." in DM Mono 11.5 px `#9A9387`.
+  - The Google button only shows when Google sign-in is configured.
+  - Reference mockup: "Sign in: Google, or an email link".
+- **First run** asks "What should we call you?" with NAME (pre-filled from Google when available) and YOUR PAGE `[handle].{domain}`, then **Start writing**, which opens a fresh page. Reference mockup: "First run: name and address, on the real domain".
+- **Icons:** inline SVG, 1.5 px stroke, round caps and joins, `currentColor` (`#736C61`, `#1C1A16` on hover), 18 px inside a 44 × 44 px button. Only six exist: plus, quote (a pair of curly quotation marks, used only in reference pills, 12 px), back (a left arrow, only for readers on writer pages), check (used only in the receipt's Verified button, 12 px), history (three lines, used for Your pieces) and account (head and shoulders, used for the account menu). No icon library.
 - **Focus:** keyboard focus only (`:focus-visible`): a 1.5 px `#1C1A16` outline, offset 3 px, 3 px radius. A mouse click never leaves a box around a button.
-- **One shared layout:** the editor, dashboard, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's title line starts 120 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
-- **Piece page (`/p/[slug]`):** the only page for a published piece, the same for readers and the writer. There is no separate receipt page, and no link anywhere says "receipt". Paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it (Literata 20 px, line-height 1.7, 22 px between paragraphs), then References (if any), then the receipt (see "References" and "The receipt"). When the signed-in writer views their own piece, the same arrow-only back button sits fixed at the top left, exactly where it sits in the editor; readers never see it. Reference mockup: "A published piece · read it, the receipt is at the end".
+- **One shared layout:** the editor, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's title line starts 120 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
+- **Piece page (`/p/[slug]`):** the only page for a published piece, the same for readers and the writer. There is no separate receipt page, and no link anywhere says "receipt". Paper and grain, with the side window on the left showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it (Literata 20 px, line-height 1.7, 22 px between paragraphs), then References (if any), then the receipt (see "References" and "The receipt"). When the signed-in writer views their own piece, the history icon and account menu sit where they do in the editor; readers never see them. Reference mockup: "A published piece · read it, the receipt is at the end".
 
 ## Publishing and your page
 
@@ -174,7 +204,7 @@ Reference mockups: "Publish · centred, with who can read it", "Published · the
 
 ### The writer's own view of a piece
 
-- On the main domain, the owner's piece page shows, at the top right of the paper (28 px from the top, 40 px from the right edge, or from the window when it's on the right), a DM Mono 13 px text button `Public` or `Private`. It opens a small popover with the same two radio rows; choosing one saves immediately and shows the new link with Copy link. Readers never see it.
+- On the main domain, the owner's piece page shows the history icon at the top left (replacing the back arrow) and the account icon at the top right. Immediately left of the account icon, 8 px from it, a DM Mono 13 px text button `Public` or `Private` opens a small popover with the same two radio rows; choosing one saves immediately and shows the new link with Copy link. Readers never see these.
 
 ### The writer's page (`{handle}.{ROOT_DOMAIN}`)
 
@@ -185,6 +215,7 @@ Reference mockups: "Publish · centred, with who can read it", "Published · the
 - 72 px after the list: the 72 px rule, then a row with the seal at 22 px and "Every piece here was written on Longhand, with a record of how." (DM Mono 12 px `#736C61`), "Longhand" linking to the main domain.
 - On a public piece page, the writer's name in the signature sentence links to their page.
 - **Back from a piece on a writer's page.** Every piece page served on `{handle}.{ROOT_DOMAIN}` shows the same arrow-only back button at the top left (same position, size and color as everywhere else), linking to `{handle}.{ROOT_DOMAIN}/`. Its tooltip and `aria-label` use the writer's display name ("Back to anon24"). It shows for everyone, signed in or not. A private piece at `/p/{slug}` shows no back button to readers (only to its owner, back to Pages).
+- **Write on Longhand.** Every page on a writer's subdomain (their page and each public piece) shows "Write on Longhand" at the top right of the paper: DM Mono 13 px `#736C61`, underlined on hover, 28 px from the top and 40 px from the right edge (or from the window when it's on the right). It links to `https://{domain}/`, which opens a fresh page for a signed-in writer and sign-in for anyone else. It is the same for everyone. Sign-in cookies are deliberately never sent to subdomains, so these pages can't tell the owner from a reader.
 - Share image for the writer's page: the name and the summary line on paper, in the existing share-image style.
 
 ## References
@@ -269,8 +300,18 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] Reduced motion stops everything moving in the window, including the side switch.
 - [ ] No gradients, shadows or dark backgrounds remain on the writing screen.
 - [ ] A brand-new account, and an existing one with no saved choices, starts on Auto with the window on the left.
-- [ ] The dashboard is top-aligned, shows the side window, and never shows the email address outside Settings.
-- [ ] The "Longhand" heading's top edge is 56 px from the viewport top, at every window size.
+- [ ] Signing in, and opening `/` while signed in, lands on a blank page with a blinking caret. Doing it twice in a row never creates a second empty draft. `/dashboard` redirects to `/`.
+- [ ] A blank piece shows "Good {time of day}, {first name}." and "What has been on your mind?" as placeholders. The first keystroke removes them, and they never appear in the event log or the receipt.
+- [ ] The history icon opens the Your pieces pane over the window. Esc, the scrim and the close button close it, and focus returns to the icon. New piece, search and the Today / This week / Earlier groups work, and the open piece is highlighted.
+- [ ] The account icon is a line icon matching the history icon, at the same height. Its menu has exactly Your page, Settings and Sign out, works by keyboard, and is the only place the email shows besides Settings.
+- [ ] Settings opens one dialog with page address, name, city and sign-in. Changes save only on Save. Changing the handle there moves the page, and the old address redirects.
+- [ ] The account menu and every popover and dialog are opaque white. Nothing shows through.
+- [ ] With the window on the right, the account icon sits beside the window, never over it. The window is full height on both sides.
+- [ ] Dragging the window never puts it above the Your pieces pane. With the pane open, the window doesn't drag.
+- [ ] Leaving the tab for an hour across a light change, then coming back, shows the new scene at once, never a grey or half-blended sky.
+- [ ] On `{handle}.{domain}` and its pieces, "Write on Longhand" at the top right goes to the main site.
+- [ ] Continue with Google signs in. A Google account whose email matches an existing email-link writer signs into that same writer. A new Google writer goes through first run with the name pre-filled.
+- [ ] No page, placeholder, email or help line shows "localhost", "Mailpit" or "127.0.0.1" when `ROOT_DOMAIN` is a real domain, including pages built before the real environment variables were set.
 - [ ] On a public piece page, the title's top edge is 56 px from the viewport top, at every window size and for short and long pieces alike.
 - [ ] Every paper page renders through the one shared layout component; no page sets its own top padding, margin or vertical centering.
 - [ ] A public piece ends with the signature line (rule, seal, sentence, meta line, links) on the paper, with no card, box or background.
@@ -281,13 +322,11 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] Sittings merge sessions less than 30 minutes apart by real clock time, so a piece written in one sitting with reloads shows "1 sitting".
 - [ ] In every light change (morning → afternoon → golden → night → morning), at most one sun is ever visible; a sun and moon show together only from golden hour to night.
 - [ ] No public text says "pasted" or "AI".
-- [ ] Every piece (draft, published or read-only) has the arrow-only back button at the top left, with a "Pages" tooltip, and nothing about it remains in the bottom bar.
 - [ ] Typing past the bottom of the screen never puts text under the bar: the caret line stays at least 160 px above the scroll area's bottom, and text fades out above the bar.
 - [ ] Writing text defaults to Literata 20 px; the Type menu switches font and size instantly and remembers it on another device; published pages stay Literata 20 px.
 - [ ] A new piece opens with the caret on "Title"; Enter moves to the text; the title pre-fills the publish sheet and never changes the receipt.
 - [ ] Reopening a piece continues its clock from its previous total; hovering the clock shows this sitting and all sittings; the total matches the receipt's active time.
-- [ ] The dashboard has only the plus button; published pieces say "published" (never "receipt") and open their piece page.
-- [ ] There is one page per published piece (`/p/[slug]`); any old receipt-only route redirects to it. The writer sees the back arrow there; readers don't.
+- [ ] There is one page per published piece (`/p/[slug]`); any old receipt-only route redirects to it. The writer sees the history icon and account menu there; readers don't.
 - [ ] Links in a piece show as hostnames in the text and as pills under REFERENCES, one per unique address, above the receipt; the same row shows live under the text while writing.
 - [ ] Pasting a long URL into an otherwise typed piece still reads "wrote this by hand."
 - [ ] Publish opens a centred dialog with a scrim, Public selected by default, keyboard-trapped, Esc closes; after publishing it shows the right link with Copy link.

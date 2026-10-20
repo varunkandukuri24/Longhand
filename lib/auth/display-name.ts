@@ -69,12 +69,15 @@ export async function requireUserWithDisplayName(): Promise<{
   };
 }
 
-/** True when the user has a non-empty display name. */
+/**
+ * True when the user has finished first run: a display name and a page address.
+ * Google users arrive with a name but no handle, so they still need onboarding.
+ */
 export async function userHasDisplayName(userId: string): Promise<boolean> {
   const [row] = await db
-    .select({ name: users.name })
+    .select({ name: users.name, handle: users.handle })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  return Boolean(row?.name?.trim());
+  return Boolean(row?.name?.trim() && row?.handle?.trim());
 }

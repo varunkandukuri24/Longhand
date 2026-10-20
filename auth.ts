@@ -1,6 +1,7 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth from "next-auth";
 import type { EmailConfig } from "next-auth/providers";
+import Google from "next-auth/providers/google";
 import Nodemailer from "next-auth/providers/nodemailer";
 import Resend from "next-auth/providers/resend";
 import { db } from "@/db";
@@ -11,10 +12,13 @@ import {
   verificationTokens,
 } from "@/db/schema";
 import { sessionCookieOptions } from "@/lib/auth/session-cookie";
+import { googleProfile } from "@/lib/auth/google-profile";
 import {
   allowSignInAttempt,
   clientIpFromHeaders,
 } from "@/lib/auth/sign-in-rate-limit";
+
+export { googleProfile };
 
 const useSecureCookies =
   process.env.AUTH_URL?.startsWith("https://") === true;
@@ -57,6 +61,23 @@ const email = emailProvider();
 /** Provider id for signIn() — "resend" in production, "nodemailer" locally. */
 export const emailProviderId = email.id;
 
+const googleId = process.env.AUTH_GOOGLE_ID?.trim();
+const googleSecret = process.env.AUTH_GOOGLE_SECRET?.trim();
+
+/** True when Google OAuth credentials are configured. */
+export const googleEnabled = Boolean(googleId && googleSecret);
+
+const google = googleEnabled
+  ? Google({
+      clientId: googleId!,
+      clientSecret: googleSecret!,
+      allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        return googleProfile(profile);
+      },
+    })
+  : null;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   adapter: DrizzleAdapter(db, {
@@ -65,7 +86,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: authSessions,
     verificationTokensTable: verificationTokens,
   }),
-  providers: [email],
+  providers: google ? [email, google] : [email],
   pages: {
     signIn: "/signin",
     verifyRequest: "/signin/verify",

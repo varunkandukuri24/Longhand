@@ -52,17 +52,20 @@ export async function changeHandle(
       .delete(handleRedirects)
       .where(eq(handleRedirects.oldHandle, handle));
 
-    await tx
-      .insert(handleRedirects)
-      .values({
-        oldHandle: current.handle,
-        userId,
-        expiresAt,
-      })
-      .onConflictDoUpdate({
-        target: handleRedirects.oldHandle,
-        set: { userId, expiresAt },
-      });
+    // First-time handle (null) has no old address to redirect from.
+    if (current.handle) {
+      await tx
+        .insert(handleRedirects)
+        .values({
+          oldHandle: current.handle,
+          userId,
+          expiresAt,
+        })
+        .onConflictDoUpdate({
+          target: handleRedirects.oldHandle,
+          set: { userId, expiresAt },
+        });
+    }
 
     await tx
       .update(users)

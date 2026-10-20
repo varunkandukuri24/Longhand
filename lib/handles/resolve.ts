@@ -26,8 +26,14 @@ export async function resolveHandle(handle: string): Promise<ResolvedHandle> {
     .where(eq(users.handle, handle))
     .limit(1);
 
-  if (user) {
-    return { kind: "user", ...user };
+  if (user?.handle) {
+    return {
+      kind: "user",
+      id: user.id,
+      handle: user.handle,
+      name: user.name,
+      createdAt: user.createdAt,
+    };
   }
 
   const [redir] = await db

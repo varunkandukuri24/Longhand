@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
 import { userHasDisplayName } from "@/lib/auth/display-name";
+import { openFreshPiece } from "@/lib/pieces/open-fresh-piece";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -10,7 +11,8 @@ export default async function HomePage() {
     if (!(await userHasDisplayName(session.user.id))) {
       redirect("/onboarding/name");
     }
-    redirect("/dashboard");
+    const pieceId = await openFreshPiece(session.user.id);
+    redirect(`/write/${pieceId}`);
   }
 
   return (

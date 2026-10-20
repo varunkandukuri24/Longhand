@@ -1,7 +1,9 @@
 import { FocusEditor } from "@/components/editor/FocusEditor";
 import { db } from "@/db";
 import { pieces } from "@/db/schema";
+import { loadOwnerAccount } from "@/lib/account/owner-account";
 import { requireUserWithDisplayName } from "@/lib/auth/display-name";
+import { rootDomain } from "@/lib/hosts";
 import { isPieceId } from "@/lib/pieces/piece-id";
 import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
@@ -10,6 +12,10 @@ export default async function WritePage({
   params,
 }: PageProps<"/write/[pieceId]">) {
   const user = await requireUserWithDisplayName();
+  const account = await loadOwnerAccount(user.id);
+  if (!account) {
+    redirect("/onboarding/name");
+  }
 
   const { pieceId } = await params;
   if (!isPieceId(pieceId)) {
@@ -40,9 +46,11 @@ export default async function WritePage({
       pieceId={piece.id}
       initialTitle={piece.title}
       writerHandle={user.handle}
+      domain={rootDomain()}
       initialWindowSide={user.windowSide}
       initialFont={user.font}
       initialFontSize={user.fontSize}
+      account={account}
     />
   );
 }

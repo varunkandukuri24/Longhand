@@ -1,5 +1,10 @@
 /** Apex host for the app, e.g. "localhost:3000" or "longhand.example". */
 export function rootDomain(): string {
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "rootDomain() must only run on the server; pass domain as a prop to client components",
+    );
+  }
   const domain = process.env.ROOT_DOMAIN?.trim();
   if (!domain) {
     throw new Error("ROOT_DOMAIN is not set");

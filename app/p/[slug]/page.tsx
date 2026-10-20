@@ -1,5 +1,6 @@
 import { PublishedPieceView } from "@/components/pieces/PublishedPieceView";
 import { auth } from "@/auth";
+import { loadOwnerAccount } from "@/lib/account/owner-account";
 import { writerPageUrl, publicUrl } from "@/lib/piece-urls";
 import { loadPublishedBySlug } from "@/lib/pieces/load-published";
 import type { Metadata } from "next";
@@ -42,10 +43,16 @@ export default async function PublicPiecePage({ params }: PageProps) {
     permanentRedirect(publicUrl(piece, piece.authorHandle));
   }
 
+  const ownerAccount =
+    isOwner && session?.user?.id
+      ? await loadOwnerAccount(session.user.id)
+      : null;
+
   return (
     <PublishedPieceView
       piece={piece}
       isOwner={isOwner}
+      ownerAccount={ownerAccount ?? undefined}
       authorHref={
         piece.visibility === "public"
           ? writerPageUrl(piece.authorHandle)

@@ -47,8 +47,8 @@ describe("dashboard layout tokens", () => {
     expect(css).toMatch(/\.paper-column\s*\{[\s\S]*?margin-top:\s*0/);
   });
 
-  it("Pages back button targets the dashboard", () => {
-    expect(PAGES_HREF).toBe("/dashboard");
+  it("reader back button still exists; owner chrome uses history icon", () => {
+    expect(PAGES_HREF).toBe("/");
     expect(PAGES_ARIA_LABEL).toBe("Back to your pages");
     const controls = readFileSync(
       join(process.cwd(), "components/editor/EditorControls.tsx"),
@@ -62,7 +62,6 @@ describe("dashboard layout tokens", () => {
     );
     expect(ownerBack).toContain("href = PAGES_HREF");
     expect(ownerBack).toContain("label = PAGES_ARIA_LABEL");
-    expect(ownerBack).toContain('"Pages"');
     expect(ownerBack).toContain("pages-back-arrow");
     expect(ownerBack).toContain("href?: string");
     expect(ownerBack).toContain("label?: string");
@@ -70,7 +69,7 @@ describe("dashboard layout tokens", () => {
       join(process.cwd(), "components/editor/FocusEditor.tsx"),
       "utf8",
     );
-    expect(editor).toContain("PagesBackLink");
+    expect(editor).toContain("OwnerChrome");
+    expect(editor).not.toContain("PagesBackLink");
   });
 });
-

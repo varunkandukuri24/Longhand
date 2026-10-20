@@ -41,7 +41,7 @@ export function WritingCityForm({ initialCity }: WritingCityFormProps) {
       }}
       className="mt-2 flex flex-wrap items-center gap-2"
     >
-      <input type="hidden" name="next" value="/dashboard" />
+      <input type="hidden" name="next" value="/" />
       <input
         type="text"
         name="city"
@@ -64,7 +64,7 @@ export function WritingCityForm({ initialCity }: WritingCityFormProps) {
           className="font-ui text-[12px] text-ink/50 underline-offset-2 hover:underline"
           onClick={() => {
             const fd = new FormData();
-            fd.set("next", "/dashboard");
+            fd.set("next", "/");
             fd.set("city", "");
             void saveWritingCity(fd);
           }}

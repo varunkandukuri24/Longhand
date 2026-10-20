@@ -1,5 +1,6 @@
 import { Seal } from "@/components/receipt/Seal";
 import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
+import { WriteOnLonghandLink } from "@/components/writers/WriteOnLonghandLink";
 import { resolveHandle } from "@/lib/handles/resolve";
 import { mainOrigin, writerOrigin } from "@/lib/hosts";
 import {
@@ -65,7 +66,11 @@ export default async function WriterPage({ params }: PageProps) {
       });
 
   return (
-    <PaperPage topOffsetPx={PAGE_TOP_OFFSET_PX} publicPage>
+    <PaperPage
+      topOffsetPx={PAGE_TOP_OFFSET_PX}
+      publicPage
+      chrome={<WriteOnLonghandLink href={`${mainOrigin()}/`} />}
+    >
       <h1
         className="font-writing text-[40px] leading-[1.15] text-ink"
         data-paper-heading

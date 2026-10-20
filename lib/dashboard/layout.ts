@@ -6,6 +6,9 @@ export {
   paperPageTopStyle,
 } from "@/lib/scene/paper-page-layout";
 
-/** Editor "Pages" back control. */
-export const PAGES_HREF = "/dashboard";
+/**
+ * Default back control for readers on a writer's page.
+ * Owner chrome uses the history icon instead.
+ */
+export const PAGES_HREF = "/";
 export const PAGES_ARIA_LABEL = "Back to your pages";

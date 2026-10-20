@@ -7,7 +7,7 @@ import Link from "next/link";
 type PagesBackLinkProps = {
   /** Fades with the editor bar while typing. Defaults to visible. */
   visible?: boolean;
-  /** Destination; defaults to the Pages dashboard. */
+  /** Destination; defaults to `/` (readers on writer pages pass an override). */
   href?: string;
   /** aria-label (and tooltip, unless this is the Pages default). */
   label?: string;

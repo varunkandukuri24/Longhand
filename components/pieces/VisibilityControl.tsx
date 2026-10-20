@@ -86,7 +86,7 @@ export function VisibilityControl({
   const label = visibility === "public" ? "Public" : "Private";
 
   return (
-    <div ref={rootRef} className="visibility-control">
+    <div ref={rootRef} className="visibility-control relative">
       <button
         type="button"
         className="editor-bar-btn min-h-0 px-0 font-ui text-[13px]"
@@ -101,7 +101,7 @@ export function VisibilityControl({
           id={panelId}
           role="dialog"
           aria-label="Who can read it"
-          className="editor-popover absolute right-0 top-full z-20 mt-2 w-[min(320px,calc(100vw-2rem))] p-3"
+          className="popover-surface absolute right-0 top-full z-[var(--z-popover)] mt-2 w-[min(320px,calc(100vw-2rem))] p-3"
         >
           <div className="flex flex-col gap-2.5">
             {(

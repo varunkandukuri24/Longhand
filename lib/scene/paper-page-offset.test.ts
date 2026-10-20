@@ -46,7 +46,7 @@ describe("paper page top offsets", () => {
     expect(css).not.toMatch(/\.dashboard-column\s*\{/);
   });
 
-  it("public and dashboard headings measure 56 px at 1440 and 1024", () => {
+  it("public and page headings measure 56 px at 1440 and 1024", () => {
     for (const width of [1440, 1024]) {
       expect(measureHeadingTop(width, PAGE_TOP_OFFSET_PX)).toBe(56);
     }
@@ -60,13 +60,9 @@ describe("paper page top offsets", () => {
     expect(shortTitleTop).toBe(longTitleTop);
   });
 
-  it("dashboard heading offset is 56 px", () => {
-    expect(measureHeadingTop(1440, PAGE_TOP_OFFSET_PX)).toBe(56);
+  it("/dashboard redirects to /", () => {
     const dashboard = read("app/dashboard/page.tsx");
-    expect(dashboard).toContain("PaperPage");
-    expect(dashboard).toContain("PAGE_TOP_OFFSET_PX");
-    expect(dashboard).toContain("data-paper-heading");
-    expect(dashboard).not.toMatch(/pt-\[120px\]|pt-\[140px\]|pt-24|writing-column|dashboard-column/);
+    expect(dashboard).toContain('redirect("/")');
   });
 
   it("public page uses PaperPage at 56 px with title/text/signature spacing", () => {
@@ -89,7 +85,6 @@ describe("paper page top offsets", () => {
 
   it("every paper screen renders through PaperPage", () => {
     const files = [
-      "app/dashboard/page.tsx",
       "components/pieces/PublishedPieceView.tsx",
       "app/u/[handle]/page.tsx",
       "app/signin/page.tsx",

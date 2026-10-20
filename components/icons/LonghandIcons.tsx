@@ -79,3 +79,54 @@ export function CheckIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/**
+ * History / Your pieces: three lines of 12, 12 and 8 px (DESIGN.md).
+ * Drawn at 20 px inside a 44 × 44 hit area.
+ */
+export function HistoryIcon(props: IconProps) {
+  const size = props.size ?? 20;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={props.className}
+    >
+      <path d="M4 6h12" />
+      <path d="M4 10h12" />
+      <path d="M4 14h8" />
+    </svg>
+  );
+}
+
+/**
+ * Account: head circle (centre 10,7, r 3.5) and shoulder arc (DESIGN.md).
+ * Drawn at 20 px inside a 44 × 44 hit area.
+ */
+export function AccountIcon(props: IconProps) {
+  const size = props.size ?? 20;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={props.className}
+    >
+      <circle cx="10" cy="7" r="3.5" />
+      <path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
+    </svg>
+  );
+}

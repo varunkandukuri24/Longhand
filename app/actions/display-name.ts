@@ -22,11 +22,11 @@ export async function saveDisplayName(formData: FormData): Promise<void> {
   const next =
     nextRaw.startsWith("/") && !nextRaw.startsWith("//")
       ? nextRaw
-      : "/dashboard";
+      : "/";
 
   const name = normalizeDisplayName(String(formData.get("name") ?? ""));
   if (!name) {
-    // Do not clear an existing name; bounce back (dashboard re-prompts if unset).
+    // Do not clear an existing name; bounce back (onboarding re-prompts if unset).
     redirect(next);
   }
 

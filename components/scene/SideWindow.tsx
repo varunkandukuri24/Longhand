@@ -9,6 +9,7 @@ import {
   type WindowSide,
   type WindowSun,
 } from "@/lib/scene";
+import { shouldCrossfadeScene } from "@/lib/scene/scene-visibility";
 import { useEffect, useRef, useState } from "react";
 
 type SideWindowProps = {
@@ -19,6 +20,8 @@ type SideWindowProps = {
   instant?: boolean;
   /** Shorten scene transitions from 3 minutes to 5 seconds (debug). */
   fastTransitions?: boolean;
+  /** Ignore drag and arrow keys (pane or dialog open). */
+  locked?: boolean;
   onSideChange: (side: WindowSide) => void;
   className?: string;
 };
@@ -98,6 +101,7 @@ export function SideWindow({
   still,
   instant = false,
   fastTransitions = false,
+  locked = false,
   onSideChange,
   className = "",
 }: SideWindowProps) {
@@ -110,6 +114,7 @@ export function SideWindow({
   const [overlayOn, setOverlayOn] = useState(false);
   const shownKeyRef = useRef(`${light}-${condition}`);
   const prevSceneRef = useRef<WindowScene>(base.scene);
+  const overlayRef = useRef<Layer | null>(null);
   const [sun, setSun] = useState<SunVisual | null>(() =>
     base.scene.sun ? sunFromScene(base.scene.sun) : null,
   );
@@ -130,8 +135,30 @@ export function SideWindow({
   const transitionMs = noMotion ? 0 : fastTransitions ? 5000 : 180_000;
 
   useEffect(() => {
+    overlayRef.current = overlay;
+  }, [overlay]);
+
+  useEffect(() => {
     const id = window.requestAnimationFrame(() => setCelestialReady(true));
     return () => window.cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) return;
+      const mid = overlayRef.current;
+      if (!mid) return;
+      // Finish any in-progress crossfade immediately on return.
+      shownKeyRef.current = mid.key;
+      prevSceneRef.current = mid.scene;
+      setBase(mid);
+      setOverlay(null);
+      setOverlayOn(false);
+      setMoonOn(mid.scene.moon);
+      setSun(mid.scene.sun ? sunFromScene(mid.scene.sun) : null);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
   useEffect(() => {
@@ -141,10 +168,26 @@ export function SideWindow({
     const nextScene = windowSceneFor(light, condition);
     const next: Layer = { key: nextKey, scene: nextScene };
     const prev = prevSceneRef.current;
+    const crossfade = shouldCrossfadeScene({
+      documentHidden: typeof document !== "undefined" && document.hidden,
+      noMotion,
+    });
+
+    prevSceneRef.current = nextScene;
+
+    if (!crossfade) {
+      const id = window.requestAnimationFrame(() => {
+        setBase(next);
+        setOverlay(null);
+        setOverlayOn(false);
+        setMoonOn(nextScene.moon);
+        setSun(nextScene.sun ? sunFromScene(nextScene.sun) : null);
+      });
+      return () => window.cancelAnimationFrame(id);
+    }
 
     if (nextScene.sun && !prev.sun) {
       if (prev.moon) {
-        // Night → morning: rise from behind the roofs.
         const rising: SunVisual = {
           ...sunFromScene(nextScene.sun),
           top: "100%",
@@ -157,7 +200,6 @@ export function SideWindow({
           });
         });
       } else {
-        // Weather clears: fade in at its spot.
         setSun({ ...sunFromScene(nextScene.sun), opacity: 0 });
         window.requestAnimationFrame(() => {
           window.requestAnimationFrame(() => {
@@ -169,19 +211,6 @@ export function SideWindow({
       setSun(sunTarget(prev, nextScene));
     }
     setMoonOn(nextScene.moon);
-    prevSceneRef.current = nextScene;
-
-    if (noMotion) {
-      setBase(next);
-      setOverlay(null);
-      setOverlayOn(false);
-      if (nextScene.sun) {
-        setSun(sunFromScene(nextScene.sun));
-      } else {
-        setSun(null);
-      }
-      return;
-    }
 
     setOverlay(next);
     setOverlayOn(false);
@@ -197,12 +226,13 @@ export function SideWindow({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
+    if (locked || e.button !== 0) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = { startX: e.clientX, moved: false, following: false };
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (locked) return;
     const drag = dragRef.current;
     if (!drag) return;
     const dx = e.clientX - drag.startX;
@@ -257,6 +287,7 @@ export function SideWindow({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (locked) return;
     if (e.key === "ArrowLeft") {
       e.preventDefault();
       snapTo("left");
@@ -287,6 +318,7 @@ export function SideWindow({
         side === "left" ? "side-window-left" : "side-window-right",
         slide ? "side-window-slide" : "",
         still || reduceMotion ? "side-window-still" : "",
+        locked ? "side-window-locked" : "",
         className,
       ].join(" ")}
       style={{ ...style, ...durationStyle }}

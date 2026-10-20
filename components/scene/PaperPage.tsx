@@ -68,6 +68,7 @@ export function PaperPage({
         .filter(Boolean)
         .join(" ")}
       onPointerDown={onPointerDown}
+      chrome={chrome}
     >
       <div
         ref={columnRef}
@@ -85,7 +86,6 @@ export function PaperPage({
       >
         {children}
       </div>
-      {chrome}
     </PaperShell>
   );
 }

@@ -48,13 +48,12 @@ export const users = pgTable("users", {
     .$defaultFn(() => crypto.randomUUID()),
   // Auth.js adapter field; stores the writer's display name (PRD: display_name).
   name: text("display_name"),
-  /** Unique page address; personal page at {handle}.{ROOT_DOMAIN}. */
-  handle: text("handle")
-    .notNull()
-    .unique()
-    .$defaultFn(
-      () => `u-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`,
-    ),
+  /**
+   * Unique page address; personal page at {handle}.{ROOT_DOMAIN}.
+   * Null until first-run onboarding chooses one (Google users arrive with a
+   * name but no handle).
+   */
+  handle: text("handle").unique(),
   email: text("email").notNull().unique(),
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),

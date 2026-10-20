@@ -37,7 +37,7 @@ export function DisplayNameForm({ initialName }: DisplayNameFormProps) {
       }}
       className="mt-2 flex flex-wrap items-center gap-2"
     >
-      <input type="hidden" name="next" value="/dashboard" />
+      <input type="hidden" name="next" value="/" />
       <input
         type="text"
         name="name"

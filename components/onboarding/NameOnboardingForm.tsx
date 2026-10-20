@@ -2,25 +2,24 @@
 
 import { saveDisplayName } from "@/app/actions/display-name";
 import { suggestHandle, validateHandle } from "@/lib/handles";
-import { rootDomain } from "@/lib/hosts";
 import { useEffect, useState } from "react";
 
 type NameOnboardingFormProps = {
   next: string;
+  domain: string;
+  /** Pre-filled from Google when available. */
+  initialName?: string;
 };
 
-export function NameOnboardingForm({ next }: NameOnboardingFormProps) {
-  const [name, setName] = useState("");
+export function NameOnboardingForm({
+  next,
+  domain,
+  initialName = "",
+}: NameOnboardingFormProps) {
+  const [name, setName] = useState(initialName);
   const [handleDraft, setHandleDraft] = useState("");
   const [handleTouched, setHandleTouched] = useState(false);
   const [availability, setAvailability] = useState<string>("");
-  const domain = (() => {
-    try {
-      return rootDomain();
-    } catch {
-      return "localhost:3000";
-    }
-  })();
 
   const handle = handleTouched ? handleDraft : suggestHandle(name);
   const checked = validateHandle(handle);
@@ -66,8 +65,14 @@ export function NameOnboardingForm({ next }: NameOnboardingFormProps) {
   return (
     <form action={saveDisplayName} className="flex flex-col gap-6">
       <input type="hidden" name="next" value={next} />
+      <h1
+        className="font-writing text-[28px] leading-tight text-ink"
+        data-paper-heading
+      >
+        What should we call you?
+      </h1>
       <label className="font-ui text-[13px] text-label">
-        What name should appear on your writing?
+        Name
         <input
           type="text"
           name="name"
@@ -81,7 +86,7 @@ export function NameOnboardingForm({ next }: NameOnboardingFormProps) {
         />
       </label>
       <label className="font-ui text-[13px] text-label">
-        Your page address
+        Your page
         <div className="mt-3 flex items-baseline gap-0 border-b border-ink/20 font-ui text-[13px]">
           <input
             type="text"
@@ -103,19 +108,11 @@ export function NameOnboardingForm({ next }: NameOnboardingFormProps) {
           {handleHint ? ` ${handleHint}` : ""}
         </span>
       </label>
-      <label className="font-ui text-[13px] text-label">
-        What city are you writing from?
-        <input
-          type="text"
-          name="city"
-          maxLength={80}
-          autoComplete="address-level2"
-          placeholder="Optional"
-          className="mt-3 w-full border-b border-ink/20 bg-transparent py-2 font-ui text-[13px] text-ink outline-none placeholder:text-label/50"
-        />
-      </label>
-      <button type="submit" className="editor-bar-btn mt-2 w-fit">
-        Continue
+      <button
+        type="submit"
+        className="mt-2 h-11 w-fit rounded px-[22px] bg-ink font-ui text-[13px] text-white"
+      >
+        Start writing
       </button>
     </form>
   );

@@ -12,6 +12,11 @@ import type { PointerEventHandler, ReactNode } from "react";
 
 type PaperShellProps = {
   children: ReactNode;
+  /**
+   * Fixed chrome (icons, Your pieces, dialogs). Must sit outside the paper
+   * column's stacking context so pane/dialogs paint above the side window.
+   */
+  chrome?: ReactNode;
   /** Public pages: left window, clear sky, reader's clock. */
   publicPage?: boolean;
   initialWindowSide?: WindowSide;
@@ -23,6 +28,7 @@ type PaperShellProps = {
 
 function PaperShellInner({
   children,
+  chrome = null,
   publicPage = false,
   hideWindow = false,
   className = "",
@@ -55,10 +61,14 @@ function PaperShellInner({
           side={ambient.windowSide}
           still={ambient.stillWindow}
           fastTransitions={ambient.fastTransitions}
+          locked={ambient.windowLocked}
           onSideChange={onSideChange}
         />
       )}
+      {/* Above grain only; window (z-10) may paint over the column edge. */}
       <div className="relative z-[2]">{children}</div>
+      {/* Sibling of window so --z-bar / --z-pane / --z-dialog win. */}
+      {chrome}
     </div>
   );
 }
@@ -66,6 +76,7 @@ function PaperShellInner({
 /** Paper + grain + side window shell (used by PaperPage). */
 export function PaperShell({
   children,
+  chrome = null,
   publicPage = false,
   initialWindowSide = "left",
   hideWindow = false,
@@ -78,6 +89,7 @@ export function PaperShell({
       initialWindowSide={initialWindowSide}
     >
       <PaperShellInner
+        chrome={chrome}
         publicPage={publicPage}
         hideWindow={hideWindow}
         className={className}

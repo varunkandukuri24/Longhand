@@ -1,7 +1,7 @@
 "use client";
 
 import { Seal } from "@/components/receipt/Seal";
-import { rootDomain } from "@/lib/hosts";
+import { useAmbientSceneContext } from "@/components/scene/ambient-context";
 import type { PieceVisibility } from "@/lib/pieces/publish";
 import {
   useCallback,
@@ -23,6 +23,7 @@ type PublishSheetProps = {
   open: boolean;
   initialTitle: string;
   handle: string;
+  domain: string;
   busy: boolean;
   error: string | null;
   published: PublishResultState | null;
@@ -51,6 +52,7 @@ export function PublishSheet({
   open,
   initialTitle,
   handle,
+  domain,
   busy,
   error,
   published,
@@ -60,6 +62,7 @@ export function PublishSheet({
   onBackToPages,
   onOpenPage,
 }: PublishSheetProps) {
+  const { setWindowLocked } = useAmbientSceneContext();
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
@@ -67,13 +70,11 @@ export function PublishSheet({
   const [visibility, setVisibility] = useState<PieceVisibility>("public");
   const [wasOpen, setWasOpen] = useState(open);
   const [copied, setCopied] = useState(false);
-  const domain = (() => {
-    try {
-      return rootDomain();
-    } catch {
-      return "localhost:3000";
-    }
-  })();
+
+  useEffect(() => {
+    setWindowLocked(open);
+    return () => setWindowLocked(false);
+  }, [open, setWindowLocked]);
 
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -158,16 +159,13 @@ export function PublishSheet({
   const publicHint = `On your page, ${handle}.${domain}, and for anyone with the link.`;
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center px-4"
-      style={{ background: "rgba(255,255,255,0.74)" }}
-    >
+    <div className="dialog-scrim">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-[min(520px,calc(100vw-32px))] rounded-lg border border-[#E6E0D4] bg-white px-8 pb-6 pt-8 text-ink shadow-[0_16px_48px_rgba(28,26,22,0.12)]"
+        className="dialog-card w-[min(520px,calc(100vw-32px))] px-8 pb-6 pt-8 text-ink"
         onKeyDown={onKeyDown}
       >
         {published ? (

@@ -2,7 +2,10 @@
 
 import { saveWindowSide } from "@/app/actions/window-side";
 import { saveWritingType } from "@/app/actions/writing-type";
-import { PagesBackLink } from "@/components/dashboard/PagesBackLink";
+import {
+  OwnerChrome,
+  type OwnerAccount,
+} from "@/components/account/OwnerChrome";
 import { EditorControls } from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
 import {
@@ -17,6 +20,10 @@ import {
 import { useAmbientSceneContext } from "@/components/scene/ambient-context";
 import { WritingMirror } from "@/components/editor/WritingMirror";
 import { ReferencesRow } from "@/components/references/ReferencesRow";
+import {
+  GREETING_BODY_PLACEHOLDER,
+  greetingTitlePlaceholder,
+} from "@/lib/editor/greeting";
 import {
   captureEdit,
   type PendingLink,
@@ -87,6 +94,8 @@ type FocusEditorProps = {
   pieceId: string;
   initialTitle?: string;
   writerHandle: string;
+  domain: string;
+  account: OwnerAccount;
   initialWindowSide?: WindowSide;
   initialFont?: WritingFont;
   initialFontSize?: WritingSize;
@@ -143,6 +152,8 @@ function FocusEditorBody({
   pieceId,
   initialTitle = "",
   writerHandle,
+  domain,
+  account,
   initialFont = "literata",
   initialFontSize = 20,
   bindPaperPointerDown,
@@ -1012,11 +1023,16 @@ function FocusEditorBody({
     chromeHost &&
     createPortal(
       <>
-        <PagesBackLink visible={controlsShown} />
+        <OwnerChrome
+          visible={controlsShown}
+          currentPieceId={pieceId}
+          account={account}
+        />
         <PublishSheet
           open={publishOpen}
           initialTitle={title}
           handle={writerHandle}
+          domain={domain}
           busy={publishBusy}
           error={publishError}
           published={publishResult}
@@ -1032,7 +1048,7 @@ function FocusEditorBody({
             void onPublish(args);
           }}
           onBackToPages={() => {
-            router.push("/dashboard");
+            router.push("/");
           }}
           onOpenPage={(url) => {
             window.location.href = url;
@@ -1160,14 +1176,23 @@ function FocusEditorBody({
             type="text"
             value={title}
             maxLength={TITLE_MAX}
-            placeholder="Title"
+            placeholder={
+              title.length === 0 && value.length === 0
+                ? greetingTitlePlaceholder(account.displayName)
+                : "Title"
+            }
             aria-label="Title"
             readOnly={superseded}
             onChange={onTitleChange}
             onKeyDown={onTitleKeyDown}
             onPaste={onTitlePaste}
             onMouseDown={onMouseDown}
-            className="writing-title"
+            className={[
+              "writing-title",
+              title.length === 0 && value.length === 0
+                ? "writing-title-greeting"
+                : "",
+            ].join(" ")}
             autoComplete="off"
             spellCheck
           />
@@ -1185,6 +1210,11 @@ function FocusEditorBody({
               value={value}
               rows={1}
               readOnly={superseded}
+              placeholder={
+                title.length === 0 && value.length === 0
+                  ? GREETING_BODY_PLACEHOLDER
+                  : undefined
+              }
               onCompositionStart={onCompositionStart}
               onCompositionEnd={onCompositionEnd}
               onInput={onInput}
@@ -1199,6 +1229,9 @@ function FocusEditorBody({
               autoCorrect="off"
               className={[
                 "writing-text font-writing leading-[1.7] text-ink",
+                title.length === 0 && value.length === 0
+                  ? "writing-text-greeting"
+                  : "",
                 superseded ? "cursor-default" : "",
               ].join(" ")}
               style={{

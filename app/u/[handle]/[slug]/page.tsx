@@ -1,6 +1,6 @@
 import { PublishedPieceView } from "@/components/pieces/PublishedPieceView";
 import { resolveHandle } from "@/lib/handles/resolve";
-import { writerOrigin } from "@/lib/hosts";
+import { mainOrigin, writerOrigin } from "@/lib/hosts";
 import { writerPageUrl } from "@/lib/piece-urls";
 import { loadPublicPieceForHandle } from "@/lib/pieces/load-published";
 import type { Metadata } from "next";
@@ -59,6 +59,7 @@ export default async function WriterPiecePage({ params }: PageProps) {
         href: "/",
         label: `Back to ${displayName}`,
       }}
+      writeOnLonghandHref={`${mainOrigin()}/`}
     />
   );
 }
