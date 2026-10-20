@@ -9,7 +9,10 @@ import {
   type WindowSide,
   type WindowSun,
 } from "@/lib/scene";
-import { shouldCrossfadeScene } from "@/lib/scene/scene-visibility";
+import {
+  shouldCrossfadeScene,
+  withNoSceneTransition,
+} from "@/lib/scene/scene-visibility";
 import { useEffect, useRef, useState } from "react";
 
 type SideWindowProps = {
@@ -20,9 +23,6 @@ type SideWindowProps = {
   instant?: boolean;
   /** Shorten scene transitions from 3 minutes to 5 seconds (debug). */
   fastTransitions?: boolean;
-  /** Ignore drag and arrow keys (pane or dialog open). */
-  locked?: boolean;
-  onSideChange: (side: WindowSide) => void;
   className?: string;
 };
 
@@ -90,7 +90,7 @@ function sunTarget(
 }
 
 /**
- * Tall narrow window from DESIGN.md. Drag horizontally to snap sides.
+ * Tall narrow window from DESIGN.md.
  * Sun and moon stay mounted across scene changes; everything else crossfades.
  * Layer order: sky+back → moon → sun → roofs+front.
  */
@@ -101,8 +101,6 @@ export function SideWindow({
   still,
   instant = false,
   fastTransitions = false,
-  locked = false,
-  onSideChange,
   className = "",
 }: SideWindowProps) {
   const caption = captionFor(light, condition);
@@ -120,12 +118,6 @@ export function SideWindow({
   );
   const [moonOn, setMoonOn] = useState(base.scene.moon);
   const [celestialReady, setCelestialReady] = useState(false);
-  const dragRef = useRef<{
-    startX: number;
-    moved: boolean;
-    following: boolean;
-  } | null>(null);
-  const [dragLeft, setDragLeft] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const reduceMotion =
@@ -149,13 +141,15 @@ export function SideWindow({
       const mid = overlayRef.current;
       if (!mid) return;
       // Finish any in-progress crossfade immediately on return.
-      shownKeyRef.current = mid.key;
-      prevSceneRef.current = mid.scene;
-      setBase(mid);
-      setOverlay(null);
-      setOverlayOn(false);
-      setMoonOn(mid.scene.moon);
-      setSun(mid.scene.sun ? sunFromScene(mid.scene.sun) : null);
+      withNoSceneTransition(rootRef.current, () => {
+        shownKeyRef.current = mid.key;
+        prevSceneRef.current = mid.scene;
+        setBase(mid);
+        setOverlay(null);
+        setOverlayOn(false);
+        setMoonOn(mid.scene.moon);
+        setSun(mid.scene.sun ? sunFromScene(mid.scene.sun) : null);
+      });
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
@@ -176,14 +170,14 @@ export function SideWindow({
     prevSceneRef.current = nextScene;
 
     if (!crossfade) {
-      const id = window.requestAnimationFrame(() => {
+      withNoSceneTransition(rootRef.current, () => {
         setBase(next);
         setOverlay(null);
         setOverlayOn(false);
         setMoonOn(nextScene.moon);
         setSun(nextScene.sun ? sunFromScene(nextScene.sun) : null);
       });
-      return () => window.cancelAnimationFrame(id);
+      return;
     }
 
     if (nextScene.sun && !prev.sun) {
@@ -220,86 +214,6 @@ export function SideWindow({
     return () => window.cancelAnimationFrame(id);
   }, [light, condition, noMotion]);
 
-  const snapTo = (next: WindowSide) => {
-    setDragLeft(null);
-    if (next !== side) onSideChange(next);
-  };
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (locked || e.button !== 0) return;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX, moved: false, following: false };
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (locked) return;
-    const drag = dragRef.current;
-    if (!drag) return;
-    const dx = e.clientX - drag.startX;
-    if (Math.abs(dx) >= 6) drag.moved = true;
-    if (Math.abs(dx) >= 24) drag.following = true;
-    if (!drag.following) return;
-
-    const el = rootRef.current;
-    if (!el) return;
-    const width = el.offsetWidth;
-    const inset = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue(
-        "--window-inset",
-      ),
-    );
-    const maxLeft = window.innerWidth - inset - width;
-    const origin =
-      side === "left" ? inset : window.innerWidth - inset - width;
-    const next = Math.min(maxLeft, Math.max(inset, origin + dx));
-    setDragLeft(next);
-  };
-
-  const onPointerUp = (e: React.PointerEvent) => {
-    const drag = dragRef.current;
-    dragRef.current = null;
-    if (!drag) return;
-    if (!drag.moved) {
-      setDragLeft(null);
-      return;
-    }
-    const el = rootRef.current;
-    if (!el) {
-      setDragLeft(null);
-      return;
-    }
-    const width = el.offsetWidth;
-    const inset = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue(
-        "--window-inset",
-      ),
-    );
-    const currentLeft =
-      dragLeft ??
-      (side === "left" ? inset : window.innerWidth - inset - width);
-    const mid = window.innerWidth / 2;
-    snapTo(currentLeft + width / 2 < mid ? "left" : "right");
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (locked) return;
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      snapTo("left");
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      snapTo("right");
-    }
-  };
-
-  const slide = !reduceMotion && dragLeft === null;
-  const style: React.CSSProperties =
-    dragLeft !== null ? { left: dragLeft, right: "auto" } : {};
   const durationStyle = {
     ["--scene-fade-ms" as string]: `${transitionMs}ms`,
   } as React.CSSProperties;
@@ -311,22 +225,14 @@ export function SideWindow({
     <div
       ref={rootRef}
       role="img"
-      tabIndex={0}
       aria-label={`Window: ${caption}`}
       className={[
         "side-window",
         side === "left" ? "side-window-left" : "side-window-right",
-        slide ? "side-window-slide" : "",
         still || reduceMotion ? "side-window-still" : "",
-        locked ? "side-window-locked" : "",
         className,
       ].join(" ")}
-      style={{ ...style, ...durationStyle }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onKeyDown={onKeyDown}
+      style={durationStyle}
     >
       {/* Sky + back only (no sun/moon). */}
       <Pane scene={base.scene} opacity={1} part="back" />

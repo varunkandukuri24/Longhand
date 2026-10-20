@@ -41,7 +41,7 @@ test("typing 60 lines keeps the caret above the bar", async ({ page }) => {
     </style>
   </head>
   <body>
-    <div class="relative min-h-dvh w-full bg-paper writing-shell-left">
+    <div class="relative min-h-dvh w-full bg-paper writing-shell-right">
       <div class="relative z-[2]">
         <div
           class="paper-column paper-column-scroll"

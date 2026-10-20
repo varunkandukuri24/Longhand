@@ -1,6 +1,5 @@
 "use client";
 
-import { saveWindowSide } from "@/app/actions/window-side";
 import { saveWritingType } from "@/app/actions/writing-type";
 import {
   OwnerChrome,
@@ -48,7 +47,7 @@ import {
   urlsFollowedByWhitespaceInRange,
 } from "@/lib/receipt/shorten";
 import type { CharOrigin, EditEvent, TextLink } from "@/lib/receipt/types";
-import { captionFor, type WindowSide } from "@/lib/scene";
+import { captionFor } from "@/lib/scene";
 import { SCENE_PRESET_KEY } from "@/lib/scene/use-ambient-scene";
 import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
 import {
@@ -96,7 +95,6 @@ type FocusEditorProps = {
   writerHandle: string;
   domain: string;
   account: OwnerAccount;
-  initialWindowSide?: WindowSide;
   initialFont?: WritingFont;
   initialFontSize?: WritingSize;
 };
@@ -123,7 +121,6 @@ export function FocusEditor(props: FocusEditorProps) {
   return (
     <PaperPage
       topOffsetPx={EDITOR_TOP_OFFSET_PX}
-      initialWindowSide={props.initialWindowSide ?? "left"}
       slide
       editorScroll
       columnRef={columnRef}
@@ -969,12 +966,6 @@ function FocusEditorBody({
 
   const controlsShown = controlsVisible || holdControls;
 
-  const onWindowSideChange = (side: WindowSide) => {
-    ambient.setWindowSide(side);
-    void saveWindowSide(side);
-    showControls();
-  };
-
   const onWritingTypeChange = (next: {
     font: WritingFont;
     fontSize: WritingSize;
@@ -1074,7 +1065,6 @@ function FocusEditorBody({
           scenePreset={ambient.preset}
           currentLight={ambient.light}
           currentCondition={ambient.condition}
-          windowSide={ambient.windowSide}
           stillWindow={ambient.stillWindow}
           onTimerChange={(minutes) => {
             setTimerMinutes(minutes);
@@ -1096,7 +1086,6 @@ function FocusEditorBody({
             ambient.setPreset(preset);
             showControls();
           }}
-          onWindowSideChange={onWindowSideChange}
           onStillWindowChange={(still) => {
             ambient.setStillWindow(still);
             showControls();
@@ -1127,10 +1116,8 @@ function FocusEditorBody({
             sceneLight={ambient.light}
             sceneCondition={ambient.condition}
             sceneSourceLabel={ambient.sourceLabel}
-            windowSide={ambient.windowSide}
             debugOverride={ambient.debugOverride}
             onDebugOverride={ambient.setDebugOverride}
-            onWindowSideChange={onWindowSideChange}
             fastTransitions={ambient.fastTransitions}
             onFastTransitionsChange={ambient.setFastTransitions}
           />

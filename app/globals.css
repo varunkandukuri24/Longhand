@@ -182,22 +182,7 @@ body {
   border: 1.5px solid var(--ink);
   border-radius: 3px;
   overflow: hidden;
-  touch-action: none;
-  cursor: grab;
   background: transparent;
-}
-
-.side-window:active {
-  cursor: grabbing;
-}
-
-.side-window-locked {
-  cursor: default;
-  pointer-events: none;
-}
-
-.side-window-locked:active {
-  cursor: default;
 }
 
 .side-window-left {
@@ -250,6 +235,12 @@ body {
     background var(--scene-fade-ms, 180s) ease-in-out,
     box-shadow var(--scene-fade-ms, 180s) ease-in-out,
     opacity var(--scene-fade-ms, 180s) ease-in-out;
+}
+
+.side-window-no-transition .side-window-sun,
+.side-window-no-transition .side-window-moon,
+.side-window-no-transition .side-window-pane {
+  transition: none !important;
 }
 
 .side-window-el {

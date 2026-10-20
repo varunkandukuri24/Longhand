@@ -6,7 +6,6 @@ import {
   PAGE_TOP_OFFSET_PX,
   paperPageTopStyle,
 } from "@/lib/scene/paper-page-layout";
-import type { WindowSide } from "@/lib/scene";
 import type {
   PointerEventHandler,
   ReactNode,
@@ -26,9 +25,8 @@ type PaperPageProps = {
   /** Editor title line: 120. Every other page's first heading: 56. */
   topOffsetPx: typeof PAGE_TOP_OFFSET_PX | typeof EDITOR_TOP_OFFSET_PX;
   publicPage?: boolean;
-  initialWindowSide?: WindowSide;
   hideWindow?: boolean;
-  /** Smooth side-switch for the writing column (editor). */
+  /** Smooth transitions for the writing column (editor). */
   slide?: boolean;
   /**
    * Editor only: column is its own scroll area ending 88 px above the viewport
@@ -50,7 +48,6 @@ export function PaperPage({
   chrome = null,
   topOffsetPx,
   publicPage = false,
-  initialWindowSide = "left",
   hideWindow = false,
   slide = false,
   editorScroll = false,
@@ -62,7 +59,6 @@ export function PaperPage({
   return (
     <PaperShell
       publicPage={publicPage}
-      initialWindowSide={initialWindowSide}
       hideWindow={hideWindow}
       className={[slide ? "writing-shell-slide" : "", className]
         .filter(Boolean)

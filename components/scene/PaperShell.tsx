@@ -1,13 +1,12 @@
 "use client";
 
-import { saveWindowSide } from "@/app/actions/window-side";
 import { PaperGrain } from "@/components/scene/PaperGrain";
 import { SideWindow } from "@/components/scene/SideWindow";
 import {
   AmbientSceneProvider,
   useAmbientSceneContext,
 } from "@/components/scene/ambient-context";
-import type { WindowSide } from "@/lib/scene";
+import { WINDOW_SIDE } from "@/lib/scene";
 import type { PointerEventHandler, ReactNode } from "react";
 
 type PaperShellProps = {
@@ -17,9 +16,8 @@ type PaperShellProps = {
    * column's stacking context so pane/dialogs paint above the side window.
    */
   chrome?: ReactNode;
-  /** Public pages: left window, clear sky, reader's clock. */
+  /** Public pages: clear sky, reader's clock. */
   publicPage?: boolean;
-  initialWindowSide?: WindowSide;
   /** Hide the side window (e.g. optional). */
   hideWindow?: boolean;
   className?: string;
@@ -29,18 +27,11 @@ type PaperShellProps = {
 function PaperShellInner({
   children,
   chrome = null,
-  publicPage = false,
   hideWindow = false,
   className = "",
   onPointerDown,
-}: Omit<PaperShellProps, "initialWindowSide">) {
+}: Omit<PaperShellProps, "publicPage">) {
   const ambient = useAmbientSceneContext();
-
-  const onSideChange = (side: WindowSide) => {
-    if (publicPage) return;
-    ambient.setWindowSide(side);
-    void saveWindowSide(side);
-  };
 
   return (
     <div
@@ -58,11 +49,9 @@ function PaperShellInner({
         <SideWindow
           light={ambient.light}
           condition={ambient.condition}
-          side={ambient.windowSide}
+          side={WINDOW_SIDE}
           still={ambient.stillWindow}
           fastTransitions={ambient.fastTransitions}
-          locked={ambient.windowLocked}
-          onSideChange={onSideChange}
         />
       )}
       {/* Above grain only; window (z-10) may paint over the column edge. */}
@@ -78,19 +67,14 @@ export function PaperShell({
   children,
   chrome = null,
   publicPage = false,
-  initialWindowSide = "left",
   hideWindow = false,
   className = "",
   onPointerDown,
 }: PaperShellProps) {
   return (
-    <AmbientSceneProvider
-      publicPage={publicPage}
-      initialWindowSide={initialWindowSide}
-    >
+    <AmbientSceneProvider publicPage={publicPage}>
       <PaperShellInner
         chrome={chrome}
-        publicPage={publicPage}
         hideWindow={hideWindow}
         className={className}
         onPointerDown={onPointerDown}

@@ -20,7 +20,6 @@ export async function loadOwnerAccount(
       handle: users.handle,
       email: users.email,
       city: users.cityName,
-      windowSide: users.windowSide,
       font: users.font,
       fontSize: users.fontSize,
     })
@@ -46,7 +45,6 @@ export async function loadOwnerAccount(
     handle: row.handle,
     email: row.email ?? "",
     cityName: row.city?.trim() || null,
-    windowSide: row.windowSide === "right" ? "right" : "left",
     font: parseWritingFont(row.font),
     fontSize: parseWritingSize(row.fontSize),
     googleLinked: Boolean(google),

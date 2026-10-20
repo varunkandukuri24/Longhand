@@ -2,14 +2,15 @@
 
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { accounts, users } from "@/db/schema";
+import { accounts, handleRedirects, users } from "@/db/schema";
 import { normalizeDisplayName } from "@/lib/auth/normalize-display-name";
-import { changeHandle } from "@/lib/handles/change";
+import { isHandleAvailable } from "@/lib/handles/change";
 import { validateHandle } from "@/lib/handles";
 import { geocodeCity } from "@/lib/scene/geocode";
 import { and, eq } from "drizzle-orm";
 
 const CITY_MAX = 80;
+const REDIRECT_DAYS = 90;
 
 export type AccountSettingsInput = {
   name: string;
@@ -25,7 +26,8 @@ export async function saveAccountSettings(
   input: AccountSettingsInput,
 ): Promise<AccountSettingsResult> {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id;
+  if (!userId) {
     return { ok: false, error: "unauthorized" };
   }
 
@@ -39,39 +41,93 @@ export async function saveAccountSettings(
     return { ok: false, error: "handle" };
   }
 
+  const [current] = await db
+    .select({
+      handle: users.handle,
+      cityName: users.cityName,
+      latitude: users.latitude,
+      longitude: users.longitude,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!current) {
+    return { ok: false, error: "unauthorized" };
+  }
+
+  const handleUnchanged = current.handle === checked.handle;
+  if (!handleUnchanged) {
+    const available = await isHandleAvailable(checked.handle, userId);
+    if (!available) {
+      return { ok: false, error: "taken" };
+    }
+  }
+
   const cityRaw = input.city.trim().slice(0, CITY_MAX);
   let cityName: string | null = null;
   let latitude: number | null = null;
   let longitude: number | null = null;
+
   if (cityRaw) {
-    const geocoded = await geocodeCity(cityRaw);
-    if (geocoded) {
-      cityName = geocoded.cityName;
-      latitude = geocoded.latitude;
-      longitude = geocoded.longitude;
+    const savedCity = current.cityName?.trim() || null;
+    if (savedCity !== null && cityRaw === savedCity) {
+      cityName = current.cityName;
+      latitude = current.latitude;
+      longitude = current.longitude;
     } else {
-      cityName = cityRaw;
+      const geocoded = await geocodeCity(cityRaw);
+      if (geocoded) {
+        cityName = geocoded.cityName;
+        latitude = geocoded.latitude;
+        longitude = geocoded.longitude;
+      } else {
+        cityName = cityRaw;
+        latitude = current.latitude;
+        longitude = current.longitude;
+      }
     }
   }
 
-  await db
-    .update(users)
-    .set({
-      name,
-      cityName,
-      latitude,
-      longitude,
-    })
-    .where(eq(users.id, session.user.id));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({
+        name,
+        cityName,
+        latitude,
+        longitude,
+        ...(handleUnchanged ? {} : { handle: checked.handle }),
+      })
+      .where(eq(users.id, userId));
 
-  const handleResult = await changeHandle(session.user.id, checked.handle);
-  if (!handleResult.ok && handleResult.error !== "unchanged") {
-    return { ok: false, error: handleResult.error };
-  }
+    if (!handleUnchanged) {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + REDIRECT_DAYS);
+
+      await tx
+        .delete(handleRedirects)
+        .where(eq(handleRedirects.oldHandle, checked.handle));
+
+      if (current.handle) {
+        await tx
+          .insert(handleRedirects)
+          .values({
+            oldHandle: current.handle,
+            userId,
+            expiresAt,
+          })
+          .onConflictDoUpdate({
+            target: handleRedirects.oldHandle,
+            set: { userId, expiresAt },
+          });
+      }
+    }
+  });
 
   return {
     ok: true,
-    handle: handleResult.ok ? handleResult.handle : checked.handle,
+    handle: checked.handle,
     name,
   };
 }

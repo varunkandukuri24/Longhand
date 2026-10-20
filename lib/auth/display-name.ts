@@ -24,7 +24,6 @@ export async function requireUserWithDisplayName(): Promise<{
   handle: string;
   email: string | null | undefined;
   cityName: string | null;
-  windowSide: "left" | "right";
   font: WritingFont;
   fontSize: WritingSize;
 }> {
@@ -39,7 +38,6 @@ export async function requireUserWithDisplayName(): Promise<{
       handle: users.handle,
       email: users.email,
       cityName: users.cityName,
-      windowSide: users.windowSide,
       font: users.font,
       fontSize: users.fontSize,
     })
@@ -63,7 +61,6 @@ export async function requireUserWithDisplayName(): Promise<{
     handle,
     email: row?.email ?? session.user.email,
     cityName: row?.cityName?.trim() || null,
-    windowSide: row?.windowSide === "right" ? "right" : "left",
     font: parseWritingFont(row?.font),
     fontSize: parseWritingSize(row?.fontSize),
   };

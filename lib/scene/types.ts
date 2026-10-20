@@ -14,6 +14,9 @@ export const DEFAULT_CONDITION: Condition = "clear";
 
 export const DEFAULT_WINDOW_SIDE: WindowSide = "left";
 
+/** Fixed window edge while moving the window is parked. */
+export const WINDOW_SIDE: WindowSide = "right";
+
 export const LIGHTS: readonly Light[] = [
   "morning",
   "afternoon",

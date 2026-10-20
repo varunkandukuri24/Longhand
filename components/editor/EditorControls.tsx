@@ -16,7 +16,6 @@ import {
   captionFor,
   type Condition,
   type Light,
-  type WindowSide,
 } from "@/lib/scene";
 import type { ScenePreset } from "@/lib/scene/use-ambient-scene";
 import {
@@ -58,12 +57,10 @@ type EditorControlsProps = {
   scenePreset: ScenePreset;
   currentLight: Light;
   currentCondition: Condition;
-  windowSide: WindowSide;
   stillWindow: boolean;
   onTimerChange: (minutes: (typeof TIMER_OPTIONS)[number] | null) => void;
   onNoBackspaceChange: (value: boolean) => void;
   onSceneChange: (preset: ScenePreset) => void;
-  onWindowSideChange: (side: WindowSide) => void;
   onStillWindowChange: (still: boolean) => void;
   writingFont: WritingFont;
   writingSize: WritingSize;
@@ -92,12 +89,10 @@ export function EditorControls({
   scenePreset,
   currentLight,
   currentCondition,
-  windowSide,
   stillWindow,
   onTimerChange,
   onNoBackspaceChange,
   onSceneChange,
-  onWindowSideChange,
   onStillWindowChange,
   writingFont,
   writingSize,
@@ -384,19 +379,6 @@ export function EditorControls({
                   {CONDITION_LABEL[c]}
                 </PopoverOption>
               ))}
-              <p className="mt-2 text-[11.5px] text-label">Window</p>
-              <PopoverOption
-                active={windowSide === "left"}
-                onClick={() => onWindowSideChange("left")}
-              >
-                Left
-              </PopoverOption>
-              <PopoverOption
-                active={windowSide === "right"}
-                onClick={() => onWindowSideChange("right")}
-              >
-                Right
-              </PopoverOption>
               <p className="mt-2 text-[11.5px] text-label">Still window</p>
               <PopoverOption
                 active={stillWindow}

@@ -12,6 +12,7 @@ export {
   DEFAULT_SUNRISE,
   DEFAULT_SUNSET,
   DEFAULT_WINDOW_SIDE,
+  WINDOW_SIDE,
   LIGHTS,
   type Condition,
   type Light,

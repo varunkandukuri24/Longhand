@@ -9,9 +9,9 @@ import type { CharOrigin, EditEvent } from "@/lib/receipt/types";
 import {
   CONDITIONS,
   LIGHTS,
+  WINDOW_SIDE,
   type Condition,
   type Light,
-  type WindowSide,
 } from "@/lib/scene";
 import type { SyncStatus } from "@/lib/sync/types";
 import { useEffect, useState } from "react";
@@ -27,12 +27,10 @@ type EditorDebugPanelProps = {
   sceneLight: Light;
   sceneCondition: Condition;
   sceneSourceLabel: string;
-  windowSide: WindowSide;
   debugOverride: { light: Light; condition: Condition } | null;
   onDebugOverride: (
     override: { light: Light; condition: Condition } | null,
   ) => void;
-  onWindowSideChange: (side: WindowSide) => void;
   fastTransitions: boolean;
   onFastTransitionsChange: (fast: boolean) => void;
 };
@@ -75,10 +73,8 @@ export function EditorDebugPanel({
   sceneLight,
   sceneCondition,
   sceneSourceLabel,
-  windowSide,
   debugOverride,
   onDebugOverride,
-  onWindowSideChange,
   fastTransitions,
   onFastTransitionsChange,
 }: EditorDebugPanelProps) {
@@ -125,24 +121,7 @@ export function EditorDebugPanel({
         {debugOverride ? (
           <p>debug preview (this tab only, not saved)</p>
         ) : null}
-        <p>
-          window{" "}
-          <button
-            type="button"
-            className={windowSide === "left" ? "text-ink underline" : ""}
-            onClick={() => onWindowSideChange("left")}
-          >
-            left
-          </button>{" "}
-          /{" "}
-          <button
-            type="button"
-            className={windowSide === "right" ? "text-ink underline" : ""}
-            onClick={() => onWindowSideChange("right")}
-          >
-            right
-          </button>
-        </p>
+        <p className="text-ink">window {WINDOW_SIDE}</p>
         <p>scene picker (preview only)</p>
         <label className="flex items-center gap-2 text-ink">
           <input

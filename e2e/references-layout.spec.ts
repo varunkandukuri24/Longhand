@@ -34,7 +34,7 @@ test("REFERENCES sits above the bottom bar when the text is short", async ({
     </style>
   </head>
   <body>
-    <div class="relative min-h-dvh w-full bg-paper text-ink writing-shell-left">
+    <div class="relative min-h-dvh w-full bg-paper text-ink writing-shell-right">
       <div class="relative z-[2]">
         <div
           class="paper-column paper-column-scroll"

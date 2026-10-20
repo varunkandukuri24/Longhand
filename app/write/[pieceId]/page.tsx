@@ -47,7 +47,6 @@ export default async function WritePage({
       initialTitle={piece.title}
       writerHandle={user.handle}
       domain={rootDomain()}
-      initialWindowSide={user.windowSide}
       initialFont={user.font}
       initialFontSize={user.fontSize}
       account={account}

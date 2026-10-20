@@ -2,7 +2,7 @@
 
 import {
   DEFAULT_CONDITION,
-  DEFAULT_WINDOW_SIDE,
+  WINDOW_SIDE,
   defaultSunrise,
   defaultSunset,
   lightFor,
@@ -15,8 +15,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const WEATHER_POLL_MS = 60 * 60 * 1000;
 const LIGHT_POLL_MS = 5 * 60 * 1000;
 export const SCENE_PRESET_KEY = "longhand-scene-preset";
-/** @deprecated Cleared on load; server window_side is the source of truth. */
-export const WINDOW_SIDE_KEY = "longhand-window-side";
 export const STILL_WINDOW_KEY = "longhand-still-window";
 
 export type ScenePreset =
@@ -39,7 +37,6 @@ export type AmbientSceneState = {
   preset: ScenePreset;
   setPreset: (preset: ScenePreset) => void;
   windowSide: WindowSide;
-  setWindowSide: (side: WindowSide) => void;
   stillWindow: boolean;
   setStillWindow: (still: boolean) => void;
   /** Tab-only preview; never written to localStorage or the server. */
@@ -52,7 +49,7 @@ export type AmbientSceneState = {
   setFastTransitions: (fast: boolean) => void;
   /**
    * True while a blocking overlay (Your pieces pane or a dialog) is open.
-   * The side window ignores drag and arrow keys then.
+   * Kept for callers; the fixed window no longer reads it for drag.
    */
   windowLocked: boolean;
   setWindowLocked: (locked: boolean) => void;
@@ -68,10 +65,6 @@ type WeatherResponse = {
   sunsetMinute?: number;
   source?: WeatherSource;
 };
-
-function normalizeWindowSide(value: unknown): WindowSide {
-  return value === "right" ? "right" : DEFAULT_WINDOW_SIDE;
-}
 
 function loadPreset(): ScenePreset {
   if (typeof window === "undefined") return { mode: "auto" };
@@ -124,17 +117,13 @@ function sunriseSunsetFromWeather(
 
 /**
  * Auto light from the device clock and city's sunrise/sunset;
- * condition from weather. Window side comes from the server.
+ * condition from weather. Window side is fixed on the right.
  */
 export function useAmbientScene(options?: {
   publicPage?: boolean;
-  initialWindowSide?: WindowSide;
 }): AmbientSceneState {
   const publicPage = options?.publicPage ?? false;
   const [preset, setPresetState] = useState<ScenePreset>({ mode: "auto" });
-  const [windowSide, setWindowSideState] = useState<WindowSide>(() =>
-    normalizeWindowSide(options?.initialWindowSide),
-  );
   const [stillWindow, setStillWindowState] = useState(false);
   const [debugOverride, setDebugOverrideState] = useState<{
     light: Light;
@@ -154,13 +143,6 @@ export function useAmbientScene(options?: {
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [now, setNow] = useState(() => new Date());
 
-  const initialSide = normalizeWindowSide(options?.initialWindowSide);
-  const [sideSource, setSideSource] = useState(initialSide);
-  if (!publicPage && initialSide !== sideSource) {
-    setSideSource(initialSide);
-    setWindowSideState(initialSide);
-  }
-
   useEffect(() => {
     if (publicPage) return;
 
@@ -170,12 +152,6 @@ export function useAmbientScene(options?: {
       setPresetState(loadPreset());
       setStillWindowState(loadStill());
     });
-    // Server owns window side; drop any stale browser copy.
-    try {
-      window.localStorage.removeItem(WINDOW_SIDE_KEY);
-    } catch {
-      /* ignore */
-    }
     return () => {
       cancelled = true;
     };
@@ -216,16 +192,6 @@ export function useAmbientScene(options?: {
       } else {
         window.localStorage.setItem(SCENE_PRESET_KEY, JSON.stringify(next));
       }
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const setWindowSide = (side: WindowSide) => {
-    const next = normalizeWindowSide(side);
-    setWindowSideState(next);
-    try {
-      window.localStorage.removeItem(WINDOW_SIDE_KEY);
     } catch {
       /* ignore */
     }
@@ -282,8 +248,7 @@ export function useAmbientScene(options?: {
     sourceLabel,
     preset,
     setPreset,
-    windowSide: publicPage ? "left" : windowSide,
-    setWindowSide,
+    windowSide: WINDOW_SIDE,
     stillWindow: publicPage ? false : stillWindow,
     setStillWindow,
     debugOverride,
