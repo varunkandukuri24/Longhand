@@ -7,6 +7,12 @@ import {
 } from "@/components/account/OwnerChrome";
 import { EditorControls } from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
+import { GuestChrome } from "@/components/editor/GuestChrome";
+import { GuestNudge } from "@/components/editor/GuestNudge";
+import {
+  GuestSignInDialog,
+  type GuestSignInReason,
+} from "@/components/editor/GuestSignInDialog";
 import {
   PublishSheet,
   type PublishResultState,
@@ -19,10 +25,19 @@ import {
 import { useAmbientSceneContext } from "@/components/scene/ambient-context";
 import { WritingMirror } from "@/components/editor/WritingMirror";
 import { ReferencesRow } from "@/components/references/ReferencesRow";
+import { blankPlaceholder } from "@/lib/editor/greeting";
 import {
-  GREETING_BODY_PLACEHOLDER,
-  greetingTitlePlaceholder,
-} from "@/lib/editor/greeting";
+  dismissNudge,
+  isNudgeDismissed,
+  takeGuestCaret,
+} from "@/lib/guest/caret";
+import {
+  atGuestLimit,
+  exceedsGuestLimit,
+  GUEST_BATCH_MIN_INTERVAL_MS,
+  GUEST_NUDGE_WORDS,
+} from "@/lib/guest/limits";
+import { wordCount } from "@/lib/receipt/compute-receipt";
 import {
   captureEdit,
   type PendingLink,
@@ -69,8 +84,8 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ChangeEvent,
-  type ClipboardEvent,
   type CompositionEvent,
   type FormEvent,
   type KeyboardEvent,
@@ -82,21 +97,20 @@ import { createPortal, flushSync } from "react-dom";
 
 type TimerMinutes = 10 | 15 | 25;
 const IS_DEV = process.env.NODE_ENV === "development";
-const TITLE_MAX = 120;
-const TITLE_SAVE_DEBOUNCE_MS = 400;
-
-function sanitizeTitle(raw: string): string {
-  return raw.replace(/\r\n/g, "\n").split("\n")[0].slice(0, TITLE_MAX);
-}
 
 type FocusEditorProps = {
-  pieceId: string;
+  mode: "guest" | "writer";
+  pieceId: string | null;
   initialTitle?: string;
-  writerHandle: string;
+  writerHandle?: string;
   domain: string;
-  account: OwnerAccount;
+  account?: OwnerAccount;
   initialFont?: WritingFont;
   initialFontSize?: WritingSize;
+  examplePieceUrl?: string | null;
+  googleEnabled?: boolean;
+  emailProviderId?: string;
+  openPublishOnLoad?: boolean;
 };
 
 function formatBarDate(d = new Date()): string {
@@ -146,13 +160,18 @@ export function FocusEditor(props: FocusEditorProps) {
 }
 
 function FocusEditorBody({
-  pieceId,
+  mode,
+  pieceId: initialPieceId,
   initialTitle = "",
-  writerHandle,
+  writerHandle = "",
   domain,
   account,
   initialFont = "literata",
   initialFontSize = 20,
+  examplePieceUrl = null,
+  googleEnabled = false,
+  emailProviderId = "nodemailer",
+  openPublishOnLoad = false,
   bindPaperPointerDown,
   chromeHost,
   columnRef,
@@ -182,13 +201,16 @@ function FocusEditorBody({
   const lastLocalEventAtRef = useRef<number | null>(null);
 
   const [value, setValue] = useState("");
-  const [title, setTitle] = useState(initialTitle);
+  const [title] = useState(initialTitle);
   const [links, setLinks] = useState<TextLink[]>([]);
   const [caretIndex, setCaretIndex] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const titleRef = useRef<HTMLInputElement>(null);
-  const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const titleSavedRef = useRef(initialTitle);
+  const pieceIdRef = useRef(initialPieceId);
+  const [livePieceId, setLivePieceId] = useState(initialPieceId);
+  const pendingCreateEventsRef = useRef<EditEvent[]>([]);
+  const creatingPieceRef = useRef<Promise<string | null> | null>(null);
+  const syncReadyRef = useRef(Boolean(initialPieceId));
+  const guestLimitRef = useRef(false);
   const [priorActiveMs, setPriorActiveMs] = useState(0);
   const sittingEventsRef = useRef<EditEvent[]>([]);
   const [sittingActiveMs, setSittingActiveMs] = useState(0);
@@ -210,7 +232,9 @@ function FocusEditorBody({
   const [superseded, setSuperseded] = useState(false);
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
   const [storedDelayedCount, setStoredDelayedCount] = useState(0);
-  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(
+    Boolean(openPublishOnLoad && mode !== "guest"),
+  );
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [publishResult, setPublishResult] = useState<PublishResultState | null>(
@@ -218,6 +242,17 @@ function FocusEditorBody({
   );
   const publishButtonRef = useRef<HTMLButtonElement | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(false);
+  const [signInReason, setSignInReason] = useState<GuestSignInReason>("empty");
+  const [guestCreateLimited, setGuestCreateLimited] = useState(false);
+  const guestCreateLimitedRef = useRef(false);
+  const [guestAtLimit, setGuestAtLimit] = useState(false);
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const [nudgeHidden, setNudgeHidden] = useState(false);
   /** True after draft text has loaded; drives autofocus. */
   const [textLoaded, setTextLoaded] = useState(false);
   const ambient = useAmbientSceneContext();
@@ -246,7 +281,7 @@ function FocusEditorBody({
     });
   }, []);
 
-  const loadKey = `${pieceId}:${bootAttempt}`;
+  const loadKey = `${initialPieceId ?? "new"}:${bootAttempt}`;
   const [activeLoadKey, setActiveLoadKey] = useState(loadKey);
   if (loadKey !== activeLoadKey) {
     setActiveLoadKey(loadKey);
@@ -255,21 +290,149 @@ function FocusEditorBody({
     setSuperseded(false);
   }
 
+  const isGuest = mode === "guest";
+
+  const bindSync = useCallback(
+    (id: string) => {
+      const sync = new EventSync(id, {
+        minFlushIntervalMs: isGuest ? GUEST_BATCH_MIN_INTERVAL_MS : 0,
+      });
+      syncRef.current?.stop();
+      syncRef.current = sync;
+      const unsubscribe = sync.subscribe(setSyncStatus);
+      const unsubSuperseded = sync.onSuperseded(() => {
+        setSuperseded(true);
+        readyRef.current = false;
+      });
+      const unsubLimit = sync.onGuestLimit(() => {
+        guestLimitRef.current = true;
+        setGuestAtLimit(true);
+        setSignInReason("limit");
+        setSignInOpen(true);
+      });
+      sync.start();
+      return () => {
+        unsubscribe();
+        unsubSuperseded();
+        unsubLimit();
+        sync.stop();
+        if (syncRef.current === sync) {
+          syncRef.current = null;
+        }
+      };
+    },
+    [isGuest],
+  );
+
+  const resolveStartCondition = useCallback(async () => {
+    let startCondition = ambient.condition;
+    try {
+      const raw = window.localStorage.getItem(SCENE_PRESET_KEY);
+      const preset = raw
+        ? (JSON.parse(raw) as {
+            mode?: string;
+            condition?: string;
+          })
+        : null;
+      if (
+        preset?.mode === "pin" &&
+        (preset.condition === "clear" ||
+          preset.condition === "cloudy" ||
+          preset.condition === "rain" ||
+          preset.condition === "snow")
+      ) {
+        startCondition = preset.condition;
+      } else {
+        const weatherRes = await fetch("/api/weather");
+        if (weatherRes.ok) {
+          const body = (await weatherRes.json()) as { condition?: string };
+          if (
+            body.condition === "clear" ||
+            body.condition === "cloudy" ||
+            body.condition === "rain" ||
+            body.condition === "snow"
+          ) {
+            startCondition = body.condition;
+          }
+        }
+      }
+    } catch {
+      /* keep ambient default */
+    }
+    return startCondition;
+  }, [ambient.condition]);
+
+  const ensureGuestPiece = useCallback(async (): Promise<string | null> => {
+    if (guestCreateLimitedRef.current) return null;
+    if (pieceIdRef.current) return pieceIdRef.current;
+    if (creatingPieceRef.current) return creatingPieceRef.current;
+
+    creatingPieceRef.current = (async () => {
+      const res = await fetch("/api/guest/pieces", { method: "POST" });
+      if (res.status === 429) {
+        pendingCreateEventsRef.current = [];
+        guestCreateLimitedRef.current = true;
+        setGuestCreateLimited(true);
+        setSignInReason("create_limit");
+        setSignInOpen(true);
+        return null;
+      }
+      if (!res.ok) {
+        pendingCreateEventsRef.current = [];
+        guestCreateLimitedRef.current = true;
+        setGuestCreateLimited(true);
+        setSignInReason("create_limit");
+        setSignInOpen(true);
+        return null;
+      }
+      const body = (await res.json()) as { pieceId?: string };
+      if (!body.pieceId) return null;
+
+      pieceIdRef.current = body.pieceId;
+      setLivePieceId(body.pieceId);
+      setGuestCreateLimited(false);
+      bindSync(body.pieceId);
+      const sync = syncRef.current;
+      if (!sync) return body.pieceId;
+      sync.setSessionCondition(ambient.condition);
+      await sync.startSession(ambient.condition);
+      // After the last await: JS is single-threaded, so no input can land
+      // between taking the buffer and marking sync ready.
+      const buffered = pendingCreateEventsRef.current;
+      pendingCreateEventsRef.current = [];
+      sync.queueEventsNow(buffered);
+      syncReadyRef.current = true;
+      await sync.flush();
+      return body.pieceId;
+    })().finally(() => {
+      creatingPieceRef.current = null;
+    });
+
+    return creatingPieceRef.current;
+  }, [bindSync, ambient.condition]);
+
   useEffect(() => {
     let cancelled = false;
     readyRef.current = false;
+    const id = pieceIdRef.current;
 
-    const sync = new EventSync(pieceId);
-    syncRef.current = sync;
-    const unsubscribe = sync.subscribe(setSyncStatus);
-    const unsubSuperseded = sync.onSuperseded(() => {
-      setSuperseded(true);
-      readyRef.current = false;
-    });
-    sync.start();
+    if (!id) {
+      readyRef.current = true;
+      setTextLoaded(true);
+      const started = Date.now();
+      sessionStartRef.current = started;
+      setSessionStartedAt(started);
+      lastLocalEventAtRef.current = null;
+      setBootError(null);
+      return;
+    }
+
+    const unbind = bindSync(id);
 
     void (async () => {
       try {
+        const sync = syncRef.current;
+        if (!sync) return;
         const state = await sync.loadState();
         if (cancelled) return;
 
@@ -284,50 +447,21 @@ function FocusEditorBody({
         setSittingActiveMs(0);
         sittingEventsRef.current = [];
         setStoredDelayedCount(state.flags?.delayedCount ?? 0);
+        if (isGuest && atGuestLimit(state.text)) {
+          guestLimitRef.current = true;
+          setGuestAtLimit(true);
+        }
+        if (isGuest && id) {
+          setNudgeHidden(isNudgeDismissed(id));
+        }
         exposeEvents();
         syncDebugSnapshot();
-        // Text is in React state; autofocus waits for this flag + paint.
         setTextLoaded(true);
 
-        // Flush any batches left in IndexedDB from a prior visit.
         await sync.flush();
         if (cancelled) return;
 
-        // Resolve condition for this session start: pinned scene, else weather/defaults.
-        let startCondition = ambient.condition;
-        try {
-          const raw = window.localStorage.getItem(SCENE_PRESET_KEY);
-          const preset = raw
-            ? (JSON.parse(raw) as {
-                mode?: string;
-                condition?: string;
-              })
-            : null;
-          if (
-            preset?.mode === "pin" &&
-            (preset.condition === "clear" ||
-              preset.condition === "cloudy" ||
-              preset.condition === "rain" ||
-              preset.condition === "snow")
-          ) {
-            startCondition = preset.condition;
-          } else {
-            const weatherRes = await fetch("/api/weather");
-            if (weatherRes.ok) {
-              const body = (await weatherRes.json()) as { condition?: string };
-              if (
-                body.condition === "clear" ||
-                body.condition === "cloudy" ||
-                body.condition === "rain" ||
-                body.condition === "snow"
-              ) {
-                startCondition = body.condition;
-              }
-            }
-          }
-        } catch {
-          /* keep ambient default */
-        }
+        const startCondition = await resolveStartCondition();
         if (cancelled) return;
         sync.setSessionCondition(startCondition);
         await sync.startSession(startCondition);
@@ -351,15 +485,9 @@ function FocusEditorBody({
     return () => {
       cancelled = true;
       readyRef.current = false;
-      unsubscribe();
-      unsubSuperseded();
-      sync.stop();
-      syncRef.current = null;
+      unbind();
     };
-    // ambient.condition is read inside the async boot path once; later updates
-    // go through the dedicated setSessionCondition effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once per loadKey
-  }, [pieceId, bootAttempt, exposeEvents, syncDebugSnapshot]);
+  }, [initialPieceId, bootAttempt, exposeEvents, syncDebugSnapshot, bindSync, isGuest, resolveStartCondition]);
 
   /** Grow the textarea to its content so REFERENCES sits under the last line. */
   const syncTextareaHeight = useCallback(() => {
@@ -412,67 +540,35 @@ function FocusEditorBody({
     ensureCaretVisible();
   }, [value, caretIndex, textLoaded, writingFont, writingSize, ensureCaretVisible]);
 
-  const scheduleTitleSave = useCallback(
-    (nextTitle: string) => {
-      if (titleSaveTimerRef.current) {
-        clearTimeout(titleSaveTimerRef.current);
-      }
-      titleSaveTimerRef.current = setTimeout(() => {
-        titleSaveTimerRef.current = null;
-        if (nextTitle === titleSavedRef.current) return;
-        titleSavedRef.current = nextTitle;
-        void fetch(`/api/pieces/${pieceId}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ title: nextTitle }),
-        }).catch(() => {
-          /* keep local title; next edit retries */
-        });
-      }, TITLE_SAVE_DEBOUNCE_MS);
-    },
-    [pieceId],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (titleSaveTimerRef.current) {
-        clearTimeout(titleSaveTimerRef.current);
-      }
-    };
-  }, []);
-
-  /** After text loads: new empty pieces focus the title; others the text end. */
+  /** After text loads: put the caret at the end (empty pages: start). */
   const placedCaretRef = useRef(false);
   useEffect(() => {
     placedCaretRef.current = false;
-  }, [pieceId, bootAttempt]);
+  }, [initialPieceId, bootAttempt]);
+
+  const dialogOpen = signInOpen || publishOpen;
 
   useEffect(() => {
-    if (!textLoaded || superseded || bootError) return;
-    if (placedCaretRef.current) return;
+    if (!textLoaded || superseded || bootError || guestCreateLimited) return;
+    if (dialogOpen) return;
 
     const placeCaret = () => {
-      if (placedCaretRef.current) return;
-      placedCaretRef.current = true;
-      syncTextareaHeight();
-
-      const isNewEmpty =
-        value.length === 0 && title.trim().length === 0;
-      if (isNewEmpty) {
-        titleRef.current?.focus({ preventScroll: true });
-        return;
-      }
-
       const el = textareaRef.current;
       if (!el || el.readOnly) return;
       el.focus({ preventScroll: true });
-      const len = el.value.length;
-      el.setSelectionRange(len, len);
-      setCaretIndex(len);
+      if (placedCaretRef.current) return;
+      placedCaretRef.current = true;
+      syncTextareaHeight();
+      const restored = takeGuestCaret();
+      const pos =
+        restored !== null
+          ? Math.max(0, Math.min(restored, el.value.length))
+          : el.value.length;
+      el.setSelectionRange(pos, pos);
+      setCaretIndex(pos);
       ensureCaretVisible();
     };
 
-    // Wait a frame so the controlled value has painted.
     const id = window.requestAnimationFrame(() => {
       window.requestAnimationFrame(placeCaret);
     });
@@ -481,59 +577,27 @@ function FocusEditorBody({
     textLoaded,
     superseded,
     bootError,
-    pieceId,
+    guestCreateLimited,
+    dialogOpen,
+    initialPieceId,
     bootAttempt,
     syncTextareaHeight,
     ensureCaretVisible,
-    value,
-    title,
   ]);
 
-  const focusTextStart = useCallback(() => {
-    const el = textareaRef.current;
-    if (!el || el.readOnly) return;
-    el.focus({ preventScroll: true });
-    el.setSelectionRange(0, 0);
-    setCaretIndex(0);
-    ensureCaretVisible();
-  }, [ensureCaretVisible]);
-
-  const focusTitle = useCallback(() => {
-    titleRef.current?.focus({ preventScroll: true });
-  }, []);
-
-  const onTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const next = sanitizeTitle(event.target.value);
-    setTitle(next);
-    scheduleTitleSave(next);
-  };
-
-  const onTitleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    enterFullscreenOnce();
-    if (event.key === "Enter" || event.key === "ArrowDown") {
+  useEffect(() => {
+    if (!isGuest || !guestCreateLimited || signInOpen) return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[role='dialog']")) return;
       event.preventDefault();
-      focusTextStart();
-    }
-  };
-
-  const onTitlePaste = (event: ClipboardEvent<HTMLInputElement>) => {
-    const text = event.clipboardData.getData("text");
-    if (!text.includes("\n") && !text.includes("\r")) return;
-    event.preventDefault();
-    const input = event.currentTarget;
-    const start = input.selectionStart ?? title.length;
-    const end = input.selectionEnd ?? title.length;
-    const firstLine = sanitizeTitle(text);
-    const next = sanitizeTitle(
-      title.slice(0, start) + firstLine + title.slice(end),
-    );
-    setTitle(next);
-    scheduleTitleSave(next);
-    requestAnimationFrame(() => {
-      const pos = Math.min(start + firstLine.length, next.length);
-      input.setSelectionRange(pos, pos);
-    });
-  };
+      setSignInReason("create_limit");
+      setSignInOpen(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isGuest, guestCreateLimited, signInOpen]);
 
   const onPublish = useCallback(
     async (args: { title: string; visibility: PieceVisibility }) => {
@@ -547,7 +611,9 @@ function FocusEditorBody({
           );
           return;
         }
-        const res = await fetch(`/api/pieces/${pieceId}/publish`, {
+        const id = pieceIdRef.current;
+        if (!id) return;
+        const res = await fetch(`/api/pieces/${id}/publish`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -589,7 +655,7 @@ function FocusEditorBody({
         setPublishBusy(false);
       }
     },
-    [pieceId],
+    [],
   );
 
   const showControls = useCallback(() => {
@@ -610,7 +676,7 @@ function FocusEditorBody({
     }, 2000);
   }, []);
 
-  const holdControls = publishOpen || popoverOpen || debugOpen;
+  const holdControls = publishOpen || popoverOpen || debugOpen || signInOpen;
 
   useEffect(() => {
     if (!holdControls) return;
@@ -671,6 +737,20 @@ function FocusEditorBody({
         return;
       }
 
+      if (isGuest && guestCreateLimitedRef.current) {
+        setSignInReason("create_limit");
+        setSignInOpen(true);
+        return;
+      }
+
+      if (isGuest && exceedsGuestLimit(next)) {
+        guestLimitRef.current = true;
+        setGuestAtLimit(true);
+        setSignInReason("limit");
+        setSignInOpen(true);
+        return;
+      }
+
       const prev = prevValueRef.current;
       if (prev === next) {
         return;
@@ -708,7 +788,18 @@ function FocusEditorBody({
       sittingEventsRef.current = sittingEventsRef.current.concat(newEvents);
       setLinks(captured.links.slice());
       prevValueRef.current = next;
-      syncRef.current?.pushEvents(newEvents);
+      if (isGuest && atGuestLimit(next)) {
+        guestLimitRef.current = true;
+        setGuestAtLimit(true);
+        setSignInReason("limit");
+        setSignInOpen(true);
+      }
+      if (syncRef.current && syncReadyRef.current) {
+        syncRef.current.pushEvents(newEvents);
+      } else if (isGuest && !guestCreateLimitedRef.current) {
+        pendingCreateEventsRef.current.push(...newEvents);
+        void ensureGuestPiece();
+      }
       exposeEvents();
       syncDebugSnapshot();
 
@@ -743,7 +834,7 @@ function FocusEditorBody({
         }
       }
     },
-    [exposeEvents, sessionT, syncDebugSnapshot],
+    [exposeEvents, sessionT, syncDebugSnapshot, isGuest, ensureGuestPiece],
   );
 
   useEffect(() => {
@@ -790,6 +881,27 @@ function FocusEditorBody({
         shouldBlockBeforeInput(inputEvent.inputType)
       ) {
         event.preventDefault();
+        return;
+      }
+
+      if (
+        isGuest &&
+        guestCreateLimitedRef.current
+      ) {
+        event.preventDefault();
+        setSignInReason("create_limit");
+        setSignInOpen(true);
+        return;
+      }
+
+      if (
+        isGuest &&
+        guestLimitRef.current &&
+        inputEvent.inputType.startsWith("insert")
+      ) {
+        event.preventDefault();
+        setSignInReason("limit");
+        setSignInOpen(true);
       }
     };
 
@@ -797,7 +909,7 @@ function FocusEditorBody({
     return () => {
       el.removeEventListener("beforeinput", onBeforeInput);
     };
-  }, []);
+  }, [isGuest, textLoaded]);
 
   useEffect(() => {
     if (!IS_DEV) {
@@ -839,7 +951,26 @@ function FocusEditorBody({
   };
 
   const onInput = (event: FormEvent<HTMLTextAreaElement>) => {
+    if (isGuest && guestCreateLimitedRef.current) {
+      const prev = prevValueRef.current;
+      event.currentTarget.value = prev;
+      setValue(prev);
+      setSignInReason("create_limit");
+      setSignInOpen(true);
+      return;
+    }
     const next = event.currentTarget.value;
+    if (isGuest && exceedsGuestLimit(next)) {
+      const prev = prevValueRef.current;
+      event.currentTarget.value = prev;
+      setValue(prev);
+      setCaretIndex(event.currentTarget.selectionStart);
+      guestLimitRef.current = true;
+      setGuestAtLimit(true);
+      setSignInReason("limit");
+      setSignInOpen(true);
+      return;
+    }
     const caret = event.currentTarget.selectionStart;
     // When shortening via execCommand in keydown, flush so React cannot
     // overwrite the DOM before Space/Enter's default insert runs.
@@ -878,22 +1009,18 @@ function FocusEditorBody({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isGuest && guestCreateLimitedRef.current) {
+      event.preventDefault();
+      setSignInReason("create_limit");
+      setSignInOpen(true);
+      return;
+    }
+
     enterFullscreenOnce();
 
     const el = event.currentTarget;
     const selStart = el.selectionStart;
     const selEnd = el.selectionEnd;
-
-    if (
-      selStart === 0 &&
-      selEnd === 0 &&
-      (event.key === "ArrowUp" ||
-        (event.key === "Tab" && event.shiftKey && !event.metaKey && !event.ctrlKey))
-    ) {
-      event.preventDefault();
-      focusTitle();
-      return;
-    }
 
     if (
       noBackspaceRef.current &&
@@ -983,13 +1110,24 @@ function FocusEditorBody({
   };
 
   const focusWritingArea = useCallback(() => {
-    if (superseded || bootError) return;
+    if (superseded || bootError || guestCreateLimited) return;
     const el = textareaRef.current;
     if (!el || el.readOnly) return;
     el.focus({ preventScroll: true });
     const len = el.value.length;
     el.setSelectionRange(len, len);
-  }, [superseded, bootError]);
+  }, [superseded, bootError, guestCreateLimited]);
+
+  useEffect(() => {
+    if (!openPublishOnLoad || isGuest || !initialPieceId) return;
+    window.history.replaceState({}, "", `/write/${initialPieceId}`);
+  }, [openPublishOnLoad, isGuest, initialPieceId]);
+
+  const openGuestSignIn = useCallback((reason: GuestSignInReason) => {
+    setSignInReason(reason);
+    setSignInOpen(true);
+    showControls();
+  }, [showControls]);
 
   useEffect(() => {
     const onPaperPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -1010,41 +1148,80 @@ function FocusEditorBody({
     return () => bindPaperPointerDown(null);
   }, [bindPaperPointerDown, superseded, bootError, focusWritingArea]);
 
+  const words = wordCount(value);
+  const showNudge =
+    isGuest &&
+    Boolean(livePieceId) &&
+    words >= GUEST_NUDGE_WORDS &&
+    !nudgeHidden &&
+    !guestAtLimit;
+
   const chrome =
     chromeHost &&
     createPortal(
       <>
-        <OwnerChrome
-          visible={controlsShown}
-          currentPieceId={pieceId}
-          account={account}
-        />
-        <PublishSheet
-          open={publishOpen}
-          initialTitle={title}
-          handle={writerHandle}
-          domain={domain}
-          busy={publishBusy}
-          error={publishError}
-          published={publishResult}
-          publishButtonRef={publishButtonRef}
-          onClose={() => {
-            if (!publishBusy) {
-              setPublishOpen(false);
-              setPublishError(null);
-              setPublishResult(null);
+        {isGuest ? (
+          <GuestChrome
+            visible={controlsShown}
+            examplePieceUrl={examplePieceUrl}
+            onSignIn={() =>
+              openGuestSignIn(value.length > 0 ? "keep" : "empty")
             }
-          }}
-          onPublish={(args) => {
-            void onPublish(args);
-          }}
-          onBackToPages={() => {
-            router.push("/");
-          }}
-          onOpenPage={(url) => {
-            window.location.href = url;
-          }}
-        />
+          />
+        ) : account ? (
+          <OwnerChrome
+            visible={controlsShown}
+            currentPieceId={livePieceId}
+            account={account}
+          />
+        ) : null}
+        {isGuest ? (
+          <GuestSignInDialog
+            open={signInOpen}
+            reason={signInReason}
+            googleEnabled={googleEnabled}
+            emailProviderId={emailProviderId}
+            caretIndex={caretIndex}
+            onClose={() => setSignInOpen(false)}
+          />
+        ) : (
+          <PublishSheet
+            open={publishOpen}
+            initialTitle={title}
+            handle={writerHandle}
+            domain={domain}
+            busy={publishBusy}
+            error={publishError}
+            published={publishResult}
+            publishButtonRef={publishButtonRef}
+            onClose={() => {
+              if (!publishBusy) {
+                setPublishOpen(false);
+                setPublishError(null);
+                setPublishResult(null);
+              }
+            }}
+            onPublish={(args) => {
+              void onPublish(args);
+            }}
+            onBackToPages={() => {
+              router.push("/");
+            }}
+            onOpenPage={(url) => {
+              window.location.href = url;
+            }}
+          />
+        )}
+        {showNudge && livePieceId ? (
+          <GuestNudge
+            visible={controlsShown}
+            onSignIn={() => openGuestSignIn("keep")}
+            onDismiss={() => {
+              setNudgeHidden(true);
+              dismissNudge(livePieceId);
+            }}
+          />
+        ) : null}
         <EditorControls
           visible={controlsShown}
           caption={captionFor(ambient.light, ambient.condition)}
@@ -1094,11 +1271,16 @@ function FocusEditorBody({
           writingSize={writingSize}
           onWritingTypeChange={onWritingTypeChange}
           onPublish={() => {
+            if (isGuest) {
+              openGuestSignIn("publish");
+              return;
+            }
             setPublishError(null);
             setPublishResult(null);
             setPublishOpen(true);
             showControls();
           }}
+          publishDisabled={isGuest && value.trim().length === 0}
           publishButtonRef={publishButtonRef}
           onPopoverChange={setPopoverOpen}
         />
@@ -1129,7 +1311,7 @@ function FocusEditorBody({
   return (
     <div
       className="writing-scroll-inner"
-      data-piece-id={pieceId}
+      data-piece-id={livePieceId ?? ""}
       data-writing-font={writingFont}
       data-writing-size={writingSize}
       style={writingTypeStyle}
@@ -1158,31 +1340,6 @@ function FocusEditorBody({
         </div>
       ) : (
         <>
-          <input
-            ref={titleRef}
-            type="text"
-            value={title}
-            maxLength={TITLE_MAX}
-            placeholder={
-              title.length === 0 && value.length === 0
-                ? greetingTitlePlaceholder(account.displayName)
-                : "Title"
-            }
-            aria-label="Title"
-            readOnly={superseded}
-            onChange={onTitleChange}
-            onKeyDown={onTitleKeyDown}
-            onPaste={onTitlePaste}
-            onMouseDown={onMouseDown}
-            className={[
-              "writing-title",
-              title.length === 0 && value.length === 0
-                ? "writing-title-greeting"
-                : "",
-            ].join(" ")}
-            autoComplete="off"
-            spellCheck
-          />
           <div className="writing-frame" data-writing-frame>
             <div ref={mirrorRef}>
               <WritingMirror
@@ -1192,16 +1349,16 @@ function FocusEditorBody({
                 className="font-writing leading-[1.7]"
               />
             </div>
+            {value.length === 0 && (mode === "guest" || hydrated) ? (
+              <div className="writing-placeholder" aria-hidden="true">
+                {blankPlaceholder(mode, account?.displayName ?? "")}
+              </div>
+            ) : null}
             <textarea
               ref={textareaRef}
               value={value}
               rows={1}
-              readOnly={superseded}
-              placeholder={
-                title.length === 0 && value.length === 0
-                  ? GREETING_BODY_PLACEHOLDER
-                  : undefined
-              }
+              readOnly={superseded || guestCreateLimited}
               onCompositionStart={onCompositionStart}
               onCompositionEnd={onCompositionEnd}
               onInput={onInput}
@@ -1216,13 +1373,11 @@ function FocusEditorBody({
               autoCorrect="off"
               className={[
                 "writing-text font-writing leading-[1.7] text-ink",
-                title.length === 0 && value.length === 0
-                  ? "writing-text-greeting"
-                  : "",
-                superseded ? "cursor-default" : "",
+                superseded || guestCreateLimited ? "cursor-default" : "",
               ].join(" ")}
               style={{
-                caretColor: superseded ? "transparent" : "#C9772E",
+                caretColor:
+                  superseded || guestCreateLimited ? "transparent" : "#C9772E",
               }}
               aria-label="Writing page"
             />

@@ -1,7 +1,9 @@
-import { auth } from "@/auth";
 import { db } from "@/db";
 import { pieces, sessions } from "@/db/schema";
-import { getOwnedPiece } from "@/lib/pieces/ownership";
+import {
+  getWritablePiece,
+  writableErrorResponse,
+} from "@/lib/pieces/ownership";
 import { isPieceId } from "@/lib/pieces/piece-id";
 import { CONDITIONS, type Condition } from "@/lib/scene";
 import { and, eq, isNull } from "drizzle-orm";
@@ -32,19 +34,15 @@ export async function POST(request: Request, context: RouteContext) {
 }
 
 async function postSession(request: Request, context: RouteContext) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return Response.json({ error: "unauthorized" }, { status: 401 });
-  }
-
   const { id: pieceId } = await context.params;
   if (!isPieceId(pieceId)) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
-  const piece = await getOwnedPiece(pieceId, session.user.id);
-  if (!piece) {
-    return Response.json({ error: "not_found" }, { status: 404 });
+  const access = await getWritablePiece(pieceId);
+  if (!access.piece) {
+    return writableErrorResponse(access.reason);
   }
+  const piece = access.piece;
 
   if (piece.status === "published") {
     return Response.json(

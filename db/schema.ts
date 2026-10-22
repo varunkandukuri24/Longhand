@@ -1,9 +1,11 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
+  check,
   doublePrecision,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -114,12 +116,37 @@ export const verificationTokens = pgTable(
   (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })],
 );
 
-/** Rolling-hour sign-in email attempts (per address and per IP). */
-export const signInAttempts = pgTable("sign_in_attempts", {
+/** Rolling windows for sign-in and guest rate limits. Keys are HMAC-SHA256. */
+export const rateLimitHits = pgTable(
+  "rate_limit_hits",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bucket: text("bucket").notNull(),
+    keyHash: text("key_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("rate_limit_hits_bucket_key_created_idx").on(
+      table.bucket,
+      table.keyHash,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const guests = pgTable("guests", {
   id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull(),
-  ip: text("ip").notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  tokenHash: text("token_hash").notNull().unique(),
+  ipHash: text("ip_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+  claimedBy: text("claimed_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  claimedAt: timestamp("claimed_at", { withTimezone: true, mode: "date" }),
 });
 
 export const handleRedirects = pgTable("handle_redirects", {
@@ -130,33 +157,48 @@ export const handleRedirects = pgTable("handle_redirects", {
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
 });
 
-export const pieces = pgTable("pieces", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull().default(""),
-  status: pieceStatusEnum("status").notNull().default("draft"),
-  visibility: pieceVisibilityEnum("visibility").notNull().default("public"),
-  slug: text("slug").unique(),
-  /**
-   * Latest draft body after accepted batches (nullable until first validated
-   * batch or backfill). Source for strict event checks; event log remains SoT.
-   */
-  draftText: text("draft_text"),
-  finalText: text("final_text"),
-  finalTextHash: text("final_text_hash"),
-  /** Shortened link spans; computed from the event log at publish. */
-  links: jsonb("links").$type<TextLink[]>(),
-  /** Newest writing session that owns this piece; only its batches are accepted. */
-  activeSessionId: uuid("active_session_id").references(
-    (): AnyPgColumn => sessions.id,
-    { onDelete: "set null" },
-  ),
-  publishedAt: timestamp("published_at", { mode: "date" }),
-  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
-});
+export const pieces = pgTable(
+  "pieces",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    guestId: uuid("guest_id").references(() => guests.id, {
+      onDelete: "cascade",
+    }),
+    title: text("title").notNull().default(""),
+    status: pieceStatusEnum("status").notNull().default("draft"),
+    visibility: pieceVisibilityEnum("visibility").notNull().default("public"),
+    slug: text("slug").unique(),
+    /**
+     * Latest draft body after accepted batches (nullable until first validated
+     * batch or backfill). Source for strict event checks; event log remains SoT.
+     */
+    draftText: text("draft_text"),
+    finalText: text("final_text"),
+    finalTextHash: text("final_text_hash"),
+    /** Shortened link spans; computed from the event log at publish. */
+    links: jsonb("links").$type<TextLink[]>(),
+    /** Newest writing session that owns this piece; only its batches are accepted. */
+    activeSessionId: uuid("active_session_id").references(
+      (): AnyPgColumn => sessions.id,
+      { onDelete: "set null" },
+    ),
+    publishedAt: timestamp("published_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "pieces_exactly_one_owner",
+      sql`(user_id is null) <> (guest_id is null)`,
+    ),
+    check(
+      "pieces_guest_never_publish",
+      sql`status = 'draft' or user_id is not null`,
+    ),
+    index("pieces_guest_id_idx").on(table.guestId),
+  ],
+);
 
 export const sessions = pgTable("sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -208,6 +250,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   authSessions: many(authSessions),
   handleRedirects: many(handleRedirects),
+  claimedGuests: many(guests),
 }));
 
 export const handleRedirectsRelations = relations(handleRedirects, ({ one }) => ({
@@ -217,8 +260,17 @@ export const handleRedirectsRelations = relations(handleRedirects, ({ one }) => 
   }),
 }));
 
+export const guestsRelations = relations(guests, ({ one, many }) => ({
+  claimedByUser: one(users, {
+    fields: [guests.claimedBy],
+    references: [users.id],
+  }),
+  pieces: many(pieces),
+}));
+
 export const piecesRelations = relations(pieces, ({ one, many }) => ({
   user: one(users, { fields: [pieces.userId], references: [users.id] }),
+  guest: one(guests, { fields: [pieces.guestId], references: [guests.id] }),
   sessions: many(sessions),
   receipt: one(receipts, { fields: [pieces.id], references: [receipts.pieceId] }),
 }));

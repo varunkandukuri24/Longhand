@@ -60,42 +60,23 @@ body {
   mix-blend-mode: multiply;
 }
 
-/* Title line above the writing area (DESIGN.md) */
-.writing-title {
-  display: block;
-  width: 100%;
-  margin: 0 0 24px;
+.writing-placeholder {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 0;
+  margin: 0;
   padding: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  box-shadow: none;
-  appearance: none;
-  -webkit-appearance: none;
+  font: inherit;
   font-family: var(--writing-font, var(--font-writing), serif);
-  font-size: 30px;
-  font-weight: 400;
-  line-height: 1.3;
-  color: var(--ink);
-  caret-color: var(--caret);
-}
-
-.writing-title::placeholder {
-  color: #a8a196;
-  opacity: 1;
-}
-
-.writing-title-greeting::placeholder,
-.writing-text-greeting::placeholder {
+  font-size: var(--writing-size);
+  line-height: 1.7;
   color: #b5aea2;
-  opacity: 1;
-}
-
-.writing-title:focus,
-.writing-title:focus-visible {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
+  pointer-events: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Writing textarea: invisible chrome; only words and caret */
@@ -721,12 +702,12 @@ a.reference-pill:hover svg {
   color: var(--ink);
 }
 
-/* Keyboard focus only — mouse click leaves no box (never on writing title/text) */
-:where(a, button, [role="button"], summary, input:not(.writing-text):not(.writing-title), select, textarea:not(.writing-text)):focus {
+/* Keyboard focus only — mouse click leaves no box (never on writing text) */
+:where(a, button, [role="button"], summary, input:not(.writing-text), select, textarea:not(.writing-text)):focus {
   outline: none;
 }
 
-:where(a, button, [role="button"], summary, input:not(.writing-text):not(.writing-title), select, textarea:not(.writing-text)):focus-visible {
+:where(a, button, [role="button"], summary, input:not(.writing-text), select, textarea:not(.writing-text)):focus-visible {
   outline: 1.5px solid var(--ink);
   outline-offset: 3px;
   border-radius: 3px;
@@ -772,6 +753,139 @@ a.reference-pill:hover svg {
   border: 1px solid #e6e0d4;
   border-radius: 8px;
   box-shadow: 0 16px 48px rgba(28, 26, 22, 0.12);
+}
+
+.dialog-scrim-column {
+  right: var(--bar-from-window);
+}
+
+.guest-brand {
+  position: fixed;
+  top: 28px;
+  z-index: var(--z-bar);
+  height: 44px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-family: var(--font-writing), serif;
+  font-size: 18px;
+  color: var(--ink);
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+.writing-shell-left .guest-brand {
+  left: var(--bar-from-window);
+}
+
+.writing-shell-right .guest-brand {
+  left: var(--bar-other-edge);
+}
+
+.guest-links {
+  position: fixed;
+  top: 28px;
+  z-index: var(--z-bar);
+  height: 44px;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-ui), monospace;
+  font-size: 13px;
+  transition: opacity 300ms ease;
+}
+
+.writing-shell-left .guest-links {
+  right: 40px;
+}
+
+.writing-shell-right .guest-links {
+  right: var(--bar-from-window);
+}
+
+.guest-example-link {
+  color: var(--label);
+  text-decoration: none;
+}
+
+.guest-example-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.guest-links-sep {
+  color: var(--label);
+}
+
+.guest-signin-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+}
+
+.guest-nudge {
+  position: fixed;
+  left: 40px;
+  bottom: 64px;
+  z-index: var(--z-bar);
+  width: 264px;
+  padding: 16px;
+  transition: opacity 300ms ease;
+}
+
+.guest-nudge-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--label);
+  font-family: var(--font-ui), monospace;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.guest-nudge-title {
+  margin: 0 24px 0 0;
+  font-family: var(--font-writing), serif;
+  font-size: 17px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.guest-nudge-copy {
+  margin: 8px 0 0;
+  font-family: var(--font-ui), monospace;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--label);
+}
+
+.guest-nudge-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: var(--ink);
+  color: #ffffff;
+  font-family: var(--font-ui), monospace;
+  font-size: 13px;
+  cursor: pointer;
 }
 
 .writing-time-popover {
@@ -829,8 +943,23 @@ a.reference-pill:hover svg {
   }
 
   .writing-shell-left .account-chrome,
-  .writing-shell-right .account-chrome {
+  .writing-shell-right .account-chrome,
+  .writing-shell-left .guest-links,
+  .writing-shell-right .guest-links {
     right: 20px;
+  }
+
+  .writing-shell-left .guest-brand,
+  .writing-shell-right .guest-brand {
+    left: 20px;
+  }
+
+  .guest-nudge {
+    left: 20px;
+  }
+
+  .dialog-scrim-column {
+    right: 0;
   }
 
   .writing-mirror,

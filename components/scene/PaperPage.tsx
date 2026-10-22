@@ -22,7 +22,7 @@ type PaperPageProps = {
    * `position: fixed` breaks inside `.paper-column` because it uses transform.
    */
   chrome?: ReactNode;
-  /** Editor title line: 120. Every other page's first heading: 56. */
+  /** Editor text: 120. Every other page's first heading: 56. */
   topOffsetPx: typeof PAGE_TOP_OFFSET_PX | typeof EDITOR_TOP_OFFSET_PX;
   publicPage?: boolean;
   hideWindow?: boolean;

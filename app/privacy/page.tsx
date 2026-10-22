@@ -60,6 +60,20 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="font-ui text-[12px] tracking-[0.14em] text-label uppercase">
+            Guests
+          </h2>
+          <p className="mt-3">
+            You can write before signing in. Longhand stores one random cookie
+            in your browser so it can save that page. The server keeps only a
+            hash of the cookie, not the cookie itself. Unclaimed guest pages,
+            and everything in them, are deleted after 7 days. Rate limits use a
+            keyed hash of your network address, never the address in the clear,
+            and those records are deleted after a day.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-ui text-[12px] tracking-[0.14em] text-label uppercase">
             Links
           </h2>
           <p className="mt-3">

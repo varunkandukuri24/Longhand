@@ -69,6 +69,7 @@ type EditorControlsProps = {
     fontSize: WritingSize;
   }) => void;
   onPublish: () => void;
+  publishDisabled?: boolean;
   publishButtonRef?: RefObject<HTMLButtonElement | null>;
   onPopoverChange?: (open: boolean) => void;
 };
@@ -98,6 +99,7 @@ export function EditorControls({
   writingSize,
   onWritingTypeChange,
   onPublish,
+  publishDisabled = false,
   publishButtonRef,
   onPopoverChange,
 }: EditorControlsProps) {
@@ -397,8 +399,10 @@ export function EditorControls({
             <button
               ref={publishButtonRef}
               type="button"
-              className="editor-bar-btn"
+              className="editor-bar-btn disabled:opacity-40 disabled:no-underline"
+              disabled={publishDisabled}
               onClick={() => {
+                if (publishDisabled) return;
                 setOpen(null);
                 onPublish();
               }}

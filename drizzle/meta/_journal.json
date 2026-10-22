@@ -99,6 +99,13 @@
       "when": 1792800000000,
       "tag": "0013_nullable_handle",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792900000000,
+      "tag": "0014_guests_and_rate_limits",
+      "breakpoints": true
     }
   ]
 }

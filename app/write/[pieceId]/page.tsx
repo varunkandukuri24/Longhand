@@ -10,6 +10,7 @@ import { notFound, redirect } from "next/navigation";
 
 export default async function WritePage({
   params,
+  searchParams,
 }: PageProps<"/write/[pieceId]">) {
   const user = await requireUserWithDisplayName();
   const account = await loadOwnerAccount(user.id);
@@ -18,6 +19,7 @@ export default async function WritePage({
   }
 
   const { pieceId } = await params;
+  const query = await searchParams;
   if (!isPieceId(pieceId)) {
     notFound();
   }
@@ -43,6 +45,7 @@ export default async function WritePage({
 
   return (
     <FocusEditor
+      mode="writer"
       pieceId={piece.id}
       initialTitle={piece.title}
       writerHandle={user.handle}
@@ -50,6 +53,7 @@ export default async function WritePage({
       initialFont={user.font}
       initialFontSize={user.fontSize}
       account={account}
+      openPublishOnLoad={query.publish === "1"}
     />
   );
 }

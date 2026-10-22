@@ -1,9 +1,11 @@
 /**
- * Time-of-day greeting for a blank piece's title placeholder (DESIGN.md).
- * Uses the reader's local clock.
+ * Time-of-day greeting for a blank piece's placeholder (DESIGN.md).
+ * Uses the reader's local clock. Never part of the event log.
  */
 
 export type GreetingPeriod = "morning" | "afternoon" | "evening";
+
+export const GUEST_PLACEHOLDER = "Write something";
 
 /** First word of the display name, or "there" if empty. */
 export function firstNameFromDisplayName(displayName: string): string {
@@ -21,13 +23,20 @@ export function greetingPeriod(hour: number): GreetingPeriod {
   return "evening";
 }
 
-export function greetingTitlePlaceholder(
+export function writerPlaceholder(
   displayName: string,
   now: Date = new Date(),
 ): string {
   const period = greetingPeriod(now.getHours());
   const first = firstNameFromDisplayName(displayName);
-  return `Good ${period}, ${first}.`;
+  return `Good ${period}, ${first}. What has been on your mind?`;
 }
 
-export const GREETING_BODY_PLACEHOLDER = "What has been on your mind?";
+export function blankPlaceholder(
+  mode: "guest" | "writer",
+  displayName: string,
+  now: Date = new Date(),
+): string {
+  if (mode === "guest") return GUEST_PLACEHOLDER;
+  return writerPlaceholder(displayName, now);
+}

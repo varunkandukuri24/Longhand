@@ -31,7 +31,7 @@ function measureHeadingTop(
 }
 
 describe("paper page top offsets", () => {
-  it("uses 56 px for pages and 120 px for the editor title line", () => {
+  it("uses 56 px for pages and 120 px for the editor text", () => {
     expect(PAGE_TOP_OFFSET_PX).toBe(56);
     expect(EDITOR_TOP_OFFSET_PX).toBe(120);
   });
@@ -89,7 +89,6 @@ describe("paper page top offsets", () => {
       "app/u/[handle]/page.tsx",
       "app/signin/page.tsx",
       "app/onboarding/name/page.tsx",
-      "app/page.tsx",
       "components/editor/FocusEditor.tsx",
     ];
     for (const file of files) {
@@ -99,6 +98,7 @@ describe("paper page top offsets", () => {
       expect(src, file).not.toMatch(/md:pt-\[140px\]/);
     }
     expect(read("app/p/[slug]/page.tsx")).toContain("PublishedPieceView");
+    expect(read("app/page.tsx")).toContain("FocusEditor");
     expect(read("components/editor/FocusEditor.tsx")).toContain(
       "EDITOR_TOP_OFFSET_PX",
     );

@@ -21,7 +21,7 @@ export type PublishedPiece = {
 async function mapRow(
   row: {
     id: string;
-    userId: string;
+    userId: string | null;
     title: string;
     finalText: string | null;
     finalTextHash: string | null;
@@ -37,6 +37,7 @@ async function mapRow(
 ): Promise<PublishedPiece | null> {
   if (
     !row ||
+    row.userId === null ||
     row.finalText === null ||
     row.publishedAt === null ||
     row.finalTextHash === null ||

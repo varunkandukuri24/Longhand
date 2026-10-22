@@ -12,7 +12,7 @@ The whole screen is paper. It's just you and your thoughts, with a few quiet opt
 | --- | --- |
 | Background | The whole viewport is paper (see Paper). No other surface behind it. |
 | Side window | 112 px wide, inset 36 px from the top, bottom and right edge. Always on the right; it can't be moved. |
-| Writing column | Up to 680 px wide, centred in the space left of the window, `left: calc(50% - 74px); transform: translateX(-50%)`. The title line's top sits 120 px from the top, the text 24 px below it. The column is its own scroll area ending 88 px above the viewport bottom, so text never runs under the bar; the window, back arrow and bar stay fixed. |
+| Writing column | Up to 680 px wide, centred in the space left of the window, `left: calc(50% - 74px); transform: translateX(-50%)`. The text's top sits 120 px from the top. The column is its own scroll area ending 88 px above the viewport bottom, so text never runs under the bar; the window, back arrow and bar stay fixed. |
 | History icon | Top left of the paper, 28 px from the top and 40 px from the left edge, aligned with the bar's start. It opens the Your pieces pane. |
 | Account icon | Top right of the paper, 28 px from the top and 184 px from the right edge, beside the window. The window is always full height and no icon ever sits above it. |
 | Bottom bar | 20 px from the bottom. Starts 40 px from the left edge and ends 184 px from the right edge (36 + 112 + 36). |
@@ -29,7 +29,6 @@ The whole screen is paper. It's just you and your thoughts, with a few quiet opt
 | --- | --- |
 | Writing | Literata 400, 20 px by default, line-height 1.7, color `#1C1A16` (about 16:1 on paper). Paragraph spacing 22 px. The writer can change the font and size for their own writing screen (see "Type menu"). |
 | Published text | Always Literata 400, 20 px, line-height 1.7, 22 px between paragraphs, whatever the writer picked for their screen. |
-| Title line (editor) | Same font as the writing, 30 px, line-height 1.3. |
 | Cursor (caret) | `#C9772E`, 2 px wide (`caret-color`). |
 | Labels, bar, popovers | DM Mono 400, 13 px (11.5–12 px for small captions), color `#736C61` (meets 4.5:1 on paper). |
 | Headings (public page title, sign-in) | Literata 400, 28–32 px, `#1C1A16`. |
@@ -42,25 +41,20 @@ No other fonts, except the three extra writing fonts in the Type menu (Newsreade
 - FONT: four rows, each name set in its own font at 17 px, a check mark on the current one: Literata (default), Newsreader, Instrument Sans, DM Mono.
 - SIZE: four "A" buttons in Literata at increasing sizes, the current one underlined: Small 18 px, Medium 20 px (default), Large 22 px, Extra large 24 px writing size. Each has an `aria-label` and `aria-pressed`.
 - A footnote: "Only changes your writing screen. Published pieces are always set in Literata."
-- The choice applies instantly, is saved per writer (`users.font`, `users.font_size`) and follows them to every piece and device. The title line uses the same font.
+- The choice applies instantly, is saved per writer (`users.font`, `users.font_size`) and follows them to every piece and device.
 - Self-host all four fonts as local woff2 (`next/font/local`, `display=swap`); only Literata and DM Mono load on public pages. OG images use local TTF files, not a network fetch.
 
 ## The writing area
 
 - The text area is invisible: no border, no outline (focused or not), no resize handle, transparent background, `appearance: none`. Only the words and the caret show.
-- It sits below the title line and grows with the text. The whole column (title, text, References row) scrolls together inside the column's scroll area.
+- It grows with the text. The whole column (text, References row) scrolls together inside the column's scroll area.
 - **Never under the bar.** The scroll area stops 88 px above the viewport bottom. Its last 64 px fade the text to paper (`mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent)`), and once the column has scrolled, its first 96 px fade in the same way at the top. This is a mask on the text, not a colored overlay.
 - **Typewriter scrolling.** While typing, the caret's line is always kept at least 160 px above the bottom of the scroll area: when it would go lower, the column scrolls smoothly (instantly under reduced motion) so the line sits there. Measure the caret position with the mirror layer.
-- Opening any editable piece focuses it automatically, with the caret blinking at the end of the existing text and that spot scrolled into view, so you can start typing with no click. This happens after the piece's text has loaded, not before. Exception: a brand-new, empty piece opens with the caret on the title line.
+- Opening any editable piece focuses it automatically, with the caret blinking at the end of the existing text and that spot scrolled into view, so you can start typing with no click. This happens after the piece's text has loaded, not before. A brand-new, empty piece opens with the caret at the start of the text.
 
-### The title line
+### No title while writing
 
-- A single-line input above the text, no border or underline, placeholder "Title" in `#A8A196`. Optional.
-- A brand-new piece opens with the caret here. Enter or ↓ moves to the start of the text; ↑ or Shift+Tab at the very start of the text moves back to the title. Pasting a newline into it keeps only the first line. At most 120 characters.
-- The title is saved with the piece (`pieces.title`, debounced) but is not part of the writing record: no events, no effect on the receipt, word count or typed share.
-- The publish sheet pre-fills it. An empty title still falls back to the publish sheet asking for one, and the Your pieces pane shows the first 60 characters of the text, as today.
-- Clicking anywhere on the paper outside the controls and the window puts focus back in the text area.
-- Read-only (published) pieces never show a caret.
+The page is one text area. There is no title input anywhere in the editor. A piece's title is set in the publish dialog. It is pre-filled from `pieces.title` if the piece has one, otherwise left empty with the placeholder "Title". The Your pieces pane shows the title if set, otherwise the first 60 characters of the text in `#736C61`. Clicking anywhere on the paper outside the controls and the window focuses the text. Read-only (published) pieces never show a caret.
 
 ## The side window
 
@@ -136,7 +130,27 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 
 - **Sign-in, name and city screens:** the same paper and grain, with the side window on the writer's chosen side. Content top-aligned, never vertically centered.
 - **Home is a fresh page.** `/` for a signed-in writer opens the editor on the newest draft with no title and no text, or creates one. `/dashboard` redirects to `/`. There is no list page.
-- **The greeting.** On a piece with no title and no text, the title line's placeholder reads "Good morning, {first name}." (5:00 to 11:59), "Good afternoon, {first name}." (12:00 to 16:59) or "Good evening, {first name}." (any other time), in the reader's local time. The text's placeholder reads "What has been on your mind?" Both are `#B5AEA2`, in the writer's own font and size. They are placeholders only: they vanish on the first keystroke, never enter the event log, and come back if the piece is emptied again. {first name} is the first word of the display name. Reference mockup: "Sign in → a fresh page, already waiting".
+- **Writing as a guest**
+  - **Home for a visitor** (`/`, not signed in) is the editor in guest mode, with the window on the right as everywhere.
+    - Top left, where the history icon would be: "Longhand" in Literata 18 px, `#1C1A16`, not a link.
+    - Top right, beside the window (184 px from the right edge): "See an example · Sign in" in DM Mono 13 px. "See an example" is `#736C61` and opens `EXAMPLE_PIECE_URL` in the same tab; it's hidden when that's unset. "Sign in" is an ink link with a 1 px underline at a 4 px offset.
+    - The bottom bar is the normal bar. Publish is greyed out until there's text; then it opens the sign-in dialog (G4).
+    - No history icon, no account icon. Reference: G1.
+  - **The nudge card** (G2):
+    - Placement: once the guest piece reaches 50 words, a small card appears at the bottom left, 40 px from the left edge and 64 px from the bottom (just above the bar).
+    - Size and surface: 264 px wide, the dialog card style (white, 1 px `#E6E0D4` border, 8 px radius, soft shadow), 16 px padding.
+    - Contents: "Not saved to an account" in Literata 17 px; "It lives in this browser for 7 days. Sign in to keep it." in DM Mono 11.5 px `#736C61`; a full-width dark button, "Sign in to keep this" (40 px tall, DM Mono 13 px); and a × button at the top right.
+    - Behaviour: it never takes focus or blocks typing (`role="status"`). × hides it for that piece (remembered in `localStorage`, wrapped in try/catch). It fades with the bar while typing, like every other control.
+  - **The sign-in dialog**: the publish dialog's card, 460 px wide, centred over the writing column, with the scrim. It has a title and a subline in Literata 17 px `#5C564C`, then **Continue with Google**, an "or" divider, EMAIL, **Email me a link**, and a footnote in DM Mono 11.5 px `#9A9387`. Variants:
+    - From "Sign in" with no text yet: "Sign in" / "Write, publish and keep everything in one place."
+    - From "Sign in" or the nudge with text (G3): "Keep this page" / "Sign in and it’s yours, with every minute counted from your first word." Footnote: "Your page stays right here while you sign in. Every minute so far counts toward its receipt."
+    - From Publish (G4): "Sign in to publish" / "Your receipt needs a name to sign it with, and your piece needs a page to live on."
+    - At the word limit (G6): "Keep going?" / "You’ve written 500 words as a guest. That’s as far as a page goes without an account." Footnote: "Nothing is lost. Sign in and keep going from this exact word."
+    - "Too many new pages": shown when creating a guest piece is refused by the IP limit. Title "Sign in to keep writing", subline "Too many new pages have been started from this network today. Sign in and you can write as much as you like." Then the same Google / email buttons. The footnote is dropped. While it's open, the text area is read-only. Closing it leaves the page read-only and shows the dialog again on the next keystroke. No message about this ever appears in the bottom bar.
+  - **Email sent** (G5): the same card, "Check your email" / "We sent a sign-in link to", the address in a 1 px bordered box, "Open the link in this browser and you’ll land back here, on this page, signed in. Keep writing while you wait.", then "Use a different email" (text button) and **Keep writing** (closes the dialog).
+  - **The word limit** (G6): at 500 words the text area stops accepting new text (deleting still works) and the G6 dialog opens. Closing it leaves the page readable and editable down, but not up, until sign-in.
+  - **After signing in**, the writer lands back on the same text with the caret where it was. The guest top bar becomes the history and account icons. A brand-new account goes through first run, then straight back to the piece. Signing in from Publish opens the publish dialog right away.
+- **The blank page.** A blank piece shows one blinking caret at the start of the text, with placeholder text in `#B5AEA2` (the writer's own font and size) right after it: "Write something" for a guest; "Good morning, {first name}. What has been on your mind?" for a signed-in writer (Good morning 5:00 to 11:59, Good afternoon 12:00 to 16:59, Good evening otherwise, local time; {first name} is the first word of the display name). It vanishes on the first keystroke, never enters the event log, and comes back if the text is emptied. Reference mockups: G1 and G1b.
 - **Your pieces pane.** The history icon (three lines of 12, 12 and 8 px, 1.5 px stroke, 20 px inside a 44 × 44 px button, `aria-label="Your pieces"`) opens a pane:
   - Size and motion: 320 px wide, full height, from the left edge, over the window. It slides in over 200 ms ease-out (instant with reduced motion). The rest of the screen gets a `rgba(255,255,255,0.6)` scrim.
   - Surface: `#FFFFFF`, a 1 px `#E6E0D4` right border, `0 0 48px rgba(28,26,22,0.10)` shadow, 28 px top and 24 px side padding.
@@ -170,7 +184,7 @@ The reference implementation below draws exactly these. Port it; don't redesign 
 - **First run** asks "What should we call you?" with NAME (pre-filled from Google when available) and YOUR PAGE `[handle].{domain}`, then **Start writing**, which opens a fresh page. Reference mockup: "First run: name and address, on the real domain".
 - **Icons:** inline SVG, 1.5 px stroke, round caps and joins, `currentColor` (`#736C61`, `#1C1A16` on hover), 18 px inside a 44 × 44 px button. Only six exist: plus, quote (a pair of curly quotation marks, used only in reference pills, 12 px), back (a left arrow, only for readers on writer pages), check (used only in the receipt's Verified button, 12 px), history (three lines, used for Your pieces) and account (head and shoulders, used for the account menu). No icon library.
 - **Focus:** keyboard focus only (`:focus-visible`): a 1.5 px `#1C1A16` outline, offset 3 px, 3 px radius. A mouse click never leaves a box around a button.
-- **One shared layout:** the editor, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's title line starts 120 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
+- **One shared layout:** the editor, public piece page, sign-in and name/city screens all use a single paper-page layout component that owns the paper, grain, side window, column position and top offset. Pages pass content in; they never add their own top padding, margin or vertical centering. Top offsets: the editor's text starts 120 px from the viewport top; on every other page, the first heading's top edge sits 56 px from the viewport top.
 - **Piece page (`/p/[slug]`):** the only page for a published piece, the same for readers and the writer. There is no separate receipt page, and no link anywhere says "receipt". Paper and grain, with the side window on the right showing the reader's own time of day and a clear sky (never the writer's location or weather). The title in Literata 32 px (top edge 56 px from the viewport top), then the text 24 px below it (Literata 20 px, line-height 1.7, 22 px between paragraphs), then References (if any), then the receipt (see "References" and "The receipt"). When the signed-in writer views their own piece, the history icon and account menu sit where they do in the editor; readers never see them. Reference mockup: "A published piece · read it, the receipt is at the end".
 
 ## Publishing and your page
@@ -182,7 +196,7 @@ Reference mockups: "Publish · centred, with who can read it", "Published · the
 - Publish opens a modal dialog centred in the viewport (not anchored to the bar): `role="dialog"`, `aria-modal="true"`, focus moves to the title field, Tab stays inside, Esc or Cancel closes it and returns focus to the Publish button.
 - Behind it, a scrim over the whole screen (window included): `rgba(255,255,255,0.74)`. No blur.
 - The card: 520 px wide (`min(520px, 100vw - 32px)`), padding 32 px 32 px 24 px, `#FFFFFF`, 1 px `#E6E0D4` border, 8 px radius, shadow `0 16px 48px rgba(28,26,22,0.12)`.
-- Contents, top to bottom: "Publish" (Literata 26 px); TITLE label (DM Mono 11 px, letter-spacing 0.14em, `#9A9387`) and the title input (Literata 20 px, 1 px `#CFC9BE` bottom rule, pre-filled from the title line); WHO CAN READ IT, two radio rows 10 px apart, each a 1 px bordered box (`#1C1A16` when selected, `#E6E0D4` otherwise, 6 px radius, padding 14px 16px) with a custom 16 px radio, the option in Literata 18 px and a DM Mono 12 px line under it:
+- Contents, top to bottom: "Publish" (Literata 26 px); TITLE label (DM Mono 11 px, letter-spacing 0.14em, `#9A9387`) and the title input (Literata 20 px, 1 px `#CFC9BE` bottom rule, placeholder "Title", pre-filled from `pieces.title` if the piece has one); WHO CAN READ IT, two radio rows 10 px apart, each a 1 px bordered box (`#1C1A16` when selected, `#E6E0D4` otherwise, 6 px radius, padding 14px 16px) with a custom 16 px radio, the option in Literata 18 px and a DM Mono 12 px line under it:
   - **Public** (default): "On your page, {handle}.{domain}, and for anyone with the link."
   - **Private**: "Only people you send the link to. Not on your page, not in search."
 - Then the note (DM Mono 12 px `#736C61`): "Publishing freezes the text and adds its receipt. You can change who can read it later."
@@ -212,7 +226,7 @@ Reference mockups: "Publish · centred, with who can read it", "Published · the
 - 72 px after the list: the 72 px rule, then a row with the seal at 22 px and "Every piece here was written on Longhand, with a record of how." (DM Mono 12 px `#736C61`), "Longhand" linking to the main domain.
 - On a public piece page, the writer's name in the signature sentence links to their page.
 - **Back from a piece on a writer's page.** Every piece page served on `{handle}.{ROOT_DOMAIN}` shows the same arrow-only back button at the top left (same position, size and color as everywhere else), linking to `{handle}.{ROOT_DOMAIN}/`. Its tooltip and `aria-label` use the writer's display name ("Back to anon24"). It shows for everyone, signed in or not. A private piece at `/p/{slug}` shows no back button to readers (only to its owner, back to Pages).
-- **Write on Longhand.** Every page on a writer's subdomain (their page and each public piece) shows "Write on Longhand" at the top right of the paper: DM Mono 13 px `#736C61`, underlined on hover, 28 px from the top and 184 px from the right edge, beside the window. It links to `https://{domain}/`, which opens a fresh page for a signed-in writer and sign-in for anyone else. It is the same for everyone. Sign-in cookies are deliberately never sent to subdomains, so these pages can't tell the owner from a reader.
+- **Write on Longhand.** Every page on a writer's subdomain (their page and each public piece) shows "Write on Longhand" at the top right of the paper: DM Mono 13 px `#736C61`, underlined on hover, 28 px from the top and 184 px from the right edge, beside the window. It links to `https://{domain}/`, which opens a fresh page for a signed-in writer and the guest editor for anyone else. It is the same for everyone. Sign-in cookies are deliberately never sent to subdomains, so these pages can't tell the owner from a reader.
 - Share image for the writer's page: the name and the summary line on paper, in the existing share-image style.
 
 ## References
@@ -299,7 +313,7 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] No gradients, shadows or dark backgrounds remain on the writing screen.
 - [ ] A brand-new account, and an existing one with no saved choices, starts on Auto.
 - [ ] Signing in, and opening `/` while signed in, lands on a blank page with a blinking caret. Doing it twice in a row never creates a second empty draft. `/dashboard` redirects to `/`.
-- [ ] A blank piece shows "Good {time of day}, {first name}." and "What has been on your mind?" as placeholders. The first keystroke removes them, and they never appear in the event log or the receipt.
+- [ ] A blank piece shows one placeholder in the text ("Write something" for a guest; "Good {time of day}, {first name}. What has been on your mind?" for a signed-in writer). The first keystroke removes it, and it never appears in the event log or the receipt.
 - [ ] The history icon opens the Your pieces pane over the window. Esc, the scrim and the close button close it, and focus returns to the icon. New piece, search and the Today / This week / Earlier groups work, and the open piece is highlighted.
 - [ ] The account icon is a line icon matching the history icon, at the same height. Its menu has exactly Your page, Settings and Sign out, works by keyboard, and is the only place the email shows besides Settings.
 - [ ] Settings opens one dialog with page address, name, city and sign-in. Changes save only on Save. Changing the handle there moves the page, and the old address redirects.
@@ -320,7 +334,18 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] No public text says "pasted" or "AI".
 - [ ] Typing past the bottom of the screen never puts text under the bar: the caret line stays at least 160 px above the scroll area's bottom, and text fades out above the bar.
 - [ ] Writing text defaults to Literata 20 px; the Type menu switches font and size instantly and remembers it on another device; published pages stay Literata 20 px.
-- [ ] A new piece opens with the caret on "Title"; Enter moves to the text; the title pre-fills the publish sheet and never changes the receipt.
+- [ ] A visitor at `/` sees one blinking caret with "Write something", "Longhand" at the top left, and "See an example · Sign in" at the top right. They can type immediately.
+- [ ] Loading `/` without typing creates no database rows.
+- [ ] A guest's first keystroke creates one guest piece. Reloading the page brings back the same text, and a second tab shows the same piece.
+- [ ] At 50 words the nudge card appears bottom left, never steals focus, and × hides it for that piece.
+- [ ] Signing in with Google, or with an email link opened in the same browser, lands back on the same piece, now owned by the account. Its receipt (after publishing) counts time from the guest's first keystroke.
+- [ ] A new account signing in from a guest piece goes through first run, then back to that piece.
+- [ ] Publish as a guest opens "Sign in to publish". After signing in, the publish dialog opens.
+- [ ] At 500 words a guest can't add text, the G6 dialog appears, and the server rejects any batch that would exceed 500 words or 4,000 characters.
+- [ ] A 4th new guest piece from one IP address in a day opens the 'Sign in to keep writing' dialog and blocks typing; the bottom bar never shows a limit message; existing guest pieces keep working.
+- [ ] On every page with a text area (guest home and /write/[id]), the caret is blinking in the text the moment the page loads, with no click.
+- [ ] Guest pieces older than 7 days that were never claimed are deleted, along with their sessions and batches.
+- [ ] No editor shows a title input. The publish dialog pre-fills an existing title.
 - [ ] Reopening a piece continues its clock from its previous total; hovering the clock shows this sitting and all sittings; the total matches the receipt's active time.
 - [ ] There is one page per published piece (`/p/[slug]`); any old receipt-only route redirects to it. The writer sees the history icon and account menu there; readers don't.
 - [ ] Links in a piece show as hostnames in the text and as pills under REFERENCES, one per unique address, above the receipt; the same row shows live under the text while writing.

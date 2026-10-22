@@ -1,5 +1,7 @@
-import { auth } from "@/auth";
-import { getOwnedPiece } from "@/lib/pieces/ownership";
+import {
+  getWritablePiece,
+  writableErrorResponse,
+} from "@/lib/pieces/ownership";
 import { isPieceId } from "@/lib/pieces/piece-id";
 import { loadPieceState } from "@/lib/pieces/load-state";
 
@@ -13,18 +15,13 @@ type RouteContext = {
  */
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return Response.json({ error: "unauthorized" }, { status: 401 });
-    }
-
     const { id: pieceId } = await context.params;
     if (!isPieceId(pieceId)) {
       return Response.json({ error: "not_found" }, { status: 404 });
     }
-    const piece = await getOwnedPiece(pieceId, session.user.id);
-    if (!piece) {
-      return Response.json({ error: "not_found" }, { status: 404 });
+    const access = await getWritablePiece(pieceId);
+    if (!access.piece) {
+      return writableErrorResponse(access.reason);
     }
 
     const state = await loadPieceState(pieceId);

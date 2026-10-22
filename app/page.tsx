@@ -1,8 +1,9 @@
-import { auth } from "@/auth";
-import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
+import { auth, emailProviderId, googleEnabled } from "@/auth";
+import { FocusEditor } from "@/components/editor/FocusEditor";
 import { userHasDisplayName } from "@/lib/auth/display-name";
+import { getGuest, getGuestPiece } from "@/lib/guest/get-guest";
+import { rootDomain } from "@/lib/hosts";
 import { openFreshPiece } from "@/lib/pieces/open-fresh-piece";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function HomePage() {
@@ -15,20 +16,18 @@ export default async function HomePage() {
     redirect(`/write/${pieceId}`);
   }
 
+  const guest = await getGuest();
+  const guestPiece = guest ? await getGuestPiece(guest.id) : null;
+  const examplePieceUrl = process.env.EXAMPLE_PIECE_URL?.trim() || null;
+
   return (
-    <PaperPage topOffsetPx={PAGE_TOP_OFFSET_PX}>
-      <h1
-        className="font-writing text-[32px] leading-tight text-ink"
-        data-paper-heading
-      >
-        Longhand
-      </h1>
-      <p className="mt-3 font-ui text-[13px] text-label">
-        A focused place to write, with proof of how it was written when you publish.
-      </p>
-      <Link href="/signin" className="editor-bar-btn mt-8 inline-flex w-fit">
-        Sign in
-      </Link>
-    </PaperPage>
+    <FocusEditor
+      mode="guest"
+      pieceId={guestPiece?.id ?? null}
+      domain={rootDomain()}
+      examplePieceUrl={examplePieceUrl}
+      googleEnabled={googleEnabled}
+      emailProviderId={emailProviderId}
+    />
   );
 }

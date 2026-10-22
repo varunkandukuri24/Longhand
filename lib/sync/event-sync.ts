@@ -32,6 +32,12 @@ export type PieceStateResponse = {
 
 type StatusListener = (status: SyncStatus) => void;
 type SupersededListener = () => void;
+type GuestLimitListener = () => void;
+
+export type EventSyncOptions = {
+  /** Guest mode: never send faster than this (ms). */
+  minFlushIntervalMs?: number;
+};
 
 type ClaimMessage = {
   type: "claimed";
@@ -66,13 +72,17 @@ export class EventSync {
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private listeners = new Set<StatusListener>();
   private supersededListeners = new Set<SupersededListener>();
+  private guestLimitListeners = new Set<GuestLimitListener>();
   private online = typeof navigator === "undefined" ? true : navigator.onLine;
   private channel: BroadcastChannel | null = null;
   /** Ambient condition to store when a session starts. */
   private sessionCondition: string | null = null;
+  private minFlushIntervalMs: number;
+  private lastFlushAt: number | null = null;
 
-  constructor(pieceId: string) {
+  constructor(pieceId: string, options: EventSyncOptions = {}) {
     this.pieceId = pieceId;
+    this.minFlushIntervalMs = options.minFlushIntervalMs ?? 0;
   }
 
   setSessionCondition(condition: string | null): void {
@@ -91,6 +101,13 @@ export class EventSync {
     this.supersededListeners.add(listener);
     return () => {
       this.supersededListeners.delete(listener);
+    };
+  }
+
+  onGuestLimit(listener: GuestLimitListener): () => void {
+    this.guestLimitListeners.add(listener);
+    return () => {
+      this.guestLimitListeners.delete(listener);
     };
   }
 
@@ -204,6 +221,16 @@ export class EventSync {
       .catch(() => {
         /* keep chain alive */
       });
+  }
+
+  /**
+   * Append events to the in-memory queue immediately, with no session rotation.
+   * Used to hand off keystrokes buffered while a guest piece was being created.
+   */
+  queueEventsNow(events: EditEvent[]): void {
+    if (events.length === 0 || this.superseded) return;
+    this.pending.push(...events);
+    this.lastEventAt = Date.now();
   }
 
   /** True when idle long enough that the next edit should start a new session. */
@@ -325,7 +352,16 @@ export class EventSync {
       .then(async () => {
         if (this.superseded) return;
         await this.enqueuePending();
-        await this.sendQueued(options.keepalive === true);
+        const keepalive = options.keepalive === true;
+        const tooSoon =
+          !keepalive &&
+          this.minFlushIntervalMs > 0 &&
+          this.lastFlushAt !== null &&
+          Date.now() - this.lastFlushAt < this.minFlushIntervalMs;
+        if (!tooSoon) {
+          this.lastFlushAt = Date.now();
+          await this.sendQueued(keepalive);
+        }
         await this.emitStatus();
       })
       .catch(() => {
@@ -427,6 +463,28 @@ export class EventSync {
         body = await res.json();
       } catch {
         body = null;
+      }
+
+      if (res.status === 429) {
+        // Keep the events and retry on the next flush, merged with anything new.
+        return false;
+      }
+
+      if (res.status === 403) {
+        const error =
+          body &&
+          typeof body === "object" &&
+          "error" in body &&
+          typeof (body as { error: unknown }).error === "string"
+            ? (body as { error: string }).error
+            : undefined;
+        if (error === "guest_limit") {
+          this.refused = true;
+          for (const listener of this.guestLimitListeners) {
+            listener();
+          }
+          return false;
+        }
       }
 
       if (res.status === 409) {

@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 
 /** Shared paper-page top offsets (DESIGN.md). */
 export const PAGE_TOP_OFFSET_PX = 56;
-/** Title line top on the writing screen (DESIGN.md). */
+/** Text top on the writing screen (DESIGN.md). */
 export const EDITOR_TOP_OFFSET_PX = 120;
 
 /** Alias for dashboard / public / sign-in heading offset. */

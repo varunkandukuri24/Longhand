@@ -1,9 +1,20 @@
-import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventBatches, pieces, sessions } from "@/db/schema";
+import { clientIpFromHeaders } from "@/lib/auth/sign-in-rate-limit";
+import { maybeCleanupGuests } from "@/lib/guest/cleanup";
+import {
+  exceedsGuestLimit,
+  GUEST_BATCH_MIN_INTERVAL_MS,
+  GUEST_BATCH_PER_IP,
+  GUEST_BATCH_WINDOW_MS,
+} from "@/lib/guest/limits";
 import { rebuildDraftTextFromBatches } from "@/lib/pieces/draft-text";
-import { getOwnedPiece } from "@/lib/pieces/ownership";
+import {
+  getWritablePiece,
+  writableErrorResponse,
+} from "@/lib/pieces/ownership";
 import { isPieceId } from "@/lib/pieces/piece-id";
+import { allow } from "@/lib/rate-limit";
 import {
   clientBoundsFromEvents,
   decideBatchAcceptance,
@@ -45,11 +56,6 @@ export async function POST(request: Request, context: RouteContext) {
 }
 
 async function postBatch(request: Request, context: RouteContext) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return Response.json({ error: "unauthorized" }, { status: 401 });
-  }
-
   const contentLength = request.headers.get("content-length");
   if (
     contentLength !== null &&
@@ -79,10 +85,11 @@ async function postBatch(request: Request, context: RouteContext) {
   if (!isPieceId(pieceId)) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
-  const piece = await getOwnedPiece(pieceId, session.user.id);
-  if (!piece) {
-    return Response.json({ error: "not_found" }, { status: 404 });
+  const access = await getWritablePiece(pieceId);
+  if (!access.piece) {
+    return writableErrorResponse(access.reason);
   }
+  const piece = access.piece;
 
   if (piece.status === "published") {
     return Response.json(
@@ -134,6 +141,11 @@ async function postBatch(request: Request, context: RouteContext) {
 
   const recomputedHash = await hashBatch(prevHash, seq, events, sha256HexNode);
   const serverNow = new Date();
+  const isGuestPiece = Boolean(piece.guestId);
+  if (isGuestPiece) {
+    await maybeCleanupGuests(serverNow);
+  }
+  const guestIp = isGuestPiece ? await clientIpFromHeaders() : null;
 
   const result = await db.transaction(async (tx) => {
     const [pieceRow] = await tx
@@ -228,6 +240,43 @@ async function postBatch(request: Request, context: RouteContext) {
       throw err;
     }
 
+    if (isGuestPiece) {
+      if (exceedsGuestLimit(nextDraft)) {
+        return { kind: "guest_limit" as const };
+      }
+
+      const [newest] = await tx
+        .select({
+          serverReceivedAt: eventBatches.serverReceivedAt,
+        })
+        .from(eventBatches)
+        .innerJoin(sessions, eq(eventBatches.sessionId, sessions.id))
+        .where(eq(sessions.pieceId, pieceId))
+        .orderBy(desc(eventBatches.serverReceivedAt))
+        .limit(1);
+
+      if (
+        newest &&
+        serverNow.getTime() - newest.serverReceivedAt.getTime() <
+          GUEST_BATCH_MIN_INTERVAL_MS
+      ) {
+        return { kind: "rate_limited" as const };
+      }
+
+      if (guestIp) {
+        const ok = await allow(
+          "guest_batch_ip",
+          guestIp,
+          GUEST_BATCH_PER_IP,
+          GUEST_BATCH_WINDOW_MS,
+          serverNow,
+        );
+        if (!ok) {
+          return { kind: "rate_limited" as const };
+        }
+      }
+    }
+
     const [stored] = await tx
       .insert(eventBatches)
       .values({
@@ -268,6 +317,14 @@ async function postBatch(request: Request, context: RouteContext) {
       { error: "invalid_event", reason: "invalid_event" },
       { status: 422 },
     );
+  }
+
+  if (result.kind === "guest_limit") {
+    return Response.json({ error: "guest_limit" }, { status: 403 });
+  }
+
+  if (result.kind === "rate_limited") {
+    return Response.json({ error: "rate_limited" }, { status: 429 });
   }
 
   if (result.kind === "conflict") {
