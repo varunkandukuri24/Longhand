@@ -45,7 +45,7 @@ export function DisplayNameForm({ initialName }: DisplayNameFormProps) {
         onChange={(e) => setName(e.target.value)}
         required
         maxLength={80}
-        className="min-w-0 flex-1 border-b border-ink/20 bg-transparent py-1 font-ui text-[13px] text-ink outline-none"
+        className="field-underline min-w-0 flex-1 py-1 font-ui text-[13px] text-ink"
         aria-label="Display name"
       />
       <button

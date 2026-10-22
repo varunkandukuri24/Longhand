@@ -275,7 +275,7 @@ export function GuestSignInDialog({
                   value={email}
                   disabled={busy}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="border-0 border-b border-[#CFC9BE] bg-transparent py-2 font-ui text-[13px] text-ink outline-none"
+                  className="field-underline py-2 font-ui text-[13px] text-ink"
                 />
               </label>
               {error ? (

@@ -82,12 +82,12 @@ export function NameOnboardingForm({
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="mt-3 w-full border-b border-ink/20 bg-transparent py-2 font-ui text-[13px] text-ink outline-none"
+          className="field-underline mt-3 w-full py-2 font-ui text-[13px] text-ink"
         />
       </label>
       <label className="font-ui text-[13px] text-label">
         Your page
-        <div className="mt-3 flex items-baseline gap-0 border-b border-ink/20 font-ui text-[13px]">
+        <div className="field-underline-wrap mt-3 flex items-baseline gap-0 font-ui text-[13px]">
           <input
             type="text"
             name="handle"
@@ -99,7 +99,7 @@ export function NameOnboardingForm({
               setHandleTouched(true);
               setHandleDraft(e.target.value.toLowerCase());
             }}
-            className="min-w-0 flex-1 bg-transparent py-2 text-ink outline-none"
+            className="min-w-0 flex-1 bg-transparent py-2 text-ink"
           />
           <span className="shrink-0 text-label">.{domain}</span>
         </div>

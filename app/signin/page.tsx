@@ -83,7 +83,7 @@ export default async function SignInPage({
             name="email"
             required
             autoComplete="email"
-            className="border-b border-ink/20 bg-transparent py-2 font-ui text-[13px] text-ink outline-none"
+            className="field-underline py-2 font-ui text-[13px] text-ink"
           />
         </label>
         <button

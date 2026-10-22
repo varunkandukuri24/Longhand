@@ -49,7 +49,7 @@ export function WritingCityForm({ initialCity }: WritingCityFormProps) {
         onChange={(e) => setCity(e.target.value)}
         maxLength={80}
         placeholder="What city are you writing from?"
-        className="min-w-0 flex-1 border-b border-ink/20 bg-transparent py-1 font-ui text-[13px] text-ink outline-none placeholder:text-ink/35"
+        className="field-underline min-w-0 flex-1 py-1 font-ui text-[13px] text-ink placeholder:text-ink/35"
         aria-label="Writing city"
       />
       <button

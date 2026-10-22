@@ -174,6 +174,8 @@ export class EventSync {
     }
     const data = body as PieceStateResponse;
     this.clockSuspectCount = data.flags?.clockSuspectCount ?? 0;
+    this.lastAckSeq = data.lastAckSeq ?? null;
+    await this.emitStatus();
     return data;
   }
 

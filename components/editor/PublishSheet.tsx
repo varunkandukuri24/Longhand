@@ -243,7 +243,7 @@ export function PublishSheet({
                 disabled={busy}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Title"
-                className="mt-2 w-full border-0 border-b border-[#CFC9BE] bg-transparent py-1 font-writing text-[20px] text-ink outline-none placeholder:text-[#A8A196]"
+                className="field-underline mt-2 w-full py-1 font-writing text-[20px] text-ink placeholder:text-[#A8A196]"
               />
             </label>
 

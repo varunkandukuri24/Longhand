@@ -27,12 +27,15 @@ test("a refused guest create opens Sign in to keep writing and does not change t
   await expect(page.locator("[data-editor-bar]")).not.toContainText(
     "Too many new pages from this network today",
   );
+  await expect(page.locator("[data-editor-bar]")).not.toContainText("saved");
+  await expect(textarea).toHaveValue("");
 
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("heading", { name: "Sign in to keep writing" }),
   ).toHaveCount(0);
   await expect(textarea).toHaveAttribute("readonly", "");
+  await expect(textarea).toHaveValue("");
 
   await page.keyboard.type("x");
   await expect(

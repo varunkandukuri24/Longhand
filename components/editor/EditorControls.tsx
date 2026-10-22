@@ -228,8 +228,12 @@ export function EditorControls({
             </div>
           ) : null}
         </span>
-        <span className="mx-2">·</span>
-        <span>{saveLabel}</span>
+        {saveLabel ? (
+          <>
+            <span className="mx-2">·</span>
+            <span>{saveLabel}</span>
+          </>
+        ) : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-5">
@@ -399,7 +403,7 @@ export function EditorControls({
             <button
               ref={publishButtonRef}
               type="button"
-              className="editor-bar-btn disabled:opacity-40 disabled:no-underline"
+              className="editor-bar-btn"
               disabled={publishDisabled}
               onClick={() => {
                 if (publishDisabled) return;

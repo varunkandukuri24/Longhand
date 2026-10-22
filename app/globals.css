@@ -447,6 +447,16 @@ body {
   text-underline-offset: 4px;
 }
 
+.editor-bar-btn:disabled {
+  color: #b5aea2;
+  text-decoration: none;
+  cursor: default;
+}
+
+.editor-bar-btn:disabled:hover {
+  text-decoration: none;
+}
+
 .icon-btn {
   position: relative;
   display: inline-flex;
@@ -703,14 +713,56 @@ a.reference-pill:hover svg {
 }
 
 /* Keyboard focus only — mouse click leaves no box (never on writing text) */
-:where(a, button, [role="button"], summary, input:not(.writing-text), select, textarea:not(.writing-text)):focus {
+:where(a, button, [role="button"], summary, select, textarea:not(.writing-text)):focus {
   outline: none;
 }
 
-:where(a, button, [role="button"], summary, input:not(.writing-text), select, textarea:not(.writing-text)):focus-visible {
+:where(a, button, [role="button"], summary, select, textarea:not(.writing-text)):focus-visible {
   outline: 1.5px solid var(--ink);
   outline-offset: 3px;
   border-radius: 3px;
+}
+
+/* Text fields: no outline box, including programmatic focus. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Dialog and form underline fields: 1px #CFC9BE rule, ink while focused. */
+.field-underline {
+  border-width: 0;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #cfc9be;
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  box-shadow: none;
+}
+
+.field-underline:focus,
+.field-underline:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-bottom-color: #1c1a16;
+}
+
+.field-underline-wrap {
+  border-bottom: 1px solid #cfc9be;
+}
+
+.field-underline-wrap:focus-within {
+  border-bottom-color: #1c1a16;
+}
+
+.field-underline-wrap input,
+.field-underline-wrap input:focus,
+.field-underline-wrap input:focus-visible {
+  border: none;
+  outline: none;
+  box-shadow: none;
 }
 
 /* Bottom-bar popovers only (open upward). */

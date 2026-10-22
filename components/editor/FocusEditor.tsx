@@ -369,20 +369,27 @@ function FocusEditorBody({
 
     creatingPieceRef.current = (async () => {
       const res = await fetch("/api/guest/pieces", { method: "POST" });
-      if (res.status === 429) {
+      const blockCreate = () => {
         pendingCreateEventsRef.current = [];
+        eventsRef.current = [];
+        originsRef.current = [];
+        sittingEventsRef.current = [];
+        prevValueRef.current = "";
+        if (textareaRef.current) textareaRef.current.value = "";
+        setValue("");
+        setLinks([]);
+        setCaretIndex(0);
         guestCreateLimitedRef.current = true;
         setGuestCreateLimited(true);
         setSignInReason("create_limit");
         setSignInOpen(true);
+      };
+      if (res.status === 429) {
+        blockCreate();
         return null;
       }
       if (!res.ok) {
-        pendingCreateEventsRef.current = [];
-        guestCreateLimitedRef.current = true;
-        setGuestCreateLimited(true);
-        setSignInReason("create_limit");
-        setSignInOpen(true);
+        blockCreate();
         return null;
       }
       const body = (await res.json()) as { pieceId?: string };
@@ -1280,7 +1287,7 @@ function FocusEditorBody({
             setPublishOpen(true);
             showControls();
           }}
-          publishDisabled={isGuest && value.trim().length === 0}
+          publishDisabled={value.trim().length === 0}
           publishButtonRef={publishButtonRef}
           onPopoverChange={setPopoverOpen}
         />

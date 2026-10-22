@@ -205,14 +205,14 @@ export function AccountSettingsDialog({
             <span className="font-ui text-[11px] tracking-[0.14em] text-[#9A9387] uppercase">
               Your page
             </span>
-            <div className="mt-2 flex items-baseline border-b border-[#CFC9BE] font-ui text-[14px]">
+            <div className="field-underline-wrap mt-2 flex items-baseline font-ui text-[14px]">
               <input
                 type="text"
                 value={handle}
                 spellCheck={false}
                 autoComplete="off"
                 onChange={(e) => setHandle(e.target.value.toLowerCase())}
-                className="min-w-0 flex-1 bg-transparent py-1 text-ink outline-none"
+                className="min-w-0 flex-1 bg-transparent py-1 text-ink"
               />
               <span className="shrink-0 text-label">.{domain}</span>
             </div>
@@ -232,7 +232,7 @@ export function AccountSettingsDialog({
               value={name}
               maxLength={80}
               onChange={(e) => setName(e.target.value)}
-              className="mt-2 w-full border-0 border-b border-[#CFC9BE] bg-transparent py-1 font-ui text-[14px] text-ink outline-none"
+              className="field-underline mt-2 w-full py-1 font-ui text-[14px] text-ink"
             />
             <span className="mt-2 block font-ui text-[12px] text-label">
               Signs your receipts: “{name.trim() || "…"} wrote this by hand.”
@@ -248,7 +248,7 @@ export function AccountSettingsDialog({
               value={city}
               maxLength={80}
               onChange={(e) => setCity(e.target.value)}
-              className="mt-2 w-full border-0 border-b border-[#CFC9BE] bg-transparent py-1 font-ui text-[14px] text-ink outline-none"
+              className="field-underline mt-2 w-full py-1 font-ui text-[14px] text-ink"
             />
             <span className="mt-2 block font-ui text-[12px] text-label">
               Sets the weather in your window. City-level only, never shown on
