@@ -1,4 +1,4 @@
-import { isMainHost, subdomainHandle } from "@/lib/hosts";
+import { isMainHost, isPreview, subdomainHandle } from "@/lib/hosts";
 import { type NextRequest, NextResponse } from "next/server";
 
 function notFound(): NextResponse {
@@ -6,6 +6,11 @@ function notFound(): NextResponse {
 }
 
 export function proxy(request: NextRequest) {
+  // Previews have no writer subdomains; /u/{handle} is the public writer page.
+  if (isPreview()) {
+    return NextResponse.next();
+  }
+
   const root = process.env.ROOT_DOMAIN?.trim();
   if (!root) {
     return NextResponse.next();

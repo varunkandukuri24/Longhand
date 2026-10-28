@@ -23,20 +23,39 @@ export function isOverSignInLimit(
   return emailCount >= SIGN_IN_EMAIL_LIMIT || ipCount >= SIGN_IN_IP_LIMIT;
 }
 
+function firstForwarded(value: string | null): string | null {
+  const first = value?.split(",")[0]?.trim();
+  return first || null;
+}
+
 /**
- * Client IP from proxy headers (Caddy sets X-Forwarded-For).
+ * Client IP from proxy headers.
+ * On Vercel, prefer x-real-ip, then the first x-forwarded-for entry
+ * (Vercel overwrites both). Local and Docker keep X-Forwarded-For first.
  * Falls back to "unknown" so a missing header still shares one bucket.
  */
-export async function clientIpFromHeaders(): Promise<string> {
-  const h = await headers();
-  const forwarded = h.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
+export function clientIpFromProxyHeaders(
+  getHeader: (name: string) => string | null,
+  onVercel: boolean = Boolean(process.env.VERCEL),
+): string {
+  if (onVercel) {
+    const real = getHeader("x-real-ip")?.trim();
+    if (real) return real;
+    const forwarded = firstForwarded(getHeader("x-forwarded-for"));
+    if (forwarded) return forwarded;
+    return "unknown";
   }
-  const real = h.get("x-real-ip")?.trim();
+
+  const forwarded = firstForwarded(getHeader("x-forwarded-for"));
+  if (forwarded) return forwarded;
+  const real = getHeader("x-real-ip")?.trim();
   if (real) return real;
   return "unknown";
+}
+
+export async function clientIpFromHeaders(): Promise<string> {
+  const h = await headers();
+  return clientIpFromProxyHeaders((name) => h.get(name));
 }
 
 /**

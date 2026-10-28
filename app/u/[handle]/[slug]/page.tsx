@@ -56,7 +56,7 @@ export default async function WriterPiecePage({ params }: PageProps) {
       isOwner={false}
       authorHref={writerPageUrl(piece.authorHandle)}
       backLink={{
-        href: "/",
+        href: writerPageUrl(piece.authorHandle),
         label: `Back to ${displayName}`,
       }}
       writeOnLonghandHref={`${mainOrigin()}/`}

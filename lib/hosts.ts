@@ -1,3 +1,8 @@
+/** True when this process is a Vercel preview deployment. */
+export function isPreview(): boolean {
+  return process.env.VERCEL_ENV === "preview";
+}
+
 /** Apex host for the app, e.g. "localhost:3000" or "longhand.example". */
 export function rootDomain(): string {
   if (typeof window !== "undefined") {
@@ -6,10 +11,17 @@ export function rootDomain(): string {
     );
   }
   const domain = process.env.ROOT_DOMAIN?.trim();
-  if (!domain) {
-    throw new Error("ROOT_DOMAIN is not set");
+  if (domain) {
+    return domain;
   }
-  return domain;
+  if (isPreview()) {
+    const preview = process.env.VERCEL_BRANCH_URL ?? process.env.VERCEL_URL;
+    const host = preview?.trim();
+    if (host) {
+      return host;
+    }
+  }
+  throw new Error("ROOT_DOMAIN is not set");
 }
 
 export function siteProtocol(): "http" | "https" {
@@ -20,11 +32,22 @@ export function siteProtocol(): "http" | "https" {
   return "https";
 }
 
+/**
+ * Session and guest cookies are Secure on HTTPS (production and previews),
+ * not on localhost. Do not key this off AUTH_URL: previews leave it unset.
+ */
+export function secureCookies(): boolean {
+  return siteProtocol() === "https";
+}
+
 export function mainOrigin(): string {
   return `${siteProtocol()}://${rootDomain()}`;
 }
 
 export function writerOrigin(handle: string): string {
+  if (isPreview()) {
+    return `${mainOrigin()}/u/${handle}`;
+  }
   return `${siteProtocol()}://${handle}.${rootDomain()}`;
 }
 
