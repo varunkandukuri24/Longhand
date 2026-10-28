@@ -67,9 +67,15 @@ export async function allow(
   return true;
 }
 
-export async function deleteOldRateLimitHits(now: Date = new Date()): Promise<void> {
+export async function deleteOldRateLimitHits(
+  now: Date = new Date(),
+): Promise<number> {
   const cutoff = new Date(now.getTime() - HIT_TTL_MS);
-  await db.delete(rateLimitHits).where(lt(rateLimitHits.createdAt, cutoff));
+  const deleted = await db
+    .delete(rateLimitHits)
+    .where(lt(rateLimitHits.createdAt, cutoff))
+    .returning({ id: rateLimitHits.id });
+  return deleted.length;
 }
 
 export async function maybeCleanupRateLimitHits(now: Date = new Date()): Promise<void> {

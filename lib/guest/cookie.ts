@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
+import { secureCookies } from "@/lib/hosts";
 import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import { GUEST_TTL_MS } from "./limits";
 
@@ -14,7 +15,7 @@ export function guestCookieOptions(): {
 } {
   return {
     httpOnly: true,
-    secure: process.env.AUTH_URL?.startsWith("https://") === true,
+    secure: secureCookies(),
     sameSite: "lax",
     path: "/",
     maxAge: Math.floor(GUEST_TTL_MS / 1000),

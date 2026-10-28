@@ -8,9 +8,10 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
 if (!connectionString) {
-  console.error("DATABASE_URL is not set");
+  console.error("DATABASE_URL_UNPOOLED or DATABASE_URL is not set");
   process.exit(1);
 }
 

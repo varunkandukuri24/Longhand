@@ -3,6 +3,7 @@ import { PaperPage, PAGE_TOP_OFFSET_PX } from "@/components/scene/PaperPage";
 import { WriteOnLonghandLink } from "@/components/writers/WriteOnLonghandLink";
 import { resolveHandle } from "@/lib/handles/resolve";
 import { mainOrigin, writerOrigin } from "@/lib/hosts";
+import { publicUrl } from "@/lib/piece-urls";
 import {
   formatWriterSummary,
   loadWriterPublicPieces,
@@ -88,7 +89,10 @@ export default async function WriterPage({ params }: PageProps) {
           <ul className="mt-12 flex flex-col gap-9">
             {pieces.map((piece) => (
               <li key={piece.slug}>
-                <Link href={`/${piece.slug}`} className="group block">
+                <Link
+                  href={publicUrl({ slug: piece.slug }, resolved.handle)}
+                  className="group block"
+                >
                   <h2 className="font-writing text-2xl leading-[1.3] text-ink group-hover:underline group-hover:underline-offset-2">
                     {piece.title}
                   </h2>

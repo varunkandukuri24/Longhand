@@ -17,11 +17,9 @@ import {
   allowSignInAttempt,
   clientIpFromHeaders,
 } from "@/lib/auth/sign-in-rate-limit";
+import { isPreview, secureCookies } from "@/lib/hosts";
 
 export { googleProfile };
-
-const useSecureCookies =
-  process.env.AUTH_URL?.startsWith("https://") === true;
 
 function wrapEmailProvider(provider: EmailConfig): EmailConfig {
   const send = provider.sendVerificationRequest.bind(provider);
@@ -64,8 +62,9 @@ export const emailProviderId = email.id;
 const googleId = process.env.AUTH_GOOGLE_ID?.trim();
 const googleSecret = process.env.AUTH_GOOGLE_SECRET?.trim();
 
-/** True when Google OAuth credentials are configured. */
-export const googleEnabled = Boolean(googleId && googleSecret);
+/** True when Google OAuth credentials are configured. Off on Vercel previews. */
+export const googleEnabled =
+  Boolean(googleId && googleSecret) && !isPreview();
 
 const google = googleEnabled
   ? Google({
@@ -92,7 +91,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     verifyRequest: "/signin/verify",
   },
   cookies: {
-    sessionToken: sessionCookieOptions(useSecureCookies),
+    sessionToken: sessionCookieOptions(secureCookies()),
   },
   callbacks: {
     session({ session, user }) {

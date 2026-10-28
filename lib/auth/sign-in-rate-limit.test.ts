@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  clientIpFromProxyHeaders,
   isOverSignInLimit,
   normalizeSignInEmail,
   SIGN_IN_EMAIL_LIMIT,
@@ -26,3 +27,33 @@ describe("sign-in rate limit", () => {
     expect(isOverSignInLimit(0, SIGN_IN_IP_LIMIT)).toBe(true);
   });
 });
+
+describe("client IP from headers", () => {
+  it("prefers x-real-ip on Vercel", () => {
+    const headers = new Map([
+      ["x-real-ip", "198.51.100.10"],
+      ["x-forwarded-for", "203.0.113.1, 10.0.0.1"],
+    ]);
+    expect(
+      clientIpFromProxyHeaders((name) => headers.get(name) ?? null, true),
+    ).toBe("198.51.100.10");
+  });
+
+  it("uses the first x-forwarded-for entry on Vercel when x-real-ip is missing", () => {
+    const headers = new Map([["x-forwarded-for", "203.0.113.1, 10.0.0.1"]]);
+    expect(
+      clientIpFromProxyHeaders((name) => headers.get(name) ?? null, true),
+    ).toBe("203.0.113.1");
+  });
+
+  it("prefers x-forwarded-for off Vercel", () => {
+    const headers = new Map([
+      ["x-real-ip", "198.51.100.10"],
+      ["x-forwarded-for", "203.0.113.1, 10.0.0.1"],
+    ]);
+    expect(
+      clientIpFromProxyHeaders((name) => headers.get(name) ?? null, false),
+    ).toBe("203.0.113.1");
+  });
+});
+

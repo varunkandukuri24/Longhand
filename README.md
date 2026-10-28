@@ -4,6 +4,10 @@ Focused writing app with shareable **effort receipts** — proof of how long you
 
 See [docs/PRD.md](./docs/PRD.md) for product requirements.
 
+## Built with
+
+Next.js, TypeScript, Postgres (Drizzle), Auth.js — deployed on Vercel with a Neon Postgres database.
+
 ## Local setup
 
 ```bash

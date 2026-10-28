@@ -170,7 +170,7 @@ The bars are starting guesses to revise after the first cohort. If writers only 
 
 ## Technical architecture
 
-A single Next.js app on a DigitalOcean droplet, backed by Postgres, handles everything in the MVP.
+A single Next.js app on Vercel (functions in `pdx1`, Portland), backed by Neon Postgres in AWS us-west-2 (Oregon), handles everything in the MVP. Pushing to main deploys production; every other branch gets a preview deployment with its own Neon database branch (a copy of production data). Migrations run in the build. A daily Vercel Cron job deletes unclaimed guest pieces and old rate-limit records.
 
 Six parts:
 
@@ -325,11 +325,13 @@ Production runs on one DigitalOcean droplet with Docker Compose: app, Postgres, 
 
 Done when: the app runs on your domain over HTTPS and a restore from backup works.
 
+**Moved to Vercel (October 2026).** Production now runs on Vercel and Neon instead of the droplet. Vercel serves typelonghand.com and the wildcard \*.typelonghand.com, with its nameservers on the domain, and handles certificates. Sign-in emails still go through Resend's HTTP API. Previews have no writer subdomains: writer pages are served at `/u/{handle}` on the preview's own address, and Google sign-in is off there (email links still work). See "Longhand — Vercel migration runbook".
+
 ## Open questions and later roadmap
 
 **Open questions**
 
-- [ ] Final name. Longhand is a placeholder; check the domain and trademark.
+- [ ] Final name. Longhand is a placeholder; check the domain (bought at Porkbun, DNS on Vercel) and trademark.
 - [ ] Is no-backspace mode the default (pure Freewrite) or an opt-in?
 - [ ] Should pasting be blocked entirely in a strict mode, or always allowed and just counted?
 - [ ] Resolved: there is no public replay in the MVP. It added little for readers and exposed deleted text.
