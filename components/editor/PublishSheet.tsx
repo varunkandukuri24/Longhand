@@ -206,7 +206,7 @@ export function PublishSheet({
               </button>
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-3">
+            <div className="dialog-actions mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
                 className="font-ui text-[13px] text-label underline decoration-transparent underline-offset-4 hover:text-ink hover:decoration-ink"
@@ -304,7 +304,7 @@ export function PublishSheet({
               <p className="mt-4 font-ui text-[12px] text-label">{error}</p>
             ) : null}
 
-            <div className="mt-6 flex items-center justify-end gap-3">
+            <div className="dialog-actions mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
                 className="font-ui text-[13px] text-label underline decoration-transparent underline-offset-4 hover:text-ink hover:decoration-ink"

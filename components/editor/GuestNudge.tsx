@@ -2,19 +2,29 @@
 
 type GuestNudgeProps = {
   visible: boolean;
+  inlineFade?: boolean;
   onSignIn: () => void;
   onDismiss: () => void;
 };
 
-export function GuestNudge({ visible, onSignIn, onDismiss }: GuestNudgeProps) {
+export function GuestNudge({
+  visible,
+  inlineFade = true,
+  onSignIn,
+  onDismiss,
+}: GuestNudgeProps) {
   return (
     <div
       className="guest-nudge dialog-card"
       role="status"
-      style={{
-        opacity: visible ? 1 : 0,
-        pointerEvents: visible ? "auto" : "none",
-      }}
+      style={
+        inlineFade
+          ? {
+              opacity: visible ? 1 : 0,
+              pointerEvents: visible ? "auto" : "none",
+            }
+          : undefined
+      }
       aria-hidden={!visible}
     >
       <button

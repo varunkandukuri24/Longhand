@@ -13,6 +13,7 @@ import {
 
 type AccountMenuProps = {
   visible: boolean;
+  inlineFade?: boolean;
   domain: string;
   displayName: string;
   handle: string;
@@ -27,6 +28,7 @@ type AccountMenuProps = {
 
 export function AccountMenu({
   visible,
+  inlineFade = true,
   domain,
   displayName,
   handle,
@@ -89,10 +91,14 @@ export function AccountMenu({
     <>
       <div
         className="account-chrome"
-        style={{
-          opacity: visible ? 1 : 0,
-          pointerEvents: visible ? "auto" : "none",
-        }}
+        style={
+          inlineFade
+            ? {
+                opacity: visible ? 1 : 0,
+                pointerEvents: visible ? "auto" : "none",
+              }
+            : undefined
+        }
         aria-hidden={!visible}
       >
         {leading}

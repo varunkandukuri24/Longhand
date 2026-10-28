@@ -205,7 +205,7 @@ export function GuestSignInDialog({
               Open the link in this browser and you’ll land back here, on this
               page, signed in. Keep writing while you wait.
             </p>
-            <div className="mt-6 flex items-center justify-end gap-3">
+            <div className="dialog-actions mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
                 className="font-ui text-[13px] text-label underline decoration-transparent underline-offset-4 hover:text-ink hover:decoration-ink"

@@ -296,7 +296,29 @@ The receipt answers one question: did a person write this? It sits on the paper 
 ## Small screens
 
 - Under 1024 px wide: the window shrinks to 72 px, and the insets and bar offsets shrink to match (window side offset = 24 + 72 + 24).
-- Under 768 px (phones): the window is hidden. The scene caption stays in the bar, the column fills the width with 20 px margins, the writing size drops one step (Medium becomes 18 px), and the back arrow sits 20 px from the left.
+
+### Phones (under 768 px)
+
+Reference mockups: M1, M4 and M5 on the canvas.
+
+- **Top row**, 8 px from the top, inside 6 px side margins: the history icon on the left. On the right, **Publish** (DM Mono 13 px, ink, 1 px underline at a 4 px offset, greyed `#B5AEA2` and not tappable when the text is empty), then the account icon. All are 44 × 44 px targets. A guest sees "Longhand" (Literata 17 px) on the left and "Sign in" on the right instead (M5).
+- **The window**: full width minus 16 px on each side, 60 px from the top, 84 px tall. Same frame (1.5 px ink, 3 px radius) and scenes as desktop, but the three glazing bars are **vertical**, at 25%, 50% and 75% of the width. The rooftops take 24% of its height. It can't be moved, and it never covers text. Every scene keeps the sun and moon inside the strip, uncropped.
+- **The text column** starts 20 px below the window (164 px from the top), with 20 px side margins. Writing size drops one step (20 px becomes 18 px), as before. It scrolls on its own and never runs under the bar.
+- **The bottom bar**: 20 px side margins, 16 px from the bottom (plus the safe-area inset). On the left, DM Mono 12 px `#736C61`: `{weekday, Mon D} · {time} · {writing time}`, with no scene caption. On the right, **Timer** in ink. Nothing else. Type, No backspace and Scene aren't shown on phones. The writer's saved type preferences still apply, at the phone size.
+- **While typing** (M4): on the first keystroke, the top row and Publish fade out over 200 ms and stop taking taps (`pointer-events: none`). The window slims to 56 px tall and moves up to 16 px from the top. The text column moves up to start 16 px below it. The bar hides, except the writing time, which sits just above the keyboard in `#B5AEA2`. Motion is 200 ms ease-out, or instant with reduced motion.
+- **Bringing them back.** Everything returns, and becomes tappable again, when any of these happens:
+  - the writer stops typing for 2 seconds;
+  - the writer scrolls the text;
+  - the keyboard closes (Done, swipe down, or tapping outside the text).
+
+  There is no hidden gesture: pausing is enough.
+- **The keyboard.** Detect it with `window.visualViewport`: it's open when the visual viewport is more than 150 px shorter than the layout viewport. Keep the writing time and the caret line above it. Use `dvh` units and `env(safe-area-inset-*)` so iOS Safari's toolbars and the home indicator never cover anything.
+- **Dialogs, pane and menus.**
+  - Dialogs (publish, sign-in, settings) are `min(560px, 100vw - 32px)` wide, scroll inside when taller than the screen, and keep their buttons visible.
+  - The Your pieces pane is `min(320px, 85vw)` wide.
+  - The guest nudge card becomes full width (16 px margins), 16 px above the bar.
+  - The account menu stays right-aligned under its icon, within 16 px of the screen edge.
+- **Read-only pages** (piece pages, writer pages, sign-in): the same top strip window (84 px, 60 px from the top) with their own top row, and content starting 20 px below it.
 
 ## Removed from v1
 
@@ -308,7 +330,7 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] No cloud, sun or moon is cropped at any viewport size; snow is visible in every daytime scene.
 - [ ] The writing text is `#1C1A16` on `#FFFFFF` paper, the paper reads as white (not beige), and no control text falls below 4.5:1 contrast.
 - [ ] Opening a piece shows a blinking caret at the end of the text with no click, and the text area never shows a border or focus box.
-- [ ] On every page the window is on the right, full height, and can't be dragged or moved by keyboard. There is no Left/Right option anywhere.
+- [ ] On desktop and tablet (768 px and up) the window is on the right, full height, and can't be dragged or moved by keyboard. There is no Left/Right option anywhere.
 - [ ] A writer whose saved `window_side` is `left` still sees the window on the right.
 - [ ] Reduced motion stops everything moving in the window, including the side switch.
 - [ ] No gradients, shadows or dark backgrounds remain on the writing screen.
@@ -323,7 +345,7 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] On `{handle}.{domain}` and its pieces, "Write on Longhand" at the top right goes to the main site.
 - [ ] Continue with Google signs in. A Google account whose email matches an existing email-link writer signs into that same writer. A new Google writer goes through first run with the name pre-filled.
 - [ ] No page, placeholder, email or help line shows "localhost", "Mailpit" or "127.0.0.1" when `ROOT_DOMAIN` is a real domain, including pages built before the real environment variables were set.
-- [ ] On a public piece page, the title's top edge is 56 px from the viewport top, at every window size and for short and long pieces alike.
+- [ ] On a public piece page, the title's top edge is 56 px from the viewport top on desktop and tablet (768 px and up), for short and long pieces alike.
 - [ ] Every paper page renders through the one shared layout component; no page sets its own top padding, margin or vertical centering.
 - [ ] A public piece ends with the signature line (rule, seal, sentence, meta line, links) on the paper, with no card, box or background.
 - [ ] The signature sentence matches the typed-share tier; links never change it.
@@ -365,6 +387,11 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] Each reference pill is one row (icon and label side by side) inside a rounded 1 px outline, never stacked.
 - [ ] Nothing in the app says "response", "respond" or "source", and no code fetches linked pages.
 - [ ] Clicking a button with the mouse never leaves a focus box; tabbing to it shows the outline.
+- [ ] At 390 × 844 and 360 × 740, nothing overflows horizontally on any page. The bar shows only date · time · writing time and Timer.
+- [ ] On a phone, the window is a full-width strip under the icons with vertical glazing bars, never hidden, with the sun and moon uncropped in all 16 scenes.
+- [ ] Typing on a phone fades the icons and Publish (untappable), slims the window to 56 px, and keeps the writing time and caret above the keyboard. Pausing 2 s, scrolling, or closing the keyboard brings everything back.
+- [ ] Publish on a phone sits beside the account icon and opens the publish dialog, which fits the screen.
+- [ ] Desktop and tablet layouts are pixel-identical to before.
 
 ## Reference implementation
 

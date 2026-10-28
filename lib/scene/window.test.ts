@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONDITIONS, LIGHTS } from "./types";
-import { captionFor, windowSceneFor } from "./window";
+import { captionFor, TOP_WINDOW_SCENE_OPTS, windowSceneFor } from "./window";
 
 describe("windowSceneFor", () => {
   it("covers all 16 light × condition combinations", () => {
@@ -53,6 +53,19 @@ describe("windowSceneFor", () => {
     const flake = scene.front.find((e) => e.kind === "snow");
     expect(flake).toBeDefined();
     expect(flake?.style).toContain("rgba(70,85,105,0.3)");
+  });
+
+  it("uses 24% rooftops on the phone strip and keeps the sun inside", () => {
+    for (const light of LIGHTS) {
+      for (const condition of CONDITIONS) {
+        const scene = windowSceneFor(light, condition, TOP_WINDOW_SCENE_OPTS);
+        expect(scene.groundH).toBe("24%");
+        if (scene.sun) {
+          expect(scene.sun.y).toBeGreaterThanOrEqual(0);
+          expect(scene.sun.y + scene.sun.size).toBeLessThanOrEqual(100);
+        }
+      }
+    }
   });
 
   it("is deterministic for the same inputs", () => {

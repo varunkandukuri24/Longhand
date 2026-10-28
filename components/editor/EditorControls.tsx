@@ -43,8 +43,42 @@ const CONDITION_LABEL: Record<Condition, string> = {
   snow: "Snow",
 };
 
+export function PhonePublishButton({
+  disabled,
+  faded,
+  onPublish,
+  buttonRef,
+}: {
+  disabled: boolean;
+  faded: boolean;
+  onPublish: () => void;
+  buttonRef?: RefObject<HTMLButtonElement | null>;
+}) {
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      className="phone-publish"
+      data-phone-publish
+      disabled={disabled}
+      aria-hidden={faded}
+      tabIndex={faded || disabled ? -1 : 0}
+      onClick={() => {
+        if (disabled || faded) return;
+        onPublish();
+      }}
+    >
+      Publish
+    </button>
+  );
+}
+
 type EditorControlsProps = {
   visible: boolean;
+  /** Skip inline opacity so phone CSS can fade the bar. */
+  inlineFade?: boolean;
+  phone?: boolean;
+  clockTimeLabel?: string;
   caption: string;
   dateLabel: string;
   writingTimeLabel: string;
@@ -78,6 +112,9 @@ type PopoverId = "type" | "timer" | "backspace" | "scene" | null;
 
 export function EditorControls({
   visible,
+  inlineFade = true,
+  phone = false,
+  clockTimeLabel = "",
   caption,
   dateLabel,
   writingTimeLabel,
@@ -158,76 +195,126 @@ export function EditorControls({
         ? `Timer: ${timerRemainingLabel}`
         : `Timer: ${timerMinutes}m`;
 
+  const writingTimeButton = (
+    <span
+      ref={timeWrapRef}
+      className="relative inline-flex"
+      onMouseEnter={() => {
+        if (!timerRemainingLabel) setTimeOpen(true);
+      }}
+      onMouseLeave={() => setTimeOpen(false)}
+    >
+      <button
+        type="button"
+        className="editor-bar-btn min-h-0"
+        aria-expanded={timeOpen}
+        aria-label={
+          timerRemainingLabel
+            ? `${timerRemainingLabel} left`
+            : `Writing time ${writingTimeLabel}`
+        }
+        onFocus={() => {
+          if (!timerRemainingLabel) setTimeOpen(true);
+        }}
+        onBlur={(event) => {
+          if (
+            timeWrapRef.current &&
+            !timeWrapRef.current.contains(event.relatedTarget as Node)
+          ) {
+            setTimeOpen(false);
+          }
+        }}
+        onClick={() => {
+          if (!timerRemainingLabel) setTimeOpen((v) => !v);
+        }}
+      >
+        {timerRemainingLabel
+          ? `${timerRemainingLabel} left`
+          : writingTimeLabel}
+      </button>
+      {timeOpen && !timerRemainingLabel ? (
+        <div
+          className="editor-popover writing-time-popover"
+          role="dialog"
+          aria-label="Writing time"
+        >
+          <p className="writing-time-row">This sitting {sittingTimeLabel}</p>
+          <p className="writing-time-row">All sittings {allSittingsLabel}</p>
+          <p className="writing-time-note">
+            Writing time only. It pauses when you stop for a minute.
+          </p>
+        </div>
+      ) : null}
+    </span>
+  );
+
+  const timerPopover = (
+    <Popover
+      label={timerLabel}
+      open={open === "timer"}
+      onToggle={() => toggle("timer")}
+      buttonClassName={phone ? "editor-bar-phone-timer" : undefined}
+    >
+      {TIMER_OPTIONS.map((minutes) => (
+        <PopoverOption
+          key={minutes}
+          active={timerMinutes === minutes}
+          onClick={() => {
+            onTimerChange(minutes);
+            setOpen(null);
+          }}
+        >
+          {minutes} min
+        </PopoverOption>
+      ))}
+      <PopoverOption
+        active={timerMinutes === null}
+        onClick={() => {
+          onTimerChange(null);
+          setOpen(null);
+        }}
+      >
+        Off
+      </PopoverOption>
+    </Popover>
+  );
+
   return (
+    <>
     <div
       ref={rowRef}
       className="editor-bar"
       data-editor-bar
-      style={{
-        opacity: visible ? 1 : 0,
-        pointerEvents: visible ? "auto" : "none",
-      }}
+      data-phone-bar={phone ? "" : undefined}
+      style={
+        inlineFade
+          ? {
+              opacity: visible ? 1 : 0,
+              pointerEvents: visible ? "auto" : "none",
+            }
+          : undefined
+      }
       aria-hidden={!visible}
     >
+      {phone ? (
+        <>
+          <div className="editor-bar-phone-meta flex min-w-0 shrink items-center font-ui text-[12px] text-label whitespace-nowrap">
+            <span>{dateLabel}</span>
+            <span className="mx-2">·</span>
+            <span>{clockTimeLabel}</span>
+            <span className="mx-2">·</span>
+            {writingTimeButton}
+          </div>
+          <div className="flex shrink-0 items-center">{timerPopover}</div>
+        </>
+      ) : (
+        <>
       <div className="flex shrink-0 items-center font-ui text-[13px] text-label whitespace-nowrap">
         <span>{caption}</span>
         <span className="mx-2">·</span>
         <span>{dateLabel}</span>
         <span className="mx-2">·</span>
-        <span
-          ref={timeWrapRef}
-          className="relative inline-flex"
-          onMouseEnter={() => {
-            if (!timerRemainingLabel) setTimeOpen(true);
-          }}
-          onMouseLeave={() => setTimeOpen(false)}
-        >
-          <button
-            type="button"
-            className="editor-bar-btn min-h-0"
-            aria-expanded={timeOpen}
-            aria-label={
-              timerRemainingLabel
-                ? `${timerRemainingLabel} left`
-                : `Writing time ${writingTimeLabel}`
-            }
-            onFocus={() => {
-              if (!timerRemainingLabel) setTimeOpen(true);
-            }}
-            onBlur={(event) => {
-              if (
-                timeWrapRef.current &&
-                !timeWrapRef.current.contains(event.relatedTarget as Node)
-              ) {
-                setTimeOpen(false);
-              }
-            }}
-            onClick={() => {
-              if (!timerRemainingLabel) setTimeOpen((v) => !v);
-            }}
-          >
-            {timerRemainingLabel
-              ? `${timerRemainingLabel} left`
-              : writingTimeLabel}
-          </button>
-          {timeOpen && !timerRemainingLabel ? (
-            <div
-              className="editor-popover writing-time-popover"
-              role="dialog"
-              aria-label="Writing time"
-            >
-              <p className="writing-time-row">
-                This sitting {sittingTimeLabel}
-              </p>
-              <p className="writing-time-row">
-                All sittings {allSittingsLabel}
-              </p>
-              <p className="writing-time-note">
-                Writing time only. It pauses when you stop for a minute.
-              </p>
-            </div>
-          ) : null}
-        </span>
+        {writingTimeButton}
         {saveLabel ? (
           <>
             <span className="mx-2">·</span>
@@ -292,33 +379,7 @@ export function EditorControls({
               </p>
             </Popover>
 
-            <Popover
-              label={timerLabel}
-              open={open === "timer"}
-              onToggle={() => toggle("timer")}
-            >
-              {TIMER_OPTIONS.map((minutes) => (
-                <PopoverOption
-                  key={minutes}
-                  active={timerMinutes === minutes}
-                  onClick={() => {
-                    onTimerChange(minutes);
-                    setOpen(null);
-                  }}
-                >
-                  {minutes} min
-                </PopoverOption>
-              ))}
-              <PopoverOption
-                active={timerMinutes === null}
-                onClick={() => {
-                  onTimerChange(null);
-                  setOpen(null);
-                }}
-              >
-                Off
-              </PopoverOption>
-            </Popover>
+            {timerPopover}
 
             <Popover
               label={`No backspace: ${noBackspace ? "on" : "off"}`}
@@ -414,7 +475,17 @@ export function EditorControls({
               Publish
             </button>
       </div>
+        </>
+      )}
     </div>
+    {phone ? (
+      <p className="phone-typing-time" aria-hidden>
+        {timerRemainingLabel
+          ? `${timerRemainingLabel} left`
+          : writingTimeLabel}
+      </p>
+    ) : null}
+    </>
   );
 }
 
@@ -424,12 +495,14 @@ function Popover({
   onToggle,
   children,
   panelClassName = "",
+  buttonClassName,
 }: {
   label: string;
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
   panelClassName?: string;
+  buttonClassName?: string;
 }) {
   const panelId = useId();
   return (
@@ -439,7 +512,7 @@ function Popover({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={onToggle}
-        className="editor-bar-btn"
+        className={["editor-bar-btn", buttonClassName].filter(Boolean).join(" ")}
       >
         {label}
       </button>

@@ -248,6 +248,18 @@ body {
   z-index: 4;
 }
 
+.side-window-glazing-25 {
+  top: 25%;
+}
+
+.side-window-glazing-50 {
+  top: 50%;
+}
+
+.side-window-glazing-75 {
+  top: 75%;
+}
+
 /* Motion inside the window only */
 @keyframes window-rain {
   from {
@@ -868,6 +880,10 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type=
   color: var(--label);
 }
 
+.phone-publish {
+  display: none;
+}
+
 .guest-signin-link {
   padding: 0;
   border: none;
@@ -968,8 +984,53 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type=
 }
 
 @media (max-width: 767px) {
-  .side-window {
-    display: none;
+  :root {
+    --phone-window-top: 60px;
+    --phone-window-height: 84px;
+    --phone-window-gap: 20px;
+  }
+
+  .typing-active {
+    --phone-window-top: 16px;
+    --phone-window-height: 56px;
+    --phone-window-gap: 16px;
+  }
+
+  .side-window,
+  .side-window-left,
+  .side-window-right,
+  .side-window-top {
+    display: block;
+    top: calc(var(--phone-window-top) + env(safe-area-inset-top, 0px));
+    right: 16px;
+    left: 16px;
+    bottom: auto;
+    width: auto;
+    height: var(--phone-window-height);
+    transition:
+      top 200ms ease-out,
+      height 200ms ease-out;
+  }
+
+  .side-window-glazing {
+    left: auto;
+    right: auto;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    height: auto;
+  }
+
+  .side-window-glazing-25 {
+    left: 25%;
+  }
+
+  .side-window-glazing-50 {
+    left: 50%;
+  }
+
+  .side-window-glazing-75 {
+    left: 75%;
   }
 
   .writing-shell-left .paper-column,
@@ -978,45 +1039,186 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type=
     margin-left: 20px;
     transform: none;
     margin-top: 0;
-    padding-top: var(--paper-page-top);
+    padding-top: calc(
+      var(--phone-window-top) + var(--phone-window-height) +
+        var(--phone-window-gap) + env(safe-area-inset-top, 0px)
+    );
+    transition:
+      padding-top 200ms ease-out,
+      margin-left 200ms ease-out,
+      width 200ms ease-out;
+  }
+
+  .paper-column-scroll {
+    height: calc(
+      100dvh - env(safe-area-inset-bottom, 0px) - 72px -
+        var(--keyboard-inset, 0px)
+    );
+    max-height: calc(
+      100dvh - env(safe-area-inset-bottom, 0px) - 72px -
+        var(--keyboard-inset, 0px)
+    );
   }
 
   .writing-shell-left .editor-bar,
   .writing-shell-right .editor-bar {
     left: 20px;
     right: 20px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    font-size: 12px;
+    gap: 12px;
+    transition:
+      opacity 200ms ease-out,
+      left 200ms ease-out,
+      right 200ms ease-out;
+  }
+
+  .editor-bar-phone-meta {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .editor-bar-phone-timer {
+    color: var(--ink);
+  }
+
+  .pages-back-arrow,
+  .history-icon,
+  .account-chrome,
+  .guest-brand,
+  .guest-links,
+  .write-on-longhand {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    transition: opacity 200ms ease-out;
   }
 
   .writing-shell-left .pages-back-arrow,
   .writing-shell-right .pages-back-arrow,
   .writing-shell-left .history-icon,
-  .writing-shell-right .history-icon {
-    left: 20px;
+  .writing-shell-right .history-icon,
+  .writing-shell-left .guest-brand,
+  .writing-shell-right .guest-brand {
+    left: 6px;
   }
 
   .writing-shell-left .account-chrome,
   .writing-shell-right .account-chrome,
   .writing-shell-left .guest-links,
-  .writing-shell-right .guest-links {
-    right: 20px;
+  .writing-shell-right .guest-links,
+  .writing-shell-left .write-on-longhand,
+  .writing-shell-right .write-on-longhand {
+    right: 6px;
   }
 
-  .writing-shell-left .guest-brand,
-  .writing-shell-right .guest-brand {
-    left: 20px;
+  .guest-brand {
+    font-size: 17px;
+  }
+
+  .guest-example-link,
+  .guest-links-sep {
+    display: none;
+  }
+
+  .phone-publish {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-ui), monospace;
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+    cursor: pointer;
+  }
+
+  .phone-publish:disabled {
+    color: #b5aea2;
+    cursor: default;
+  }
+
+  .account-menu-popover {
+    max-width: calc(100vw - 32px);
+  }
+
+  .your-pieces-pane {
+    width: min(320px, 85vw);
   }
 
   .guest-nudge {
-    left: 20px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   }
 
   .dialog-scrim-column {
     right: 0;
   }
 
+  .dialog-card {
+    width: min(560px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+  }
+
+  .dialog-actions {
+    position: sticky;
+    bottom: 0;
+    background: #ffffff;
+    padding-top: 12px;
+  }
+
   .writing-mirror,
-  .writing-text {
+  .writing-text,
+  .writing-placeholder {
     font-size: var(--writing-size-phone, 18px);
+  }
+
+  .phone-typing-time {
+    display: none;
+  }
+
+  .typing-active .history-icon,
+  .typing-active .account-chrome,
+  .typing-active .guest-brand,
+  .typing-active .guest-links,
+  .typing-active .pages-back-arrow,
+  .typing-active .write-on-longhand {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .typing-active .editor-bar {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .typing-active .guest-nudge {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .typing-active .phone-typing-time {
+    display: block;
+    position: fixed;
+    left: 20px;
+    right: 20px;
+    bottom: calc(
+      var(--keyboard-inset, 0px) + env(safe-area-inset-bottom, 0px) + 8px
+    );
+    z-index: var(--z-bar);
+    margin: 0;
+    font-family: var(--font-ui), monospace;
+    font-size: 12px;
+    color: #b5aea2;
+    pointer-events: none;
   }
 }
 
@@ -1127,7 +1329,9 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type=
   .writing-shell-slide .editor-bar,
   .writing-shell-slide .pages-back-arrow,
   .writing-shell-slide .history-icon,
-  .writing-shell-slide .account-chrome {
+  .writing-shell-slide .account-chrome,
+  .side-window,
+  .phone-typing-time {
     transition: none !important;
   }
 

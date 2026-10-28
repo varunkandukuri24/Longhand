@@ -36,6 +36,14 @@ describe("paper page top offsets", () => {
     expect(EDITOR_TOP_OFFSET_PX).toBe(120);
   });
 
+  it("phones keep the window visible as a top strip", () => {
+    const css = read("app/globals.css");
+    const phoneBlock = css.split("@media (max-width: 767px)")[1] ?? "";
+    expect(phoneBlock).not.toMatch(/\.side-window\s*\{\s*display:\s*none/);
+    expect(phoneBlock).toMatch(/--phone-window-height:\s*84px/);
+    expect(phoneBlock).toMatch(/left:\s*25%/);
+  });
+
   it("CSS paper-column owns top offset with no extra margin", () => {
     const css = read("app/globals.css");
     expect(css).toMatch(/\.paper-column\s*\{/);

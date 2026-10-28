@@ -5,7 +5,10 @@ import {
   OwnerChrome,
   type OwnerAccount,
 } from "@/components/account/OwnerChrome";
-import { EditorControls } from "@/components/editor/EditorControls";
+import {
+  EditorControls,
+  PhonePublishButton,
+} from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
 import { GuestChrome } from "@/components/editor/GuestChrome";
 import { GuestNudge } from "@/components/editor/GuestNudge";
@@ -62,7 +65,9 @@ import {
   urlsFollowedByWhitespaceInRange,
 } from "@/lib/receipt/shorten";
 import type { CharOrigin, EditEvent, TextLink } from "@/lib/receipt/types";
+import { usePhoneTyping } from "@/lib/editor/use-phone-typing";
 import { captionFor } from "@/lib/scene";
+import { usePhoneLayout } from "@/lib/scene/use-phone-layout";
 import { SCENE_PRESET_KEY } from "@/lib/scene/use-ambient-scene";
 import { EventSync, IDLE_NEW_SESSION_MS } from "@/lib/sync/event-sync";
 import {
@@ -121,6 +126,13 @@ function formatBarDate(d = new Date()): string {
   }).format(d);
 }
 
+function formatClockTime(d = new Date()): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(d);
+}
+
 function formatCountdown(ms: number): string {
   return formatWritingClock(Math.max(0, ms));
 }
@@ -131,6 +143,8 @@ export function FocusEditor(props: FocusEditorProps) {
   );
   const columnRef = useRef<HTMLDivElement | null>(null);
   const [chromeHost, setChromeHost] = useState<HTMLDivElement | null>(null);
+  const [typingActive, setTypingActive] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
 
   return (
     <PaperPage
@@ -138,6 +152,10 @@ export function FocusEditor(props: FocusEditorProps) {
       slide
       editorScroll
       columnRef={columnRef}
+      className={typingActive ? "typing-active" : ""}
+      style={{
+        ["--keyboard-inset" as string]: `${keyboardInset}px`,
+      }}
       onColumnScroll={(event) => {
         const scrolled = event.currentTarget.scrollTop > 0;
         event.currentTarget.dataset.scrolled = scrolled ? "true" : "false";
@@ -151,6 +169,8 @@ export function FocusEditor(props: FocusEditorProps) {
         {...props}
         chromeHost={chromeHost}
         columnRef={columnRef}
+        onTypingActiveChange={setTypingActive}
+        onKeyboardInsetChange={setKeyboardInset}
         bindPaperPointerDown={(handler) => {
           paperPointerDownRef.current = handler;
         }}
@@ -175,12 +195,16 @@ function FocusEditorBody({
   bindPaperPointerDown,
   chromeHost,
   columnRef,
+  onTypingActiveChange,
+  onKeyboardInsetChange,
 }: FocusEditorProps & {
   bindPaperPointerDown: (
     handler: PointerEventHandler<HTMLDivElement> | null,
   ) => void;
   chromeHost: HTMLDivElement | null;
   columnRef: RefObject<HTMLDivElement | null>;
+  onTypingActiveChange: (active: boolean) => void;
+  onKeyboardInsetChange: (inset: number) => void;
 }) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -256,6 +280,29 @@ function FocusEditorBody({
   /** True after draft text has loaded; drives autofocus. */
   const [textLoaded, setTextLoaded] = useState(false);
   const ambient = useAmbientSceneContext();
+  const phoneLayout = usePhoneLayout();
+  const {
+    typingActive: phoneTypingActive,
+    keyboardInset,
+    noteInput: notePhoneTyping,
+    release: releasePhoneTyping,
+  } = usePhoneTyping(phoneLayout);
+
+  useEffect(() => {
+    onTypingActiveChange(phoneTypingActive);
+  }, [phoneTypingActive, onTypingActiveChange]);
+
+  useEffect(() => {
+    onKeyboardInsetChange(keyboardInset);
+  }, [keyboardInset, onKeyboardInsetChange]);
+
+  useEffect(() => {
+    const el = columnRef.current;
+    if (!el || !phoneLayout) return;
+    const onScroll = () => releasePhoneTyping();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [columnRef, phoneLayout, releasePhoneTyping]);
 
   useEffect(() => {
     noBackspaceRef.current = noBackspace;
@@ -533,6 +580,16 @@ function FocusEditorBody({
     });
   }, [columnRef]);
 
+  useEffect(() => {
+    if (!phoneLayout) return;
+    ensureCaretVisible();
+  }, [
+    phoneLayout,
+    keyboardInset,
+    phoneTypingActive,
+    ensureCaretVisible,
+  ]);
+
   const syncCaretIndex = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -692,7 +749,8 @@ function FocusEditorBody({
       clearTimeout(fadeTimerRef.current);
       fadeTimerRef.current = null;
     }
-  }, [holdControls]);
+    releasePhoneTyping();
+  }, [holdControls, releasePhoneTyping]);
 
   const enterFullscreenOnce = useCallback(() => {
     if (enteredFullscreenRef.current) {
@@ -954,7 +1012,11 @@ function FocusEditorBody({
     setCaretIndex(event.currentTarget.selectionStart);
     commitDiff(next, lastInputTypeRef.current);
     syncTextareaHeight();
-    scheduleControlsFade();
+    if (phoneLayout) {
+      notePhoneTyping();
+    } else {
+      scheduleControlsFade();
+    }
   };
 
   const onInput = (event: FormEvent<HTMLTextAreaElement>) => {
@@ -999,7 +1061,11 @@ function FocusEditorBody({
     const inputType = native.inputType || lastInputTypeRef.current;
     commitDiff(next, inputType);
     syncTextareaHeight();
-    scheduleControlsFade();
+    if (phoneLayout) {
+      notePhoneTyping();
+    } else {
+      scheduleControlsFade();
+    }
   };
 
   const onChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -1095,10 +1161,14 @@ function FocusEditorBody({
   };
 
   const onMouseMove = () => {
+    if (phoneLayout) return;
     showControls();
   };
 
-  const controlsShown = controlsVisible || holdControls;
+  const controlsShown = phoneLayout
+    ? !phoneTypingActive || holdControls
+    : controlsVisible || holdControls;
+  const chromeInlineFade = !phoneLayout;
 
   const onWritingTypeChange = (next: {
     font: WritingFont;
@@ -1148,12 +1218,30 @@ function FocusEditorBody({
       ) {
         return;
       }
+      if (
+        phoneLayout &&
+        textareaRef.current &&
+        document.activeElement === textareaRef.current &&
+        !target.closest("textarea, .writing-frame")
+      ) {
+        event.preventDefault();
+        textareaRef.current.blur();
+        releasePhoneTyping();
+        return;
+      }
       event.preventDefault();
       focusWritingArea();
     };
     bindPaperPointerDown(onPaperPointerDown);
     return () => bindPaperPointerDown(null);
-  }, [bindPaperPointerDown, superseded, bootError, focusWritingArea]);
+  }, [
+    bindPaperPointerDown,
+    superseded,
+    bootError,
+    focusWritingArea,
+    phoneLayout,
+    releasePhoneTyping,
+  ]);
 
   const words = wordCount(value);
   const showNudge =
@@ -1170,6 +1258,7 @@ function FocusEditorBody({
         {isGuest ? (
           <GuestChrome
             visible={controlsShown}
+            inlineFade={chromeInlineFade}
             examplePieceUrl={examplePieceUrl}
             onSignIn={() =>
               openGuestSignIn(value.length > 0 ? "keep" : "empty")
@@ -1178,8 +1267,24 @@ function FocusEditorBody({
         ) : account ? (
           <OwnerChrome
             visible={controlsShown}
+            inlineFade={chromeInlineFade}
             currentPieceId={livePieceId}
             account={account}
+            leading={
+              phoneLayout ? (
+                <PhonePublishButton
+                  disabled={value.trim().length === 0}
+                  faded={phoneTypingActive && !holdControls}
+                  buttonRef={publishButtonRef}
+                  onPublish={() => {
+                    setPublishError(null);
+                    setPublishResult(null);
+                    setPublishOpen(true);
+                    showControls();
+                  }}
+                />
+              ) : null
+            }
           />
         ) : null}
         {isGuest ? (
@@ -1222,6 +1327,7 @@ function FocusEditorBody({
         {showNudge && livePieceId ? (
           <GuestNudge
             visible={controlsShown}
+            inlineFade={chromeInlineFade}
             onSignIn={() => openGuestSignIn("keep")}
             onDismiss={() => {
               setNudgeHidden(true);
@@ -1231,6 +1337,9 @@ function FocusEditorBody({
         ) : null}
         <EditorControls
           visible={controlsShown}
+          inlineFade={chromeInlineFade}
+          phone={phoneLayout}
+          clockTimeLabel={formatClockTime()}
           caption={captionFor(ambient.light, ambient.condition)}
           dateLabel={formatBarDate()}
           writingTimeLabel={formatWritingClock(totalActiveMs)}
