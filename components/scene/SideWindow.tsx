@@ -2,6 +2,8 @@
 
 import {
   captionFor,
+  SIDE_WINDOW_SCENE_OPTS,
+  TOP_WINDOW_SCENE_OPTS,
   windowSceneFor,
   type Condition,
   type Light,
@@ -15,6 +17,8 @@ import {
 } from "@/lib/scene/scene-visibility";
 import { useEffect, useRef, useState } from "react";
 
+export type WindowPlacement = "side" | "top";
+
 type SideWindowProps = {
   light: Light;
   condition: Condition;
@@ -23,6 +27,8 @@ type SideWindowProps = {
   instant?: boolean;
   /** Shorten scene transitions from 3 minutes to 5 seconds (debug). */
   fastTransitions?: boolean;
+  /** Tall side window, or the short top strip on phones. */
+  placement?: WindowPlacement;
   className?: string;
 };
 
@@ -94,6 +100,10 @@ function sunTarget(
  * Sun and moon stay mounted across scene changes; everything else crossfades.
  * Layer order: sky+back → moon → sun → roofs+front.
  */
+function sceneOptsFor(placement: WindowPlacement) {
+  return placement === "top" ? TOP_WINDOW_SCENE_OPTS : SIDE_WINDOW_SCENE_OPTS;
+}
+
 export function SideWindow({
   light,
   condition,
@@ -101,18 +111,20 @@ export function SideWindow({
   still,
   instant = false,
   fastTransitions = false,
+  placement = "side",
   className = "",
 }: SideWindowProps) {
   const caption = captionFor(light, condition);
   const [base, setBase] = useState<Layer>(() => ({
     key: `${light}-${condition}`,
-    scene: windowSceneFor(light, condition),
+    scene: windowSceneFor(light, condition, sceneOptsFor(placement)),
   }));
   const [overlay, setOverlay] = useState<Layer | null>(null);
   const [overlayOn, setOverlayOn] = useState(false);
   const shownKeyRef = useRef(`${light}-${condition}`);
   const prevSceneRef = useRef<WindowScene>(base.scene);
   const overlayRef = useRef<Layer | null>(null);
+  const placementRef = useRef(placement);
   const [sun, setSun] = useState<SunVisual | null>(() =>
     base.scene.sun ? sunFromScene(base.scene.sun) : null,
   );
@@ -157,9 +169,28 @@ export function SideWindow({
 
   useEffect(() => {
     const nextKey = `${light}-${condition}`;
-    if (nextKey === shownKeyRef.current) return;
+    const nextScene = windowSceneFor(
+      light,
+      condition,
+      sceneOptsFor(placement),
+    );
+    const placementChanged = placementRef.current !== placement;
+    placementRef.current = placement;
+
+    if (nextKey === shownKeyRef.current) {
+      if (!placementChanged) return;
+      withNoSceneTransition(rootRef.current, () => {
+        prevSceneRef.current = nextScene;
+        setBase({ key: nextKey, scene: nextScene });
+        setOverlay(null);
+        setOverlayOn(false);
+        setMoonOn(nextScene.moon);
+        setSun(nextScene.sun ? sunFromScene(nextScene.sun) : null);
+      });
+      return;
+    }
+
     shownKeyRef.current = nextKey;
-    const nextScene = windowSceneFor(light, condition);
     const next: Layer = { key: nextKey, scene: nextScene };
     const prev = prevSceneRef.current;
     const crossfade = shouldCrossfadeScene({
@@ -212,7 +243,7 @@ export function SideWindow({
       window.requestAnimationFrame(() => setOverlayOn(true));
     });
     return () => window.cancelAnimationFrame(id);
-  }, [light, condition, noMotion]);
+  }, [light, condition, noMotion, placement]);
 
   const durationStyle = {
     ["--scene-fade-ms" as string]: `${transitionMs}ms`,
@@ -228,10 +259,12 @@ export function SideWindow({
       aria-label={`Window: ${caption}`}
       className={[
         "side-window",
+        placement === "top" ? "side-window-top" : "",
         side === "left" ? "side-window-left" : "side-window-right",
         still || reduceMotion ? "side-window-still" : "",
         className,
       ].join(" ")}
+      data-window-placement={placement}
       style={durationStyle}
     >
       {/* Sky + back only (no sun/moon). */}
@@ -282,9 +315,9 @@ export function SideWindow({
         />
       ) : null}
 
-      <span className="side-window-glazing" style={{ top: "25%" }} />
-      <span className="side-window-glazing" style={{ top: "50%" }} />
-      <span className="side-window-glazing" style={{ top: "75%" }} />
+      <span className="side-window-glazing side-window-glazing-25" />
+      <span className="side-window-glazing side-window-glazing-50" />
+      <span className="side-window-glazing side-window-glazing-75" />
     </div>
   );
 }

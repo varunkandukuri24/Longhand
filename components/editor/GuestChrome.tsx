@@ -2,12 +2,14 @@
 
 type GuestChromeProps = {
   visible: boolean;
+  inlineFade?: boolean;
   examplePieceUrl: string | null;
   onSignIn: () => void;
 };
 
 export function GuestChrome({
   visible,
+  inlineFade = true,
   examplePieceUrl,
   onSignIn,
 }: GuestChromeProps) {
@@ -15,19 +17,27 @@ export function GuestChrome({
     <>
       <p
         className="guest-brand"
-        style={{
-          opacity: visible ? 1 : 0,
-        }}
+        style={
+          inlineFade
+            ? {
+                opacity: visible ? 1 : 0,
+              }
+            : undefined
+        }
         aria-hidden={!visible}
       >
         Longhand
       </p>
       <div
         className="guest-links"
-        style={{
-          opacity: visible ? 1 : 0,
-          pointerEvents: visible ? "auto" : "none",
-        }}
+        style={
+          inlineFade
+            ? {
+                opacity: visible ? 1 : 0,
+                pointerEvents: visible ? "auto" : "none",
+              }
+            : undefined
+        }
         aria-hidden={!visible}
       >
         {examplePieceUrl ? (

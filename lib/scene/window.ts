@@ -92,10 +92,16 @@ export function toWindowLight(light: Light): WindowLight {
  * Sun and moon are returned separately so the window can keep one of each
  * mounted across scene changes.
  */
+export const SIDE_WINDOW_SCENE_OPTS = { density: 1.6, groundH: 9 } as const;
+export const TOP_WINDOW_SCENE_OPTS = { density: 1.6, groundH: 24 } as const;
+
 export function windowSceneFor(
   light: Light,
   cond: Condition,
-  { density = 1.6, groundH = 9 }: { density?: number; groundH?: number } = {},
+  {
+    density = 1.6,
+    groundH = 9,
+  }: { density?: number; groundH?: number } = {},
 ): WindowScene {
   const wLight = toWindowLight(light);
   const night = wLight === "night";

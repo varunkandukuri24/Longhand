@@ -2,9 +2,8 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth from "next-auth";
 import type { EmailConfig } from "next-auth/providers";
 import Google from "next-auth/providers/google";
-import Nodemailer from "next-auth/providers/nodemailer";
-import Resend from "next-auth/providers/resend";
 import { db } from "@/db";
+import { createEmailProvider } from "@/lib/auth/email-provider";
 import {
   accounts,
   authSessions,
@@ -38,18 +37,11 @@ function wrapEmailProvider(provider: EmailConfig): EmailConfig {
 }
 
 function emailProvider(): EmailConfig {
-  if (process.env.AUTH_RESEND_KEY) {
-    return wrapEmailProvider(
-      Resend({
-        apiKey: process.env.AUTH_RESEND_KEY,
-        from: process.env.EMAIL_FROM,
-      }),
-    );
-  }
   return wrapEmailProvider(
-    Nodemailer({
-      server: process.env.EMAIL_SERVER,
-      from: process.env.EMAIL_FROM,
+    createEmailProvider({
+      AUTH_RESEND_KEY: process.env.AUTH_RESEND_KEY,
+      EMAIL_SERVER: process.env.EMAIL_SERVER,
+      EMAIL_FROM: process.env.EMAIL_FROM,
     }),
   );
 }

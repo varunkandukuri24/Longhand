@@ -7,7 +7,8 @@ import {
   useAmbientSceneContext,
 } from "@/components/scene/ambient-context";
 import { WINDOW_SIDE } from "@/lib/scene";
-import type { PointerEventHandler, ReactNode } from "react";
+import { usePhoneLayout } from "@/lib/scene/use-phone-layout";
+import type { CSSProperties, PointerEventHandler, ReactNode } from "react";
 
 type PaperShellProps = {
   children: ReactNode;
@@ -21,6 +22,7 @@ type PaperShellProps = {
   /** Hide the side window (e.g. optional). */
   hideWindow?: boolean;
   className?: string;
+  style?: CSSProperties;
   onPointerDown?: PointerEventHandler<HTMLDivElement>;
 };
 
@@ -29,9 +31,11 @@ function PaperShellInner({
   chrome = null,
   hideWindow = false,
   className = "",
+  style,
   onPointerDown,
 }: Omit<PaperShellProps, "publicPage">) {
   const ambient = useAmbientSceneContext();
+  const phone = usePhoneLayout();
 
   return (
     <div
@@ -42,6 +46,8 @@ function PaperShellInner({
           : "writing-shell-right",
         className,
       ].join(" ")}
+      data-phone-layout={phone ? "" : undefined}
+      style={style}
       onPointerDown={onPointerDown}
     >
       <PaperGrain />
@@ -52,6 +58,7 @@ function PaperShellInner({
           side={WINDOW_SIDE}
           still={ambient.stillWindow}
           fastTransitions={ambient.fastTransitions}
+          placement={phone ? "top" : "side"}
         />
       )}
       {/* Above grain only; window (z-10) may paint over the column edge. */}
@@ -69,6 +76,7 @@ export function PaperShell({
   publicPage = false,
   hideWindow = false,
   className = "",
+  style,
   onPointerDown,
 }: PaperShellProps) {
   return (
@@ -77,6 +85,7 @@ export function PaperShell({
         chrome={chrome}
         hideWindow={hideWindow}
         className={className}
+        style={style}
         onPointerDown={onPointerDown}
       >
         {children}

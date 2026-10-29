@@ -7,6 +7,7 @@ import {
   paperPageTopStyle,
 } from "@/lib/scene/paper-page-layout";
 import type {
+  CSSProperties,
   PointerEventHandler,
   ReactNode,
   Ref,
@@ -37,6 +38,7 @@ type PaperPageProps = {
   onColumnScroll?: UIEventHandler<HTMLDivElement>;
   onPointerDown?: PointerEventHandler<HTMLDivElement>;
   className?: string;
+  style?: CSSProperties;
 };
 
 /**
@@ -55,6 +57,7 @@ export function PaperPage({
   onColumnScroll,
   onPointerDown,
   className = "",
+  style,
 }: PaperPageProps) {
   return (
     <PaperShell
@@ -63,6 +66,7 @@ export function PaperPage({
       className={[slide ? "writing-shell-slide" : "", className]
         .filter(Boolean)
         .join(" ")}
+      style={style}
       onPointerDown={onPointerDown}
       chrome={chrome}
     >

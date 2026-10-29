@@ -5,13 +5,17 @@ import { YourPiecesPane } from "@/components/account/YourPiecesPane";
 import { VisibilityControl } from "@/components/pieces/VisibilityControl";
 import type { OwnerAccount } from "@/lib/account/types";
 import type { PieceVisibility } from "@/lib/pieces/publish";
+import type { ReactNode } from "react";
 
 export type { OwnerAccount };
 
 type OwnerChromeProps = {
   visible: boolean;
+  inlineFade?: boolean;
   currentPieceId?: string | null;
   account: OwnerAccount;
+  /** Rendered immediately left of the account icon (e.g. phone Publish). */
+  leading?: ReactNode;
   /** When set, shows Public/Private immediately left of the account icon. */
   visibility?: {
     pieceId: string;
@@ -21,14 +25,17 @@ type OwnerChromeProps = {
 
 export function OwnerChrome({
   visible,
+  inlineFade = true,
   currentPieceId,
   account,
+  leading = null,
   visibility,
 }: OwnerChromeProps) {
   return (
     <>
       <YourPiecesPane
         visible={visible}
+        inlineFade={inlineFade}
         currentPieceId={currentPieceId}
         handle={account.handle}
         domain={account.domain}
@@ -36,6 +43,7 @@ export function OwnerChrome({
       />
       <AccountMenu
         visible={visible}
+        inlineFade={inlineFade}
         domain={account.domain}
         displayName={account.displayName}
         handle={account.handle}
@@ -45,12 +53,15 @@ export function OwnerChrome({
         googleEnabled={account.googleEnabled}
         writerPageHref={account.writerPageHref}
         leading={
-          visibility ? (
-            <VisibilityControl
-              pieceId={visibility.pieceId}
-              initialVisibility={visibility.initialVisibility}
-            />
-          ) : null
+          <>
+            {leading}
+            {visibility ? (
+              <VisibilityControl
+                pieceId={visibility.pieceId}
+                initialVisibility={visibility.initialVisibility}
+              />
+            ) : null}
+          </>
         }
       />
     </>

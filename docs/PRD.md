@@ -72,7 +72,7 @@ The whole screen is paper, with a tall, narrow window along one edge showing the
 | Scenes | 16 light × condition skies and elements from DESIGN.md; light boundaries unchanged (sunrise→11:00 morning, 11:00→hour before sunset afternoon, golden hour until 20 min after sunset, else night) |
 | Motion | Only inside the window, and slow; still under reduced motion or "Still window"; scene changes crossfade over 3 minutes. There is only ever one sun and one moon: between scenes they move to their new place instead of fading in twice, so two suns never show at once. The sun and moon overlap only from golden hour to night, as the sun sets behind the roofs and the moon fades in. |
 | Controls | Bottom bar: scene caption · date · elapsed · saved on the left; Type, Timer, No backspace, Scene, Publish on the right. The history icon sits alone at the top left, and the account icon at the top right, beside the window. |
-| Phones | Under 768 px the window is hidden; under 1024 px it shrinks to 72 px |
+| Phones | Under 768 px the window becomes a short, wide strip across the top, under the icons. The bottom bar shows only date, time, writing time and Timer, and Publish moves up beside the account icon. While typing, the icons and Publish fade and the window slims; they return when the writer pauses for 2 seconds, scrolls, or closes the keyboard. Type, No backspace and Scene aren't offered on phones. |
 
 - Banned: gradient washes, glassy panels, emoji, sparkle icons, Inter or Roboto, default component-library styling, exclamation marks in copy.
 - Copy is plain and dry: "52 minutes. 3 sessions. 94% typed."

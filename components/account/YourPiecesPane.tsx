@@ -23,6 +23,7 @@ import {
 
 type YourPiecesPaneProps = {
   visible: boolean;
+  inlineFade?: boolean;
   currentPieceId?: string | null;
   handle: string;
   domain: string;
@@ -31,6 +32,7 @@ type YourPiecesPaneProps = {
 
 export function YourPiecesPane({
   visible: chromeVisible,
+  inlineFade = true,
   currentPieceId,
   handle,
   domain,
@@ -112,10 +114,14 @@ export function YourPiecesPane({
         className="history-icon icon-btn"
         aria-label="Your pieces"
         aria-expanded={open}
-        style={{
-          opacity: chromeVisible ? 1 : 0,
-          pointerEvents: chromeVisible ? "auto" : "none",
-        }}
+        style={
+          inlineFade
+            ? {
+                opacity: chromeVisible ? 1 : 0,
+                pointerEvents: chromeVisible ? "auto" : "none",
+              }
+            : undefined
+        }
         aria-hidden={!chromeVisible}
         tabIndex={chromeVisible ? 0 : -1}
         onClick={openPane}
