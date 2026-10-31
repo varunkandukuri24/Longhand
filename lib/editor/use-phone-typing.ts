@@ -51,6 +51,7 @@ export function usePhoneTyping(enabled: boolean): {
     };
 
     const visual = window.visualViewport;
+    readViewport();
     visual?.addEventListener("resize", readViewport);
     visual?.addEventListener("scroll", readViewport);
     window.addEventListener("resize", readViewport);

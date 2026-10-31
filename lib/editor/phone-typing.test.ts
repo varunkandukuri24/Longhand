@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   createPhoneTypingController,
   isKeyboardOpen,
   keyboardInsetPx,
   KEYBOARD_OPEN_DELTA_PX,
+  phoneEditorChrome,
   PHONE_TYPING_IDLE_MS,
 } from "./phone-typing";
 
@@ -20,6 +23,37 @@ describe("keyboardInsetPx", () => {
     expect(keyboardInsetPx(844, 500, 0)).toBe(344);
     expect(keyboardInsetPx(844, 500, 40)).toBe(304);
     expect(keyboardInsetPx(844, 900, 0)).toBe(0);
+  });
+});
+
+describe("phoneEditorChrome", () => {
+  it("keeps keyboardOpen and typingActive independent", () => {
+    expect(phoneEditorChrome(true, false)).toEqual({
+      slimWindow: true,
+      fadeControls: false,
+    });
+    expect(phoneEditorChrome(false, true)).toEqual({
+      slimWindow: false,
+      fadeControls: true,
+    });
+    expect(phoneEditorChrome(true, true)).toEqual({
+      slimWindow: true,
+      fadeControls: true,
+    });
+    expect(phoneEditorChrome(false, false)).toEqual({
+      slimWindow: false,
+      fadeControls: false,
+    });
+  });
+
+  it("slims the window on keyboardOpen, not on typingActive", () => {
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    const phone = css.split("@media (max-width: 767px)")[1] ?? "";
+    expect(phone).toMatch(
+      /\.keyboard-open\s*\{[\s\S]*?--phone-window-height:\s*56px/,
+    );
+    const typingBlock = phone.match(/\.typing-active\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(typingBlock).not.toMatch(/--phone-window-height/);
   });
 });
 
