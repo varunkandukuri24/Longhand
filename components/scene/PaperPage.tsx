@@ -69,6 +69,7 @@ export function PaperPage({
       style={style}
       onPointerDown={onPointerDown}
       chrome={chrome}
+      editorShell={editorScroll}
     >
       <div
         ref={columnRef}

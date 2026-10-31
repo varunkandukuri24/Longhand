@@ -50,6 +50,13 @@ body {
   font-family: var(--font-ui), monospace;
 }
 
+html.editor-lock,
+html.editor-lock body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 /* Paper grain: full-viewport, barely visible */
 .paper-grain {
   position: fixed;
@@ -990,10 +997,24 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type=
     --phone-window-gap: 20px;
   }
 
-  .typing-active {
+  .keyboard-open {
     --phone-window-top: 16px;
     --phone-window-height: 56px;
     --phone-window-gap: 16px;
+  }
+
+  [data-editor-shell][data-phone-layout] {
+    --vv-top: 0px;
+    --vv-height: 100dvh;
+    position: fixed;
+    top: var(--vv-top);
+    height: var(--vv-height);
+    left: 0;
+    right: 0;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    transform: translateZ(0);
   }
 
   .side-window,
@@ -1051,12 +1072,10 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type=
 
   .paper-column-scroll {
     height: calc(
-      100dvh - env(safe-area-inset-bottom, 0px) - 72px -
-        var(--keyboard-inset, 0px)
+      var(--vv-height, 100dvh) - env(safe-area-inset-bottom, 0px) - 72px
     );
     max-height: calc(
-      100dvh - env(safe-area-inset-bottom, 0px) - 72px -
-        var(--keyboard-inset, 0px)
+      var(--vv-height, 100dvh) - env(safe-area-inset-bottom, 0px) - 72px
     );
   }
 
@@ -1210,9 +1229,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type=
     position: fixed;
     left: 20px;
     right: 20px;
-    bottom: calc(
-      var(--keyboard-inset, 0px) + env(safe-area-inset-bottom, 0px) + 8px
-    );
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
     z-index: var(--z-bar);
     margin: 0;
     font-family: var(--font-ui), monospace;

@@ -1,6 +1,20 @@
 export const PHONE_TYPING_IDLE_MS = 2000;
 export const KEYBOARD_OPEN_DELTA_PX = 150;
 
+/**
+ * Keyboard and typing are independent: the window slims when the keyboard
+ * opens; icons and Publish fade only while typing.
+ */
+export function phoneEditorChrome(
+  keyboardOpen: boolean,
+  typingActive: boolean,
+): { slimWindow: boolean; fadeControls: boolean } {
+  return {
+    slimWindow: keyboardOpen,
+    fadeControls: typingActive,
+  };
+}
+
 export function isKeyboardOpen(
   layoutHeight: number,
   visualHeight: number,
