@@ -305,7 +305,7 @@ Reference mockups: M1, M4 and M5 on the canvas.
 - **The window**: full width minus 16 px on each side, 60 px from the top, 84 px tall. Same frame (1.5 px ink, 3 px radius) and scenes as desktop, but the three glazing bars are **vertical**, at 25%, 50% and 75% of the width. The rooftops take 24% of its height. It can't be moved, and it never covers text. Every scene keeps the sun and moon inside the strip, uncropped.
 - **The text column** starts 20 px below the window (164 px from the top), with 20 px side margins. Writing size drops one step (20 px becomes 18 px), as before. It scrolls on its own and never runs under the bar.
 - **The bottom bar**: 20 px side margins, 16 px from the bottom (plus the safe-area inset). On the left, DM Mono 12 px `#736C61`: `{weekday, Mon D} · {time} · {writing time}`, with no scene caption. On the right, **Timer** in ink. Nothing else. Type, No backspace and Scene aren't shown on phones. The writer's saved type preferences still apply, at the phone size.
-- **While typing** (M4): on the first keystroke, the top row and Publish fade out over 200 ms and stop taking taps (`pointer-events: none`). The window slims to 56 px tall and moves up to 16 px from the top. The text column moves up to start 16 px below it. The bar hides, except the writing time, which sits just above the keyboard in `#B5AEA2`. Motion is 200 ms ease-out, or instant with reduced motion.
+- **While typing** (M4): when the keyboard opens, the window slims to 56 px tall and moves up to 16 px from the top, and the text column moves up to start 16 px below it. This happens once, before any text scrolls. On the first keystroke, the top row and Publish fade out over 200 ms and stop taking taps. The page itself never scrolls: the editor is pinned to the visible area above the keyboard, and only the text column scrolls, keeping the caret line in view below the window. The bar hides, except the writing time, which sits just above the keyboard in `#B5AEA2`. Motion is 200 ms ease-out, or instant with reduced motion.
 - **Bringing them back.** Everything returns, and becomes tappable again, when any of these happens:
   - the writer stops typing for 2 seconds;
   - the writer scrolls the text;
@@ -390,6 +390,8 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] At 390 × 844 and 360 × 740, nothing overflows horizontally on any page. The bar shows only date · time · writing time and Timer.
 - [ ] On a phone, the window is a full-width strip under the icons with vertical glazing bars, never hidden, with the sun and moon uncropped in all 16 scenes.
 - [ ] Typing on a phone fades the icons and Publish (untappable), slims the window to 56 px, and keeps the writing time and caret above the keyboard. Pausing 2 s, scrolling, or closing the keyboard brings everything back.
+- [ ] On iPhone Safari, iPhone Chrome and Android Chrome: tapping into the text and typing the first word never puts the caret above or behind the window, and the page never scrolls as a whole.
+- [ ] Sign-in and saving never hang: a database problem fails within 15 seconds with an error, instead of loading forever.
 - [ ] Publish on a phone sits beside the account icon and opens the publish dialog, which fits the screen.
 - [ ] Desktop and tablet layouts are pixel-identical to before.
 

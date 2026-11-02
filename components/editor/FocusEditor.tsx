@@ -65,6 +65,8 @@ import {
   urlsFollowedByWhitespaceInRange,
 } from "@/lib/receipt/shorten";
 import type { CharOrigin, EditEvent, TextLink } from "@/lib/receipt/types";
+import { EDITOR_WINDOW_SETTLE_MS } from "@/lib/editor/editor-viewport";
+import { phoneEditorChrome } from "@/lib/editor/phone-typing";
 import { usePhoneTyping } from "@/lib/editor/use-phone-typing";
 import { captionFor } from "@/lib/scene";
 import { usePhoneLayout } from "@/lib/scene/use-phone-layout";
@@ -144,7 +146,9 @@ export function FocusEditor(props: FocusEditorProps) {
   const columnRef = useRef<HTMLDivElement | null>(null);
   const [chromeHost, setChromeHost] = useState<HTMLDivElement | null>(null);
   const [typingActive, setTypingActive] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const chrome = phoneEditorChrome(keyboardOpen, typingActive);
 
   return (
     <PaperPage
@@ -152,7 +156,12 @@ export function FocusEditor(props: FocusEditorProps) {
       slide
       editorScroll
       columnRef={columnRef}
-      className={typingActive ? "typing-active" : ""}
+      className={[
+        chrome.fadeControls ? "typing-active" : "",
+        chrome.slimWindow ? "keyboard-open" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{
         ["--keyboard-inset" as string]: `${keyboardInset}px`,
       }}
@@ -170,6 +179,7 @@ export function FocusEditor(props: FocusEditorProps) {
         chromeHost={chromeHost}
         columnRef={columnRef}
         onTypingActiveChange={setTypingActive}
+        onKeyboardOpenChange={setKeyboardOpen}
         onKeyboardInsetChange={setKeyboardInset}
         bindPaperPointerDown={(handler) => {
           paperPointerDownRef.current = handler;
@@ -196,6 +206,7 @@ function FocusEditorBody({
   chromeHost,
   columnRef,
   onTypingActiveChange,
+  onKeyboardOpenChange,
   onKeyboardInsetChange,
 }: FocusEditorProps & {
   bindPaperPointerDown: (
@@ -204,6 +215,7 @@ function FocusEditorBody({
   chromeHost: HTMLDivElement | null;
   columnRef: RefObject<HTMLDivElement | null>;
   onTypingActiveChange: (active: boolean) => void;
+  onKeyboardOpenChange: (open: boolean) => void;
   onKeyboardInsetChange: (inset: number) => void;
 }) {
   const router = useRouter();
@@ -283,6 +295,7 @@ function FocusEditorBody({
   const phoneLayout = usePhoneLayout();
   const {
     typingActive: phoneTypingActive,
+    keyboardOpen: phoneKeyboardOpen,
     keyboardInset,
     noteInput: notePhoneTyping,
     release: releasePhoneTyping,
@@ -291,6 +304,10 @@ function FocusEditorBody({
   useEffect(() => {
     onTypingActiveChange(phoneTypingActive);
   }, [phoneTypingActive, onTypingActiveChange]);
+
+  useEffect(() => {
+    onKeyboardOpenChange(phoneKeyboardOpen);
+  }, [phoneKeyboardOpen, onKeyboardOpenChange]);
 
   useEffect(() => {
     onKeyboardInsetChange(keyboardInset);
@@ -582,13 +599,29 @@ function FocusEditorBody({
 
   useEffect(() => {
     if (!phoneLayout) return;
-    ensureCaretVisible();
-  }, [
-    phoneLayout,
-    keyboardInset,
-    phoneTypingActive,
-    ensureCaretVisible,
-  ]);
+    const shell = columnRef.current?.closest("[data-editor-shell]");
+    const windowEl = shell?.querySelector(".side-window") ?? null;
+    let finished = false;
+    const run = () => {
+      if (finished) return;
+      finished = true;
+      ensureCaretVisible();
+    };
+    const onTransitionEnd = (event: Event) => {
+      const property =
+        event instanceof TransitionEvent ? event.propertyName : "";
+      if (property === "height" || property === "top") {
+        run();
+      }
+    };
+    windowEl?.addEventListener("transitionend", onTransitionEnd);
+    const timeout = window.setTimeout(run, EDITOR_WINDOW_SETTLE_MS);
+    return () => {
+      finished = true;
+      windowEl?.removeEventListener("transitionend", onTransitionEnd);
+      window.clearTimeout(timeout);
+    };
+  }, [phoneLayout, phoneKeyboardOpen, columnRef, ensureCaretVisible]);
 
   const syncCaretIndex = useCallback(() => {
     const el = textareaRef.current;

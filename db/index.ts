@@ -1,31 +1,34 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { attachDatabasePool } from "@vercel/functions";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "./schema";
 
-type PostgresClient = ReturnType<typeof postgres>;
-
 const globalForDb = globalThis as typeof globalThis & {
-  __longhandPostgres?: PostgresClient;
+  __longhandPool?: Pool;
 };
 
-function createClient(): PostgresClient {
+function createPool(): Pool {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set");
   }
-  // Neon pooled URLs (PgBouncer) cannot use prepared statements.
-  return postgres(connectionString, {
-    max: process.env.VERCEL ? 1 : 10,
-    prepare: false,
-    idle_timeout: 20,
-    connect_timeout: 10,
+  const pool = new Pool({
+    connectionString,
+    max: process.env.VERCEL ? 5 : 10,
+    idleTimeoutMillis: 5_000,
+    connectionTimeoutMillis: 10_000,
+    query_timeout: 15_000,
   });
+  if (process.env.VERCEL) {
+    attachDatabasePool(pool);
+  }
+  return pool;
 }
 
-const client = globalForDb.__longhandPostgres ?? createClient();
+const pool = globalForDb.__longhandPool ?? createPool();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.__longhandPostgres = client;
+  globalForDb.__longhandPool = pool;
 }
 
-export const db = drizzle(client, { schema });
+export const db = drizzle(pool, { schema });
