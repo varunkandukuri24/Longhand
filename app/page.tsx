@@ -2,6 +2,11 @@ import { auth, emailProviderId, googleEnabled } from "@/auth";
 import { FocusEditor } from "@/components/editor/FocusEditor";
 import { userHasDisplayName } from "@/lib/auth/display-name";
 import { getGuest, getGuestPiece } from "@/lib/guest/get-guest";
+import {
+  GUEST_CHAR_LIMIT,
+  GUEST_NUDGE_WORDS,
+  GUEST_WORD_LIMIT,
+} from "@/lib/guest/limits";
 import { rootDomain } from "@/lib/hosts";
 import { openFreshPiece } from "@/lib/pieces/open-fresh-piece";
 import { redirect } from "next/navigation";
@@ -28,6 +33,9 @@ export default async function HomePage() {
       examplePieceUrl={examplePieceUrl}
       googleEnabled={googleEnabled}
       emailProviderId={emailProviderId}
+      guestWordLimit={GUEST_WORD_LIMIT}
+      guestCharLimit={GUEST_CHAR_LIMIT}
+      guestNudgeWords={GUEST_NUDGE_WORDS}
     />
   );
 }
