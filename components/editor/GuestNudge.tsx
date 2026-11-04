@@ -36,7 +36,7 @@ export function GuestNudge({
       >
         ×
       </button>
-      <p className="guest-nudge-title">Not saved to an account</p>
+      <p className="guest-nudge-title">This isn&apos;t saved to an account yet</p>
       <p className="guest-nudge-copy">
         It lives in this browser for 7 days. Sign in to keep it.
       </p>
@@ -46,7 +46,7 @@ export function GuestNudge({
         tabIndex={visible ? 0 : -1}
         onClick={onSignIn}
       >
-        Sign in to keep this
+        Sign in to keep it
       </button>
     </div>
   );

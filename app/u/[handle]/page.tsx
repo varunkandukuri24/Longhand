@@ -124,14 +124,14 @@ export default async function WriterPage({ params }: PageProps) {
         <div className="mt-[22px] flex items-center gap-3">
           <Seal size={22} />
           <p className="font-ui text-[12px] text-label">
-            Every piece here was written on{" "}
+            Written on{" "}
             <a
               href={mainOrigin()}
               className="underline decoration-[#BDB6AA] underline-offset-4 hover:decoration-ink"
             >
               Longhand
             </a>
-            , with a record of how.
+            . Each piece shows how it was written.
           </p>
         </div>
         <p className="mt-4 font-ui text-[12px] text-label">

@@ -28,7 +28,7 @@ export function NameOnboardingForm({
     ? checked.error === "length"
       ? "Use 3 to 30 characters."
       : checked.error === "reserved"
-        ? "That address is reserved."
+        ? "That one's reserved. Try another."
         : "Lowercase letters, numbers and hyphens only."
     : "";
 

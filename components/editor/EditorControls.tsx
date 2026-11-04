@@ -241,7 +241,8 @@ export function EditorControls({
           <p className="writing-time-row">This sitting {sittingTimeLabel}</p>
           <p className="writing-time-row">All sittings {allSittingsLabel}</p>
           <p className="writing-time-note">
-            Writing time only. It pauses when you stop for a minute.
+            Only counts time you&apos;re actually writing. It pauses after a
+            minute of nothing.
           </p>
         </div>
       ) : null}
@@ -374,8 +375,8 @@ export function EditorControls({
                 ))}
               </div>
               <p className="type-menu-note">
-                Only changes your writing screen. Published pieces are always
-                set in Literata.
+                Just for you while you write. Published pieces always use
+                Literata.
               </p>
             </Popover>
 

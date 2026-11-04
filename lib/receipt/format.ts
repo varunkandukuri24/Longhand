@@ -286,8 +286,8 @@ export function formatVerifiedCopy(publishedAt: Date, locale?: string): {
 } {
   const date = formatReceiptDate(publishedAt, locale);
   return {
-    primary: `Longhand recorded this piece as it was written, keystroke by keystroke, on its own clock. The published text matches that record exactly, and neither has changed since it was published on ${date}.`,
+    primary: `Longhand saved every edit as it happened, timed by our server, not the writer's device. The published text matches that record exactly and hasn't changed since ${date}.`,
     secondary:
-      "It shows how the words got onto the page. It can't see what happened off the page, like what the writer read or talked through first.",
+      "It only knows what happened on this page, not what the writer read or talked over beforehand.",
   };
 }

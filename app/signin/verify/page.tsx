@@ -12,8 +12,8 @@ export default async function VerifyRequestPage() {
       </h1>
       <p className="mt-3 font-ui text-[13px] text-ink/70">
         {showMailpit
-          ? "A sign-in link is on its way. Locally, open Mailpit at http://localhost:8025."
-          : "A sign-in link is on its way."}
+          ? "We sent you a link. Open it on this device to sign in. Locally, open Mailpit at http://localhost:8025."
+          : "We sent you a link. Open it on this device to sign in."}
       </p>
     </main>
   );

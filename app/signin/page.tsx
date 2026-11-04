@@ -25,12 +25,12 @@ export default async function SignInPage({
         Longhand
       </h1>
       <p className="mt-3 font-writing text-[18px] leading-snug text-[#5C564C]">
-        A quiet place to write, and a record of how you wrote it.
+        A place to write for humans
       </p>
 
       {params.error ? (
         <p className="mt-6 font-ui text-[13px] text-ink" role="alert">
-          Sign-in failed. Try again with a valid email.
+          That didn&apos;t work. Check the email address and try again.
         </p>
       ) : null}
 
@@ -95,7 +95,7 @@ export default async function SignInPage({
       </form>
 
       <p className="mt-4 font-ui text-[11.5px] text-[#9A9387]">
-        No password. New here? Either way makes your account.
+        No password. If you&apos;re new, this makes your account.
       </p>
 
       <p className="mt-12 font-ui text-[12px] text-label">

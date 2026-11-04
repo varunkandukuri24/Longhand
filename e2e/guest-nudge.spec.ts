@@ -21,10 +21,10 @@ test("the nudge card appears at 50 words", async ({ page }) => {
   expect((await created).ok()).toBe(true);
   await page.mouse.move(120, 80);
 
-  await expect(page.getByText("Not saved to an account")).toBeVisible({
+  await expect(page.getByText("This isn't saved to an account yet")).toBeVisible({
     timeout: 10_000,
   });
   await expect(
-    page.getByRole("button", { name: "Sign in to keep this" }),
+    page.getByRole("button", { name: "Sign in to keep it" }),
   ).toBeVisible();
 });

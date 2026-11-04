@@ -49,7 +49,7 @@ describe("dashboard layout tokens", () => {
 
   it("reader back button still exists; owner chrome uses history icon", () => {
     expect(PAGES_HREF).toBe("/");
-    expect(PAGES_ARIA_LABEL).toBe("Back to your pages");
+    expect(PAGES_ARIA_LABEL).toBe("Your pieces");
     const controls = readFileSync(
       join(process.cwd(), "components/editor/EditorControls.tsx"),
       "utf8",

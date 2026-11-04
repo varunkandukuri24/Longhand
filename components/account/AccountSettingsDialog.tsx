@@ -34,7 +34,7 @@ function handleHint(
 ): string {
   if (reason === "length") return "Use 3 to 30 characters.";
   if (reason === "format") return "Lowercase letters, numbers and hyphens only.";
-  if (reason === "reserved") return "That address is reserved.";
+  if (reason === "reserved") return "That one's reserved. Try another.";
   if (reason === "taken" || available === false) return "Taken";
   if (available === true) return "Available";
   return "";
@@ -148,12 +148,12 @@ export function AccountSettingsDialog({
     if (!result.ok) {
       setError(
         result.error === "taken"
-          ? "That address is taken."
+          ? "Someone already has that one."
           : result.error === "handle"
             ? "Check your page address."
             : result.error === "name"
               ? "Enter a name."
-              : "Could not save.",
+              : "Couldn't save. Try again.",
       );
       setBusy(false);
       return;
@@ -217,8 +217,8 @@ export function AccountSettingsDialog({
               <span className="shrink-0 text-label">.{domain}</span>
             </div>
             <span className="mt-2 block font-ui text-[12px] text-label">
-              Lowercase letters, numbers and hyphens. Changing it later moves
-              your page; old links redirect for 90 days.
+              Letters, numbers and hyphens. If you change it, old links keep
+              working for 90 days.
               {shownAvailability ? ` ${shownAvailability}` : ""}
             </span>
           </label>
@@ -251,8 +251,7 @@ export function AccountSettingsDialog({
               className="field-underline mt-2 w-full py-1 font-ui text-[14px] text-ink"
             />
             <span className="mt-2 block font-ui text-[12px] text-label">
-              Sets the weather in your window. City-level only, never shown on
-              your pages.
+              Used for the weather in your window. Never shown to anyone.
             </span>
           </label>
 
@@ -263,7 +262,7 @@ export function AccountSettingsDialog({
             <div className="mt-2 flex flex-col gap-2 font-ui text-[13px] text-label">
               {googleEnabled ? (
                 googleLinked ? (
-                  <p>Google — connected</p>
+                  <p>Google · connected</p>
                 ) : (
                   <form action={connectGoogle}>
                     <button
@@ -275,7 +274,7 @@ export function AccountSettingsDialog({
                   </form>
                 )
               ) : null}
-              <p>Email link · {email} — on</p>
+              <p>Email link · {email} · on</p>
             </div>
           </div>
         </div>

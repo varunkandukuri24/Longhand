@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy · Longhand",
-  description: "What Longhand stores, and what stays private.",
+  description: "What we keep, and what stays private.",
 };
 
 export default function PrivacyPage() {
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         Privacy
       </h1>
       <p className="mt-3 font-ui text-[13px] text-label">
-        What Longhand stores, and what stays private.
+        What we keep, and what stays private.
       </p>
 
       <div className="mt-10 flex flex-col gap-8 font-writing text-[17px] leading-[1.65] text-ink">
@@ -26,10 +26,10 @@ export default function PrivacyPage() {
             Account
           </h2>
           <p className="mt-3">
-            Sign-in uses your email address and a magic link. Public pages show
-            only the display name and page address you choose, never any part of
-            your email. An optional writing city is stored only to set the side
-            window; it is never shown on public pages.
+            You sign in with Google or an emailed link. Your pages only ever show
+            the name and address you pick, never your email. An optional writing
+            city is stored only to set the side window; it is never shown on
+            public pages.
           </p>
         </section>
 
@@ -52,9 +52,9 @@ export default function PrivacyPage() {
           </h2>
           <p className="mt-3">
             Public pages show the text and the effort receipt only. There is no
-            public replay. The event log is never served publicly. Keystroke
-            timing is treated as sensitive: it is never sold, shared, or used for
-            training, and it is deleted with the piece.
+            public replay. The event log is never served publicly. We never sell
+            or share your typing data or use it to train AI, and it&apos;s deleted
+            with the piece.
           </p>
         </section>
 
@@ -66,9 +66,9 @@ export default function PrivacyPage() {
             You can write before signing in. Longhand stores one random cookie
             in your browser so it can save that page. The server keeps only a
             hash of the cookie, not the cookie itself. Unclaimed guest pages,
-            and everything in them, are deleted after 7 days. Rate limits use a
-            keyed hash of your network address, never the address in the clear,
-            and those records are deleted after a day.
+            and everything in them, are deleted after 7 days. To stop spam we
+            count new pages per network, using a scrambled version of your IP
+            address that we delete after a day.
           </p>
         </section>
 

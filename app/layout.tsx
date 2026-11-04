@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Longhand",
-  description: "Focused writing with shareable proof of effort.",
+  description: "A place to write for humans",
 };
 
 export const viewport: Viewport = {

@@ -156,7 +156,7 @@ export function PublishSheet({
     return null;
   }
 
-  const publicHint = `On your page, ${handle}.${domain}, and for anyone with the link.`;
+  const publicHint = `Listed on ${handle}.${domain}. Anyone with the link can read it.`;
 
   return (
     <div className="dialog-scrim">
@@ -212,14 +212,14 @@ export function PublishSheet({
                 className="font-ui text-[13px] text-label underline decoration-transparent underline-offset-4 hover:text-ink hover:decoration-ink"
                 onClick={onBackToPages}
               >
-                Back to pages
+                Keep writing
               </button>
               <button
                 type="button"
                 className="h-11 rounded px-[22px] bg-ink font-ui text-[13px] text-white"
                 onClick={() => onOpenPage(published.url)}
               >
-                Open the page
+                View it
               </button>
             </div>
           </>
@@ -262,7 +262,7 @@ export function PublishSheet({
                     {
                       value: "private" as const,
                       label: "Private",
-                      hint: "Only people you send the link to. Not on your page, not in search.",
+                      hint: "Only people you send the link to. It won't show on your page or in search.",
                     },
                   ] as const
                 ).map((option) => {
@@ -296,8 +296,8 @@ export function PublishSheet({
             </fieldset>
 
             <p className="mt-5 font-ui text-[12px] text-label">
-              Publishing freezes the text and adds its receipt. You can change
-              who can read it later.
+              Once it&apos;s published you can&apos;t edit it. You can change who
+              sees it later.
             </p>
 
             {error ? (
