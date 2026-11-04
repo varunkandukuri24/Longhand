@@ -546,7 +546,7 @@ function FocusEditorBody({
       } catch (err) {
         if (!cancelled) {
           const message =
-            err instanceof Error ? err.message : "Could not load this piece.";
+            err instanceof Error ? err.message : "This piece didn't load.";
           setBootError(message);
           readyRef.current = false;
         }
@@ -704,7 +704,7 @@ function FocusEditorBody({
         await syncRef.current?.flush();
         if (syncRef.current?.hasRefusedBatches()) {
           setPublishError(
-            "Some of your writing didn't save, so this piece can't be published yet.",
+            "Some of your writing didn't save, so this can't be published yet. Reload and try again.",
           );
           return;
         }
@@ -729,10 +729,10 @@ function FocusEditorBody({
         if (!res.ok) {
           if (res.status === 409 && body?.reason === "text_mismatch") {
             setPublishError(
-              "Some of your writing didn't save, so this piece can't be published yet.",
+              "Some of your writing didn't save, so this can't be published yet. Reload and try again.",
             );
           } else {
-            setPublishError("Could not publish this piece.");
+            setPublishError("Publishing didn't work. Try again.");
           }
           return;
         }
@@ -744,10 +744,10 @@ function FocusEditorBody({
             signatureLine: body.signatureLine,
           });
         } else {
-          setPublishError("Could not publish this piece.");
+          setPublishError("Publishing didn't work. Try again.");
         }
       } catch {
-        setPublishError("Could not publish this piece.");
+        setPublishError("Publishing didn't work. Try again.");
       } finally {
         setPublishBusy(false);
       }
@@ -1468,13 +1468,13 @@ function FocusEditorBody({
     >
       {superseded ? (
         <p className="mb-4 font-ui text-[12px] text-label">
-          Open in another window. Refresh to continue here.
+          This piece is open somewhere else. Refresh to write here instead.
         </p>
       ) : null}
       {bootError ? (
         <div className="flex flex-col gap-4">
           <p className="font-ui text-[13px] text-ink">
-            Could not load this piece.
+            This piece didn&apos;t load.
           </p>
           <p className="font-ui text-[12px] text-label break-words">
             {bootError}
@@ -1484,7 +1484,7 @@ function FocusEditorBody({
             className="editor-bar-btn w-fit"
             onClick={() => setBootAttempt((n) => n + 1)}
           >
-            Retry
+            Try again
           </button>
         </div>
       ) : (
@@ -1500,7 +1500,7 @@ function FocusEditorBody({
             </div>
             {value.length === 0 && (mode === "guest" || hydrated) ? (
               <div className="writing-placeholder" aria-hidden="true">
-                {blankPlaceholder(mode, account?.displayName ?? "")}
+                {blankPlaceholder(mode)}
               </div>
             ) : null}
             <textarea

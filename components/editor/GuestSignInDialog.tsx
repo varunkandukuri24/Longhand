@@ -3,6 +3,7 @@
 import { GoogleMark } from "@/components/auth/GoogleMark";
 import { useAmbientSceneContext } from "@/components/scene/ambient-context";
 import { saveGuestCaret } from "@/lib/guest/caret";
+import { GUEST_WORD_LIMIT } from "@/lib/guest/limits";
 import { signIn } from "next-auth/react";
 import {
   useCallback,
@@ -36,27 +37,26 @@ const COPY: Record<
 > = {
   empty: {
     title: "Sign in",
-    subline: "Write, publish and keep everything in one place.",
+    subline: "Save what you write, and publish it when you're ready.",
     footnote: null,
   },
   keep: {
     title: "Keep this page",
     subline:
-      "Sign in and it’s yours, with every minute counted from your first word.",
-    footnote:
-      "Your page stays right here while you sign in. Every minute so far counts toward its receipt.",
+      "Sign in to save it to your account. The time you've already spent still counts.",
+    footnote: "You won't lose anything you've written.",
   },
   publish: {
     title: "Sign in to publish",
     subline:
-      "Your receipt needs a name to sign it with, and your piece needs a page to live on.",
+      "Publishing needs an account, so the receipt can say who wrote it.",
     footnote: null,
   },
   limit: {
-    title: "Keep going?",
+    title: `You've hit ${GUEST_WORD_LIMIT} words`,
     subline:
-      "You’ve written 500 words as a guest. That’s as far as a page goes without an account.",
-    footnote: "Nothing is lost. Sign in and keep going from this exact word.",
+      "That's the limit without an account. Sign in to keep going.",
+    footnote: "Everything you've written stays.",
   },
   create_limit: {
     title: "Sign in to keep writing",
@@ -161,13 +161,13 @@ export function GuestSignInDialog({
         redirect: false,
       });
       if (result?.error) {
-        setError("Could not send a sign-in link.");
+        setError("Couldn't send the link. Try again in a minute.");
         setBusy(false);
         return;
       }
       setSentTo(address);
     } catch {
-      setError("Could not send a sign-in link.");
+      setError("Couldn't send the link. Try again in a minute.");
     } finally {
       setBusy(false);
     }
@@ -202,8 +202,8 @@ export function GuestSignInDialog({
               {sentTo}
             </p>
             <p className="mt-4 font-writing text-[17px] leading-snug text-[#5C564C]">
-              Open the link in this browser and you’ll land back here, on this
-              page, signed in. Keep writing while you wait.
+              Open it in this browser and you&apos;ll come right back here. You
+              can keep writing in the meantime.
             </p>
             <div className="dialog-actions mt-6 flex items-center justify-end gap-3">
               <button

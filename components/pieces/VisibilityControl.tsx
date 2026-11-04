@@ -109,12 +109,12 @@ export function VisibilityControl({
                 {
                   value: "public" as const,
                   title: "Public",
-                  hint: "On your page, and for anyone with the link.",
+                  hint: "Listed on your page. Anyone with the link can read it.",
                 },
                 {
                   value: "private" as const,
                   title: "Private",
-                  hint: "Only people you send the link to. Not on your page, not in search.",
+                  hint: "Only people you send the link to. It won't show on your page or in search.",
                 },
               ] as const
             ).map((option) => {

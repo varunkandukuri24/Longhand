@@ -25,8 +25,8 @@ export type WeatherSource = "weather" | "defaults";
 
 /** How the displayed scene was chosen (debug preview does not change this). */
 export type SceneSourceLabel =
-  | "Auto from the weather service"
-  | "Auto using defaults"
+  | "Auto, from your city's weather"
+  | "Auto (no city set)"
   | "Pinned";
 
 export type AmbientSceneState = {
@@ -238,8 +238,8 @@ export function useAmbientScene(options?: {
     !publicPage && preset.mode === "pin"
       ? "Pinned"
       : source === "weather"
-        ? "Auto from the weather service"
-        : "Auto using defaults";
+        ? "Auto, from your city's weather"
+        : "Auto (no city set)";
 
   return {
     light,

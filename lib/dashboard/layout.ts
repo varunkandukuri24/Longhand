@@ -11,4 +11,4 @@ export {
  * Owner chrome uses the history icon instead.
  */
 export const PAGES_HREF = "/";
-export const PAGES_ARIA_LABEL = "Back to your pages";
+export const PAGES_ARIA_LABEL = "Your pieces";

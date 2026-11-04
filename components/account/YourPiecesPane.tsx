@@ -175,13 +175,13 @@ export function YourPiecesPane({
             </form>
 
             <label className="mt-4 block">
-              <span className="sr-only">Search your pieces</span>
+              <span className="sr-only">Search</span>
               <input
                 ref={searchRef}
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search your pieces"
+                placeholder="Search"
                 className="w-full border-0 border-b border-[#E6E0D4] bg-transparent py-2 font-ui text-[13px] text-ink outline-none placeholder:text-label"
               />
             </label>
@@ -190,7 +190,7 @@ export function YourPiecesPane({
               {loading ? (
                 <p className="font-ui text-[12px] text-label">Loading</p>
               ) : groups.length === 0 ? (
-                <p className="font-ui text-[12px] text-label">No pieces yet.</p>
+                <p className="font-ui text-[12px] text-label">Nothing here yet.</p>
               ) : (
                 groups.map((group) => (
                   <section key={group.key} className="mb-5">
