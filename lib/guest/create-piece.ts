@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { guests, pieces } from "@/db/schema";
+import { track } from "@/lib/analytics/track";
 import { allow, hashRateLimitKey } from "@/lib/rate-limit";
 import {
   GUEST_CREATE_PER_IP,
@@ -48,6 +49,7 @@ export async function createOrGetGuestPieceFor(args: {
     now,
   );
   if (!allowed) {
+    void track("limit_hit", { props: { kind: "create" } });
     return { ok: false, error: "guest_create_limit" };
   }
 
@@ -74,8 +76,10 @@ export async function createOrGetGuestPieceFor(args: {
       })
       .returning({ id: pieces.id });
 
-    return { pieceId: piece.id };
+    return { pieceId: piece.id, guestId: guest.id };
   });
+
+  void track("guest_started", { guestId: created.guestId });
 
   return {
     ok: true,

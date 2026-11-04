@@ -2,6 +2,7 @@
 
 import { Seal } from "@/components/receipt/Seal";
 import { CheckIcon } from "@/components/icons/LonghandIcons";
+import { trackClient } from "@/lib/analytics/client";
 import {
   formatCompositionLegend,
   formatDuration,
@@ -108,7 +109,14 @@ export function SignatureReceipt({
           className="inline-flex items-center gap-[6px] font-ui text-[12.5px] text-label transition-colors hover:text-ink"
           aria-expanded={detailsOpen}
           aria-controls={detailsId}
-          onClick={() => setDetailsOpen((open) => !open)}
+          onClick={() => {
+            setDetailsOpen((open) => {
+              if (!open) {
+                trackClient("receipt_opened");
+              }
+              return !open;
+            });
+          }}
         >
           <CheckIcon size={12} />
           Verified · See how it was written
