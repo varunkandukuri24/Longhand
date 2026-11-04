@@ -365,7 +365,7 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] A new account signing in from a guest piece goes through first run, then back to that piece.
 - [ ] Publish as a guest opens "Sign in to publish". After signing in, the publish dialog opens.
 - [ ] At 500 words a guest can't add text, the G6 dialog appears, and the server rejects any batch that would exceed 500 words or 4,000 characters.
-- [ ] A 4th new guest piece from one IP address in a day opens the 'Sign in to keep writing' dialog and blocks typing; the bottom bar never shows a limit message; existing guest pieces keep working.
+- [ ] A 21st new guest piece from one IP address in a day opens the 'Sign in to keep writing' dialog and blocks typing; the bottom bar never shows a limit message; existing guest pieces keep working.
 - [ ] On every page with a text area (guest home and /write/[id]), the caret is blinking in the text the moment the page loads, with no click.
 - [ ] Guest pieces older than 7 days that were never claimed are deleted, along with their sessions and batches.
 - [ ] No editor shows a title input. The publish dialog pre-fills an existing title.

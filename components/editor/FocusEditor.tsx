@@ -38,8 +38,7 @@ import {
   atGuestLimit,
   exceedsGuestLimit,
   GUEST_BATCH_MIN_INTERVAL_MS,
-  GUEST_NUDGE_WORDS,
-} from "@/lib/guest/limits";
+} from "@/lib/guest/limit-checks";
 import { wordCount } from "@/lib/receipt/compute-receipt";
 import {
   captureEdit,
@@ -118,6 +117,10 @@ type FocusEditorProps = {
   googleEnabled?: boolean;
   emailProviderId?: string;
   openPublishOnLoad?: boolean;
+  /** Resolved on the server; guests only. */
+  guestWordLimit?: number;
+  guestCharLimit?: number;
+  guestNudgeWords?: number;
 };
 
 function formatBarDate(d = new Date()): string {
@@ -202,6 +205,9 @@ function FocusEditorBody({
   googleEnabled = false,
   emailProviderId = "nodemailer",
   openPublishOnLoad = false,
+  guestWordLimit = 500,
+  guestCharLimit = 4_000,
+  guestNudgeWords = 50,
   bindPaperPointerDown,
   chromeHost,
   columnRef,
@@ -518,7 +524,10 @@ function FocusEditorBody({
         setSittingActiveMs(0);
         sittingEventsRef.current = [];
         setStoredDelayedCount(state.flags?.delayedCount ?? 0);
-        if (isGuest && atGuestLimit(state.text)) {
+        if (
+          isGuest &&
+          atGuestLimit(state.text, guestWordLimit, guestCharLimit)
+        ) {
           guestLimitRef.current = true;
           setGuestAtLimit(true);
         }
@@ -558,7 +567,17 @@ function FocusEditorBody({
       readyRef.current = false;
       unbind();
     };
-  }, [initialPieceId, bootAttempt, exposeEvents, syncDebugSnapshot, bindSync, isGuest, resolveStartCondition]);
+  }, [
+    initialPieceId,
+    bootAttempt,
+    exposeEvents,
+    syncDebugSnapshot,
+    bindSync,
+    isGuest,
+    resolveStartCondition,
+    guestWordLimit,
+    guestCharLimit,
+  ]);
 
   /** Grow the textarea to its content so REFERENCES sits under the last line. */
   const syncTextareaHeight = useCallback(() => {
@@ -841,7 +860,7 @@ function FocusEditorBody({
         return;
       }
 
-      if (isGuest && exceedsGuestLimit(next)) {
+      if (isGuest && exceedsGuestLimit(next, guestWordLimit, guestCharLimit)) {
         guestLimitRef.current = true;
         setGuestAtLimit(true);
         setSignInReason("limit");
@@ -886,7 +905,7 @@ function FocusEditorBody({
       sittingEventsRef.current = sittingEventsRef.current.concat(newEvents);
       setLinks(captured.links.slice());
       prevValueRef.current = next;
-      if (isGuest && atGuestLimit(next)) {
+      if (isGuest && atGuestLimit(next, guestWordLimit, guestCharLimit)) {
         guestLimitRef.current = true;
         setGuestAtLimit(true);
         setSignInReason("limit");
@@ -932,7 +951,15 @@ function FocusEditorBody({
         }
       }
     },
-    [exposeEvents, sessionT, syncDebugSnapshot, isGuest, ensureGuestPiece],
+    [
+      exposeEvents,
+      sessionT,
+      syncDebugSnapshot,
+      isGuest,
+      ensureGuestPiece,
+      guestWordLimit,
+      guestCharLimit,
+    ],
   );
 
   useEffect(() => {
@@ -1062,7 +1089,7 @@ function FocusEditorBody({
       return;
     }
     const next = event.currentTarget.value;
-    if (isGuest && exceedsGuestLimit(next)) {
+    if (isGuest && exceedsGuestLimit(next, guestWordLimit, guestCharLimit)) {
       const prev = prevValueRef.current;
       event.currentTarget.value = prev;
       setValue(prev);
@@ -1280,7 +1307,7 @@ function FocusEditorBody({
   const showNudge =
     isGuest &&
     Boolean(livePieceId) &&
-    words >= GUEST_NUDGE_WORDS &&
+    words >= guestNudgeWords &&
     !nudgeHidden &&
     !guestAtLimit;
 
