@@ -1,5 +1,5 @@
-/** Wait for the phone window's 200 ms height transition, plus a little slack. */
-export const EDITOR_WINDOW_SETTLE_MS = 220;
+/** Wait for the phone scroll area's 200 ms top transition, plus a little slack. */
+export const EDITOR_WINDOW_SETTLE_MS = 240;
 
 export type VisualViewportLike = {
   offsetTop: number;

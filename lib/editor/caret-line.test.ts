@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { typewriterScrollTop, type CaretLineBox } from "./caret-line";
+import {
+  TYPEWRITER_MIN_ABOVE_BOTTOM_PX,
+  TYPEWRITER_PHONE_MIN_ABOVE_BOTTOM_PX,
+  typewriterScrollTop,
+  type CaretLineBox,
+} from "./caret-line";
 
 function fakeScroll(clientHeight: number): HTMLElement {
   return { clientHeight } as HTMLElement;
@@ -33,5 +38,19 @@ describe("typewriterScrollTop", () => {
       spaceBelow: 50,
     };
     expect(typewriterScrollTop(fakeScroll(400), caret, 160)).toBe(0);
+  });
+
+  it("uses a shorter margin on phones than on desktop", () => {
+    expect(TYPEWRITER_MIN_ABOVE_BOTTOM_PX).toBe(160);
+    expect(TYPEWRITER_PHONE_MIN_ABOVE_BOTTOM_PX).toBe(48);
+    const caret: CaretLineBox = {
+      offsetTop: 200,
+      height: 30,
+      spaceBelow: 20,
+    };
+    // 200+30+48 - 250 = 28
+    expect(
+      typewriterScrollTop(fakeScroll(250), caret, TYPEWRITER_PHONE_MIN_ABOVE_BOTTOM_PX),
+    ).toBe(28);
   });
 });

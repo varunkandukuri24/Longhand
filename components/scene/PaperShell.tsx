@@ -79,7 +79,7 @@ function PaperShellInner({
         />
       )}
       {/* Above grain only; window (z-10) may paint over the column edge. */}
-      <div className="relative z-[2]">{children}</div>
+      <div className="paper-shell-content relative z-[2]">{children}</div>
       {/* Sibling of window so --z-bar / --z-pane / --z-dialog win. */}
       {chrome}
     </div>

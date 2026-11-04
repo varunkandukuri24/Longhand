@@ -47,6 +47,7 @@ import {
 import {
   measureCaretProbe,
   TYPEWRITER_MIN_ABOVE_BOTTOM_PX,
+  TYPEWRITER_PHONE_MIN_ABOVE_BOTTOM_PX,
   typewriterScrollTop,
 } from "@/lib/editor/caret-line";
 import { diffText } from "@/lib/editor/diff";
@@ -588,7 +589,12 @@ function FocusEditorBody({
     el.style.height = `${Math.max(el.scrollHeight, lineMin)}px`;
   }, [writingSize]);
 
+  /** True while the phone scroll area's top/bottom transition is in flight. */
+  const phoneScrollSettleRef = useRef(false);
+
   const ensureCaretVisible = useCallback(() => {
+    if (phoneLayout && phoneScrollSettleRef.current) return;
+
     const scrollEl = columnRef.current;
     const textarea = textareaRef.current;
     const mirrorRoot = mirrorRef.current;
@@ -600,11 +606,10 @@ function FocusEditorBody({
     if (!probe) return;
 
     const caret = measureCaretProbe(scrollEl, probe);
-    const next = typewriterScrollTop(
-      scrollEl,
-      caret,
-      TYPEWRITER_MIN_ABOVE_BOTTOM_PX,
-    );
+    const minAbove = phoneLayout
+      ? TYPEWRITER_PHONE_MIN_ABOVE_BOTTOM_PX
+      : TYPEWRITER_MIN_ABOVE_BOTTOM_PX;
+    const next = typewriterScrollTop(scrollEl, caret, minAbove);
     if (next === null) return;
 
     const reduced =
@@ -614,33 +619,51 @@ function FocusEditorBody({
       top: next,
       behavior: reduced ? "auto" : "smooth",
     });
-  }, [columnRef]);
+  }, [columnRef, phoneLayout]);
 
   useEffect(() => {
     if (!phoneLayout) return;
-    const shell = columnRef.current?.closest("[data-editor-shell]");
-    const windowEl = shell?.querySelector(".side-window") ?? null;
+    const scrollEl = columnRef.current;
+    if (!scrollEl) return;
+
+    phoneScrollSettleRef.current = true;
     let finished = false;
     const run = () => {
       if (finished) return;
       finished = true;
+      phoneScrollSettleRef.current = false;
       ensureCaretVisible();
     };
     const onTransitionEnd = (event: Event) => {
+      if (event.target !== scrollEl) return;
       const property =
         event instanceof TransitionEvent ? event.propertyName : "";
-      if (property === "height" || property === "top") {
+      if (property === "top" || property === "bottom") {
         run();
       }
     };
-    windowEl?.addEventListener("transitionend", onTransitionEnd);
+    scrollEl.addEventListener("transitionend", onTransitionEnd);
     const timeout = window.setTimeout(run, EDITOR_WINDOW_SETTLE_MS);
     return () => {
       finished = true;
-      windowEl?.removeEventListener("transitionend", onTransitionEnd);
+      phoneScrollSettleRef.current = false;
+      scrollEl.removeEventListener("transitionend", onTransitionEnd);
       window.clearTimeout(timeout);
     };
   }, [phoneLayout, phoneKeyboardOpen, columnRef, ensureCaretVisible]);
+
+  useEffect(() => {
+    if (!phoneLayout) return;
+    const el = textareaRef.current;
+    if (!el) return;
+    const snapDocumentScroll = () => {
+      if (window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    el.addEventListener("focus", snapDocumentScroll);
+    return () => el.removeEventListener("focus", snapDocumentScroll);
+  }, [phoneLayout, textLoaded]);
 
   const syncCaretIndex = useCallback(() => {
     const el = textareaRef.current;
