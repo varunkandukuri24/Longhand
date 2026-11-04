@@ -34,6 +34,8 @@ export function proxy(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
+    pathname === "/icon" ||
+    pathname === "/apple-icon" ||
     pathname === "/robots.txt"
   ) {
     return NextResponse.next();
