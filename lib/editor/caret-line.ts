@@ -45,3 +45,6 @@ export function typewriterScrollTop(
 }
 
 export const TYPEWRITER_MIN_ABOVE_BOTTOM_PX = 160;
+
+/** Phone scroll areas are short; keep about one line above the keyboard. */
+export const TYPEWRITER_PHONE_MIN_ABOVE_BOTTOM_PX = 48;

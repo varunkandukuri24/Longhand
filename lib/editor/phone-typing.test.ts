@@ -55,6 +55,25 @@ describe("phoneEditorChrome", () => {
     const typingBlock = phone.match(/\.typing-active\s*\{[^}]*\}/)?.[0] ?? "";
     expect(typingBlock).not.toMatch(/--phone-window-height/);
   });
+
+  it("positions the editor scroll area below the window, not via padding", () => {
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    const phone = css.split("@media (max-width: 767px)")[1] ?? "";
+    const scrollRule =
+      phone.match(
+        /\.writing-shell-left\s+\.paper-column-scroll,\s*\n\s*\.writing-shell-right\s+\.paper-column-scroll\s*\{[^}]+\}/,
+      )?.[0] ?? "";
+    expect(scrollRule).toMatch(/position:\s*absolute/);
+    expect(scrollRule).toMatch(/padding-top:\s*0/);
+    expect(scrollRule).toMatch(/height:\s*auto/);
+    expect(scrollRule).not.toMatch(/max-height:\s*calc/);
+    expect(phone).toMatch(
+      /\.keyboard-open\s+\.paper-column-scroll\s*\{[\s\S]*?bottom:\s*32px/,
+    );
+    expect(phone).toMatch(
+      /\.paper-column-scroll\s+\.writing-scroll-inner\s*\{[\s\S]*?padding-bottom:\s*50%/,
+    );
+  });
 });
 
 describe("createPhoneTypingController", () => {

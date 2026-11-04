@@ -1070,13 +1070,43 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type=
       width 200ms ease-out;
   }
 
-  .paper-column-scroll {
-    height: calc(
-      var(--vv-height, 100dvh) - env(safe-area-inset-bottom, 0px) - 72px
+  /* Editor: fill the pinned shell so the scroll area can sit below the window. */
+  [data-editor-shell][data-phone-layout] > .paper-shell-content {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+
+  /*
+   * Editor scroll area starts below the window (positioned, not padded), so
+   * scrolled text is clipped at the window's bottom edge.
+   */
+  .writing-shell-left .paper-column-scroll,
+  .writing-shell-right .paper-column-scroll {
+    position: absolute;
+    top: calc(
+      var(--phone-window-top) + var(--phone-window-height) +
+        var(--phone-window-gap) + env(safe-area-inset-top, 0px)
     );
-    max-height: calc(
-      var(--vv-height, 100dvh) - env(safe-area-inset-bottom, 0px) - 72px
-    );
+    left: 20px;
+    right: 20px;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    margin-left: 0;
+    padding-top: 0;
+    height: auto;
+    max-height: none;
+    transition:
+      top 200ms ease-out,
+      bottom 200ms ease-out;
+  }
+
+  .keyboard-open .paper-column-scroll {
+    bottom: 32px;
+  }
+
+  .paper-column-scroll .writing-scroll-inner {
+    padding-bottom: 50%;
   }
 
   .writing-shell-left .editor-bar,
