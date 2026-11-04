@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { VercelAnalytics } from "@/components/analytics/VercelAnalytics";
+import { rootDomain } from "@/lib/hosts";
 import { dmMono, literata } from "./fonts";
 import "./globals.css";
 
@@ -15,6 +17,13 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  let analyticsRoot = "localhost:3000";
+  try {
+    analyticsRoot = rootDomain();
+  } catch {
+    /* ROOT_DOMAIN unset in some test/build contexts */
+  }
+
   return (
     <html
       lang="en"
@@ -22,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col bg-paper text-ink">
         {children}
+        <VercelAnalytics rootDomain={analyticsRoot} />
       </body>
     </html>
   );

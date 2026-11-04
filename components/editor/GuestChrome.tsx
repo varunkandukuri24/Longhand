@@ -1,5 +1,7 @@
 "use client";
 
+import { trackClient } from "@/lib/analytics/client";
+
 type GuestChromeProps = {
   visible: boolean;
   inlineFade?: boolean;
@@ -46,6 +48,7 @@ export function GuestChrome({
               href={examplePieceUrl}
               className="guest-example-link"
               tabIndex={visible ? 0 : -1}
+              onClick={() => trackClient("example_clicked")}
             >
               See an example
             </a>

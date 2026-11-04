@@ -1,6 +1,11 @@
 import { db } from "@/db";
 import { pieces, receipts, users } from "@/db/schema";
 import {
+  signatureTier,
+  wordBucket,
+} from "@/lib/analytics/names";
+import { track } from "@/lib/analytics/track";
+import {
   formatDuration,
   formatSignatureSentence,
   formatSittingCount,
@@ -146,6 +151,15 @@ export async function publishPiece(input: PublishInput): Promise<PublishResult> 
           version: metrics.version,
           computedAt: publishedAt,
         });
+      });
+
+      void track("published", {
+        userId: input.userId,
+        props: {
+          visibility,
+          tier: signatureTier(metrics.typedShare),
+          words: wordBucket(metrics.wordCount),
+        },
       });
 
       return {

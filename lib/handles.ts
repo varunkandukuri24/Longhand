@@ -28,6 +28,7 @@ export const RESERVED_HANDLES = new Set([
   "staging",
   "root",
   "privacy",
+  "stats",
 ]);
 
 const HANDLE_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
