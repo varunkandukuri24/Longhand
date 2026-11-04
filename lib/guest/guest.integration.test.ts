@@ -8,7 +8,11 @@ import { sha256HexNode } from "@/lib/receipt/sha256-node";
 import type { EditEvent } from "@/lib/receipt/types";
 import { computeReceipt } from "@/lib/receipt/compute-receipt";
 import { hashRateLimitKey } from "@/lib/rate-limit";
-import { GUEST_CHAR_LIMIT, GUEST_WORD_LIMIT } from "./limits";
+import {
+  GUEST_CHAR_LIMIT,
+  GUEST_CREATE_PER_IP,
+  GUEST_WORD_LIMIT,
+} from "./limits";
 
 process.env.AUTH_SECRET ??= "test-secret-for-guest-hmac";
 
@@ -82,10 +86,10 @@ describe.skipIf(!databaseUrl)("guest pieces", () => {
     await client.end();
   });
 
-  it("refuses a 4th new guest piece from one IP in a day", async () => {
+  it("refuses one more than the per-IP daily create limit", async () => {
     const ip = `203.0.113.${Math.floor(Math.random() * 200) + 1}`;
     const created: string[] = [];
-    for (let i = 0; i < 3; i += 1) {
+    for (let i = 0; i < GUEST_CREATE_PER_IP; i += 1) {
       const result = await createOrGetGuestPieceFor({
         existingToken: null,
         ip,
@@ -93,20 +97,20 @@ describe.skipIf(!databaseUrl)("guest pieces", () => {
       expect(result.ok).toBe(true);
       if (result.ok) created.push(result.pieceId);
     }
-    const fourth = await createOrGetGuestPieceFor({
+    const over = await createOrGetGuestPieceFor({
       existingToken: null,
       ip,
     });
-    expect(fourth.ok).toBe(false);
-    if (!fourth.ok) {
-      expect(fourth.error).toBe("guest_create_limit");
+    expect(over.ok).toBe(false);
+    if (!over.ok) {
+      expect(over.error).toBe("guest_create_limit");
     }
 
-    const first = await createOrGetGuestPieceFor({
+    const again = await createOrGetGuestPieceFor({
       existingToken: null,
       ip,
     });
-    expect(first.ok).toBe(false);
+    expect(again.ok).toBe(false);
 
     const [guestRow] = await db
       .select({ ipHash: schema.guests.ipHash })
