@@ -168,6 +168,15 @@ The one number that decides whether to keep going: the share of published pieces
 
 The bars are starting guesses to revise after the first cohort. If writers only share receipts when someone requires it, the product has drifted into the crowded compliance market.
 
+## Analytics
+
+Longhand measures visits and use without tracking what anyone writes.
+
+- **Visitors**: Vercel Web Analytics (cookieless): page views, unique visitors, referrers, countries, devices. Paths with ids are collapsed (`/write/[id]`, `/p/[slug]`, writer pages as `/u/[handle]`), so private links never appear in analytics.
+- **Product events**: a first-party `analytics_events` table. Rows hold an event name, a time, the account or guest it belongs to (internal ids only), and at most a few allowlisted properties. They never hold text, titles, emails or IP addresses.
+- **Stats page**: `/stats`, visible only to emails in `ADMIN_EMAILS` (a 404 for everyone else). It shows the funnel, writers and readers for the last 7 and 30 days.
+- **The privacy page** says this in plain words.
+
 ## Technical architecture
 
 A single Next.js app on Vercel (functions in `pdx1`, Portland), backed by Neon Postgres in AWS us-west-2 (Oregon), handles everything in the MVP. Pushing to main deploys production; every other branch gets a preview deployment with its own Neon database branch (a copy of production data). Migrations run in the build. A daily Vercel Cron job deletes unclaimed guest pieces and old rate-limit records.
@@ -194,6 +203,7 @@ Edits stream from the browser every 5 seconds; the server checks the chain and t
 | event_batches | id, session_id, seq, events (jsonb), prev_hash, hash, client_t_start, client_t_end, server_received_at, delayed |
 | receipts | piece_id, metrics (jsonb), chain_head_hash, version, computed_at |
 | rate_limit_hits | bucket, key_hash, created_at (replaces sign_in_attempts) |
+| analytics_events | id, name, user_id (nullable), guest_id (nullable), props (jsonb, allowlisted keys only), created_at |
 
 Old handles live in handle_redirects (old_handle, user_id, expires_at) for 90 days.
 

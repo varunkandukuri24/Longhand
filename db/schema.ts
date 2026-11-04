@@ -245,6 +245,31 @@ export const receipts = pgTable("receipts", {
   computedAt: timestamp("computed_at", { mode: "date" }).notNull().defaultNow(),
 });
 
+/** First-party product analytics. Never stores writing text, titles, emails or IPs. */
+export const analyticsEvents = pgTable(
+  "analytics_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    guestId: uuid("guest_id").references(() => guests.id, {
+      onDelete: "set null",
+    }),
+    props: jsonb("props")
+      .$type<Record<string, string | number | boolean>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("analytics_events_name_created_idx").on(table.name, table.createdAt),
+  ],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   pieces: many(pieces),
   accounts: many(accounts),

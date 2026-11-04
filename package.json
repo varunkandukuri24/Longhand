@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.10.5",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.3",

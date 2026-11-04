@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { track } from "@/lib/analytics/track";
 import { userHasDisplayName } from "@/lib/auth/display-name";
 import { clearGuestCookie, readGuestCookie } from "@/lib/guest/cookie";
 import { claimGuestPieces } from "@/lib/guest/claim";
@@ -30,6 +31,9 @@ export async function GET(request: Request) {
       userId: session.user.id,
     });
     await clearGuestCookie();
+    if (pieceId) {
+      void track("guest_claimed", { userId: session.user.id });
+    }
   }
 
   if (!pieceId) {

@@ -97,6 +97,7 @@ describe("paper page top offsets", () => {
       "app/u/[handle]/page.tsx",
       "app/signin/page.tsx",
       "app/onboarding/name/page.tsx",
+      "app/stats/page.tsx",
       "components/editor/FocusEditor.tsx",
     ];
     for (const file of files) {

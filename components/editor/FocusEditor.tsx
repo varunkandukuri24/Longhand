@@ -28,6 +28,7 @@ import {
 import { useAmbientSceneContext } from "@/components/scene/ambient-context";
 import { WritingMirror } from "@/components/editor/WritingMirror";
 import { ReferencesRow } from "@/components/references/ReferencesRow";
+import { trackClient } from "@/lib/analytics/client";
 import { blankPlaceholder } from "@/lib/editor/greeting";
 import {
   dismissNudge,
@@ -295,6 +296,9 @@ function FocusEditorBody({
     () => false,
   );
   const [nudgeHidden, setNudgeHidden] = useState(false);
+  const nudgeTrackedRef = useRef(false);
+  const wordLimitTrackedRef = useRef(false);
+  const publishWasOpenRef = useRef(false);
   /** True after draft text has loaded; drives autofocus. */
   const [textLoaded, setTextLoaded] = useState(false);
   const ambient = useAmbientSceneContext();
@@ -1266,6 +1270,29 @@ function FocusEditorBody({
     showControls();
   }, [showControls]);
 
+  const signInWasOpenRef = useRef(false);
+  useEffect(() => {
+    if (signInOpen && !signInWasOpenRef.current) {
+      trackClient("signin_opened", { reason: signInReason });
+    }
+    signInWasOpenRef.current = signInOpen;
+  }, [signInOpen, signInReason]);
+
+  useEffect(() => {
+    if (isGuest) return;
+    if (publishOpen && !publishWasOpenRef.current) {
+      trackClient("publish_opened");
+    }
+    publishWasOpenRef.current = publishOpen;
+  }, [publishOpen, isGuest]);
+
+  useEffect(() => {
+    if (!guestAtLimit) return;
+    if (wordLimitTrackedRef.current) return;
+    wordLimitTrackedRef.current = true;
+    trackClient("limit_hit", { kind: "words" });
+  }, [guestAtLimit]);
+
   useEffect(() => {
     const onPaperPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
       if (superseded || bootError) return;
@@ -1310,6 +1337,13 @@ function FocusEditorBody({
     words >= guestNudgeWords &&
     !nudgeHidden &&
     !guestAtLimit;
+
+  useEffect(() => {
+    if (!showNudge) return;
+    if (nudgeTrackedRef.current) return;
+    nudgeTrackedRef.current = true;
+    trackClient("guest_nudge_shown");
+  }, [showNudge]);
 
   const chrome =
     chromeHost &&

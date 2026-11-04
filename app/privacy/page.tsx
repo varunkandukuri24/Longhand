@@ -83,6 +83,17 @@ export default function PrivacyPage() {
             . The server makes no outbound requests for links in a piece.
           </p>
         </section>
+
+        <section>
+          <h2 className="font-ui text-[12px] tracking-[0.14em] text-label uppercase">
+            Analytics
+          </h2>
+          <p className="mt-3">
+            We count visits with Vercel Web Analytics, which uses no cookies, and
+            we keep simple counts of what happens in the app, like when a piece
+            is published. None of it includes what you write.
+          </p>
+        </section>
       </div>
 
       <p className="mt-12 font-ui text-[12px] text-label">

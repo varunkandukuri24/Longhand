@@ -3,6 +3,8 @@ import NextAuth from "next-auth";
 import type { EmailConfig } from "next-auth/providers";
 import Google from "next-auth/providers/google";
 import { db } from "@/db";
+import { signInMethodFromProvider } from "@/lib/analytics/names";
+import { track } from "@/lib/analytics/track";
 import { createEmailProvider } from "@/lib/auth/email-provider";
 import {
   accounts,
@@ -91,6 +93,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = user.id;
       }
       return session;
+    },
+  },
+  events: {
+    async signIn({ user, account, isNewUser }) {
+      if (!user?.id) return;
+      void track("signed_in", {
+        userId: user.id,
+        props: {
+          method: signInMethodFromProvider(account?.provider),
+          new_account: Boolean(isNewUser),
+        },
+      });
     },
   },
 });

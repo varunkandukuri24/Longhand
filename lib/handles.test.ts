@@ -71,6 +71,7 @@ describe("validateHandle", () => {
       "staging",
       "root",
       "privacy",
+      "stats",
     ]) {
       expect(RESERVED_HANDLES.has(name)).toBe(true);
       expect(validateHandle(name).ok).toBe(false);
