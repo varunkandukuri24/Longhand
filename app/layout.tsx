@@ -1,12 +1,29 @@
 import type { Metadata, Viewport } from "next";
 import { VercelAnalytics } from "@/components/analytics/VercelAnalytics";
-import { rootDomain } from "@/lib/hosts";
+import { rootDomain, siteProtocol } from "@/lib/hosts";
 import { dmMono, literata } from "./fonts";
 import "./globals.css";
 
+function metadataBaseUrl(): URL | undefined {
+  try {
+    return new URL(`${siteProtocol()}://${rootDomain()}`);
+  } catch {
+    return undefined;
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: metadataBaseUrl(),
   title: "Longhand",
   description: "A place to write for humans",
+  openGraph: {
+    title: "Longhand",
+    description: "A place to write for humans",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export const viewport: Viewport = {

@@ -137,11 +137,28 @@ The reference implementation below draws exactly these. Port it; don't redesign 
     - Top right, beside the window (184 px from the right edge): "See an example · Sign in" in DM Mono 13 px. "See an example" is `#736C61` and opens `EXAMPLE_PIECE_URL` in the same tab; it's hidden when that's unset. "Sign in" is an ink link with a 1 px underline at a 4 px offset.
     - The bottom bar is the normal bar. Publish is greyed out until there's text; then it opens the sign-in dialog (G4).
     - No history icon, no account icon. Reference: G1.
-  - **The nudge card** (G2):
-    - Placement: once the guest piece reaches 50 words, a small card appears at the bottom left, 40 px from the left edge and 64 px from the bottom (just above the bar).
-    - Size and surface: 264 px wide, the dialog card style (white, 1 px `#E6E0D4` border, 8 px radius, soft shadow), 16 px padding.
-    - Contents: "This isn't saved to an account yet" in Literata 17 px; "It lives in this browser for 7 days. Sign in to keep it." in DM Mono 11.5 px `#736C61`; a full-width dark button, "Sign in to keep it" (40 px tall, DM Mono 13 px); and a × button at the top right.
-    - Behaviour: it never takes focus or blocks typing (`role="status"`). × hides it for that piece (remembered in `localStorage`, wrapped in try/catch). It fades with the bar while typing, like every other control.
+  - **First-visit intro** (LandIntro, LandIntroPhone). This shows only to a guest with no guest piece and no `lh_intro_seen` flag in localStorage.
+    - Placement: inside the writing column, above the text area. On desktop it starts 112 px from the top. On phones it starts 24 px below the window strip.
+    - Headline: "Prove you write it, not AI" in Literata 44 px (32 px on phones), line-height 1.15, letter-spacing -0.01em.
+    - Body: "Write here. When you publish, your piece ends with a record of how it was written." in Literata 19 px `#5C564C`, max 560 px wide. On phones it's 16.5 px.
+    - Example card: a 1 px `#E8E3DA` bordered card with an 8 px radius, max 460 px wide.
+      - Label: "WHAT READERS SEE AT THE END" ("WHAT READERS SEE" on phones), DM Mono 10.5 px, 0.14em tracking, `#9A9387`.
+      - Content: the **real** signature line of the piece at `EXAMPLE_PIECE_URL` (seal, sentence, meta), and the card links to that piece.
+      - If `EXAMPLE_PIECE_URL` is unset or doesn't resolve, the card is left out. We never show a made-up receipt.
+    - Then a 72 px `#E8E3DA` rule, and the text area, whose placeholder reads "Start typing. No account needed." while the intro shows.
+    - On the first keystroke the intro fades out over 200 ms (instantly with reduced motion), the text moves up to the normal position, and `lh_intro_seen` is set. Wrap localStorage in try/catch; if storage fails, the intro simply shows again next visit.
+    - The caret is in the text area on load, as today. The intro never takes focus and never enters the event log.
+  - **Receipt-so-far card** (LandLive, LandLivePhone).
+    - **Placement and timing.** Guests only. It appears once the guest piece reaches 25 words, at the nudge card's old spot: bottom left, 40 px from the left edge and 64 px from the bottom, 340 px wide. On phones it's full width with 16 px margins, 64 px from the bottom. Same card style as the nudge, with `role="status"`; it never takes focus, and it fades with the bar while typing.
+    - **Contents.**
+      - The label "YOUR RECEIPT SO FAR" (DM Mono 10.5 px, 0.14em, `#9A9387`).
+      - The seal (34 px) with the live signature sentence for "You" ("You wrote this by hand." and so on, the same tiers as the receipt).
+      - The meta line `{writing time} · {n} sitting(s) · {typed}% typed`, from the same writing-time and share logic as the bar clock.
+      - Below 50 words, the line "It grows as you write. Publish to put it under your piece." in DM Mono 11.5 px `#736C61`.
+      - From `GUEST_NUDGE_WORDS` (50) words, that line becomes "This isn't saved to an account yet." plus the full-width dark button "Sign in to keep it", which opens the keep-page sign-in dialog, as the nudge did.
+    - **Dismissing.** × hides it for that piece (localStorage, try/catch).
+    - **Accuracy.** It's an estimate shown to the writer. The published receipt is still computed by the server.
+
   - **The sign-in dialog**: the publish dialog's card, 460 px wide, centred over the writing column, with the scrim. It has a title and a subline in Literata 17 px `#5C564C`, then **Continue with Google**, an "or" divider, EMAIL, **Email me a link**, and a footnote in DM Mono 11.5 px `#9A9387`. Variants:
     - From "Sign in" with no text yet: "Sign in" / "Save what you write, and publish it when you're ready."
     - From "Sign in" or the nudge with text (G3): "Keep this page" / "Sign in to save it to your account. The time you've already spent still counts." Footnote: "You won't lose anything you've written."
@@ -151,6 +168,12 @@ The reference implementation below draws exactly these. Port it; don't redesign 
   - **Email sent** (G5): the same card, "Check your email" / "We sent a sign-in link to", the address in a 1 px bordered box, "Open it in this browser and you'll come right back here. You can keep writing in the meantime.", then "Use a different email" (text button) and **Keep writing** (closes the dialog).
   - **The word limit** (G6): at 500 words the text area stops accepting new text (deleting still works) and the G6 dialog opens. Closing it leaves the page readable and editable down, but not up, until sign-in.
   - **After signing in**, the writer lands back on the same text with the caret where it was. The guest top bar becomes the history and account icons. A brand-new account goes through first run, then straight back to the piece. Signing in from Publish opens the publish dialog right away.
+- **Home link preview** (LandShareCard), 1200 × 630:
+  - "Longhand" (Literata 26 px, `#736C61`), then "Prove you write it, not AI" (Literata 76 px), then "Write here. Publish with a record of how it was written." (Literata 28 px, `#5C564C`).
+  - The example piece's real signature line, if `EXAMPLE_PIECE_URL` resolves.
+  - A simple afternoon window on the right (sky `#6FA7D8`, rooftops, 2 px ink frame).
+  - "typelonghand.com" bottom right in DM Mono 18 px.
+
 - **The blank page.** A blank piece shows one blinking caret at the start of the text, with placeholder text in `#B5AEA2` (the writer's own font and size) right after it: "Write something" for a guest. For a signed-in writer the placeholder is "What's on your mind?" (no name, no time of day). It vanishes on the first keystroke, never enters the event log, and comes back if the text is emptied. Reference mockups: G1 and G1b.
 - **Your pieces pane.** The history icon (three lines of 12, 12 and 8 px, 1.5 px stroke, 20 px inside a 44 × 44 px button, `aria-label="Your pieces"`) opens a pane:
   - Size and motion: 320 px wide, full height, from the left edge, over the window. It slides in over 200 ms ease-out (instant with reduced motion). The rest of the screen gets a `rgba(255,255,255,0.6)` scrim.
@@ -317,7 +340,7 @@ Reference mockups: M1, M4 and M5 on the canvas.
 - **Dialogs, pane and menus.**
   - Dialogs (publish, sign-in, settings) are `min(560px, 100vw - 32px)` wide, scroll inside when taller than the screen, and keep their buttons visible.
   - The Your pieces pane is `min(320px, 85vw)` wide.
-  - The guest nudge card becomes full width (16 px margins), 16 px above the bar.
+  - The guest receipt-so-far card becomes full width (16 px margins), 64 px from the bottom.
   - The account menu stays right-aligned under its icon, within 16 px of the screen edge.
 - **Read-only pages** (piece pages, writer pages, sign-in): the same top strip window (84 px, 60 px from the top) with their own top row, and content starting 20 px below it.
 
@@ -361,7 +384,11 @@ The room color, full-bleed scenes, lamp glow, dark-scene control colors and the 
 - [ ] A visitor at `/` sees one blinking caret with "Write something", "Longhand" at the top left, and "See an example · Sign in" at the top right. They can type immediately.
 - [ ] Loading `/` without typing creates no database rows.
 - [ ] A guest's first keystroke creates one guest piece. Reloading the page brings back the same text, and a second tab shows the same piece.
-- [ ] At 50 words the nudge card appears bottom left, never steals focus, and × hides it for that piece.
+- [ ] A first-time guest at `/` sees the intro, with the caret already blinking in the text. Typing one character removes the intro, and a reload doesn't bring it back. Signed-in writers never see it.
+- [ ] The intro's example card shows the real signature line of `EXAMPLE_PIECE_URL` and links to it, and is absent when that isn't set.
+- [ ] The receipt-so-far card appears at 25 words, updates its time, sittings and typed share as you write, gains "Sign in to keep it" at 50 words, and × hides it for that piece. The old nudge card is gone.
+- [ ] Sharing `https://typelonghand.com` on X shows the large preview card (check with the X card validator or opengraph.xyz).
+- [ ] On a phone, the intro sits under the window strip, and the card sits above the bar without covering the caret line.
 - [ ] Signing in with Google, or with an email link opened in the same browser, lands back on the same piece, now owned by the account. Its receipt (after publishing) counts time from the guest's first keystroke.
 - [ ] A new account signing in from a guest piece goes through first run, then back to that piece.
 - [ ] Publish as a guest opens "Sign in to publish". After signing in, the publish dialog opens.

@@ -3,7 +3,10 @@ import {
   exceedsGuestLimit as exceedsGuestLimitWith,
 } from "./limit-checks";
 
-export { GUEST_BATCH_MIN_INTERVAL_MS } from "./limit-checks";
+export {
+  GUEST_BATCH_MIN_INTERVAL_MS,
+  GUEST_RECEIPT_WORDS,
+} from "./limit-checks";
 
 /** Parse a positive integer from the environment, or return the default. */
 function envPositiveInt(name: string, fallback: number): number {

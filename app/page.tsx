@@ -7,6 +7,7 @@ import {
   GUEST_NUDGE_WORDS,
   GUEST_WORD_LIMIT,
 } from "@/lib/guest/limits";
+import { getExampleSignature } from "@/lib/landing/example-signature";
 import { rootDomain } from "@/lib/hosts";
 import { openFreshPiece } from "@/lib/pieces/open-fresh-piece";
 import { redirect } from "next/navigation";
@@ -24,6 +25,7 @@ export default async function HomePage() {
   const guest = await getGuest();
   const guestPiece = guest ? await getGuestPiece(guest.id) : null;
   const examplePieceUrl = process.env.EXAMPLE_PIECE_URL?.trim() || null;
+  const exampleSignature = await getExampleSignature();
 
   return (
     <FocusEditor
@@ -31,6 +33,7 @@ export default async function HomePage() {
       pieceId={guestPiece?.id ?? null}
       domain={rootDomain()}
       examplePieceUrl={examplePieceUrl}
+      exampleSignature={exampleSignature}
       googleEnabled={googleEnabled}
       emailProviderId={emailProviderId}
       guestWordLimit={GUEST_WORD_LIMIT}

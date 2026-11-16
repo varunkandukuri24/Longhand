@@ -11,7 +11,8 @@ import {
 } from "@/components/editor/EditorControls";
 import { EditorDebugPanel } from "@/components/editor/EditorDebugPanel";
 import { GuestChrome } from "@/components/editor/GuestChrome";
-import { GuestNudge } from "@/components/editor/GuestNudge";
+import { GuestIntro } from "@/components/editor/GuestIntro";
+import { GuestReceiptCard } from "@/components/editor/GuestReceiptCard";
 import {
   GuestSignInDialog,
   type GuestSignInReason,
@@ -29,18 +30,33 @@ import { useAmbientSceneContext } from "@/components/scene/ambient-context";
 import { WritingMirror } from "@/components/editor/WritingMirror";
 import { ReferencesRow } from "@/components/references/ReferencesRow";
 import { trackClient } from "@/lib/analytics/client";
-import { blankPlaceholder } from "@/lib/editor/greeting";
+import {
+  blankPlaceholder,
+  GUEST_INTRO_PLACEHOLDER,
+} from "@/lib/editor/greeting";
 import {
   dismissNudge,
   isNudgeDismissed,
   takeGuestCaret,
 } from "@/lib/guest/caret";
+import { isIntroSeen, markIntroSeen } from "@/lib/guest/intro";
 import {
   atGuestLimit,
   exceedsGuestLimit,
   GUEST_BATCH_MIN_INTERVAL_MS,
+  GUEST_RECEIPT_WORDS,
 } from "@/lib/guest/limit-checks";
-import { wordCount } from "@/lib/receipt/compute-receipt";
+import type { ExampleSignature } from "@/lib/landing/example-signature";
+import {
+  originShares,
+  wordCount,
+} from "@/lib/receipt/compute-receipt";
+import {
+  formatDuration,
+  formatSignatureSentence,
+  formatSittingCount,
+  sharesToPercents,
+} from "@/lib/receipt/format";
 import {
   captureEdit,
   type PendingLink,
@@ -116,6 +132,7 @@ type FocusEditorProps = {
   initialFont?: WritingFont;
   initialFontSize?: WritingSize;
   examplePieceUrl?: string | null;
+  exampleSignature?: ExampleSignature | null;
   googleEnabled?: boolean;
   emailProviderId?: string;
   openPublishOnLoad?: boolean;
@@ -204,6 +221,7 @@ function FocusEditorBody({
   initialFont = "literata",
   initialFontSize = 20,
   examplePieceUrl = null,
+  exampleSignature = null,
   googleEnabled = false,
   emailProviderId = "nodemailer",
   openPublishOnLoad = false,
@@ -298,7 +316,24 @@ function FocusEditorBody({
   );
   const [nudgeHidden, setNudgeHidden] = useState(false);
   const nudgeTrackedRef = useRef(false);
+  const introTrackedRef = useRef(false);
+  const introActiveRef = useRef(false);
+  /** Client-only override after the first keystroke (fade → hidden). */
+  const [introOverride, setIntroOverride] = useState<"fade" | "hidden" | null>(
+    null,
+  );
+  const clientReady = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const [priorSittingCount, setPriorSittingCount] = useState(0);
+  const [receiptLive, setReceiptLive] = useState({
+    sentence: "You wrote this by hand.",
+    meta: "<1 min · 1 sitting · 100% typed",
+  });
   const wordLimitTrackedRef = useRef(false);
+  const ensureCaretVisibleRef = useRef<() => void>(() => {});
   const publishWasOpenRef = useRef(false);
   /** True after draft text has loaded; drives autofocus. */
   const [textLoaded, setTextLoaded] = useState(false);
@@ -366,6 +401,15 @@ function FocusEditorBody({
   }
 
   const isGuest = mode === "guest";
+
+  let introPhase: "hidden" | "visible" | "fade" = "hidden";
+  if (clientReady && isGuest && !initialPieceId) {
+    if (introOverride) {
+      introPhase = introOverride;
+    } else if (!isIntroSeen()) {
+      introPhase = "visible";
+    }
+  }
 
   const bindSync = useCallback(
     (id: string) => {
@@ -528,6 +572,7 @@ function FocusEditorBody({
         setTotalActiveMs(state.priorActiveMs ?? 0);
         setSittingActiveMs(0);
         sittingEventsRef.current = [];
+        setPriorSittingCount((state.priorActiveMs ?? 0) > 0 ? 1 : 0);
         setStoredDelayedCount(state.flags?.delayedCount ?? 0);
         if (
           isGuest &&
@@ -863,6 +908,7 @@ function FocusEditorBody({
         lastEventWallMs: lastLocal,
         nowWallMs: lastLocal,
       }));
+      setPriorSittingCount((prev) => prev + 1);
       sittingEventsRef.current = [];
       setSittingActiveMs(0);
     }
@@ -898,6 +944,25 @@ function FocusEditorBody({
       const prev = prevValueRef.current;
       if (prev === next) {
         return;
+      }
+
+      if (isGuest && introActiveRef.current) {
+        introActiveRef.current = false;
+        trackClient("intro_dismissed");
+        markIntroSeen();
+        const reduced =
+          typeof window !== "undefined" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduced) {
+          setIntroOverride("hidden");
+          requestAnimationFrame(() => ensureCaretVisibleRef.current());
+        } else {
+          setIntroOverride("fade");
+          window.setTimeout(() => {
+            setIntroOverride("hidden");
+            ensureCaretVisibleRef.current();
+          }, 200);
+        }
       }
 
       const diff = diffText(prev, next);
@@ -1354,19 +1419,56 @@ function FocusEditorBody({
   ]);
 
   const words = wordCount(value);
-  const showNudge =
+  const showReceiptCard =
     isGuest &&
     Boolean(livePieceId) &&
-    words >= guestNudgeWords &&
+    words >= GUEST_RECEIPT_WORDS &&
     !nudgeHidden &&
     !guestAtLimit;
+  const showReceiptSignIn = words >= guestNudgeWords;
 
   useEffect(() => {
-    if (!showNudge) return;
+    introActiveRef.current = introPhase === "visible";
+  }, [introPhase]);
+
+  useEffect(() => {
+    if (introPhase !== "visible") return;
+    if (introTrackedRef.current) return;
+    introTrackedRef.current = true;
+    trackClient("intro_shown");
+  }, [introPhase]);
+
+  useEffect(() => {
+    ensureCaretVisibleRef.current = ensureCaretVisible;
+  }, [ensureCaretVisible]);
+
+  useEffect(() => {
+    if (!showReceiptCard) return;
+    if (!showReceiptSignIn) return;
     if (nudgeTrackedRef.current) return;
     nudgeTrackedRef.current = true;
     trackClient("guest_nudge_shown");
-  }, [showNudge]);
+  }, [showReceiptCard, showReceiptSignIn]);
+
+  useEffect(() => {
+    if (!isGuest) return;
+    const tick = () => {
+      const shares = originShares(originsRef.current, prevValueRef.current);
+      const typedPct = sharesToPercents(
+        shares.typedShare,
+        shares.pastedShare,
+        shares.quotedShare,
+      ).typed;
+      const sittings = priorSittingCount + 1;
+      setReceiptLive({
+        sentence: formatSignatureSentence("You", shares.typedShare),
+        meta: `${formatDuration(totalActiveMs)} · ${formatSittingCount(sittings)} · ${typedPct}% typed`,
+      });
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [isGuest, priorSittingCount, totalActiveMs, value]);
 
   const chrome =
     chromeHost &&
@@ -1441,10 +1543,13 @@ function FocusEditorBody({
             }}
           />
         )}
-        {showNudge && livePieceId ? (
-          <GuestNudge
+        {showReceiptCard && livePieceId ? (
+          <GuestReceiptCard
             visible={controlsShown}
             inlineFade={chromeInlineFade}
+            sentence={receiptLive.sentence}
+            meta={receiptLive.meta}
+            showSignIn={showReceiptSignIn}
             onSignIn={() => openGuestSignIn("keep")}
             onDismiss={() => {
               setNudgeHidden(true);
@@ -1573,6 +1678,13 @@ function FocusEditorBody({
         </div>
       ) : (
         <>
+          {isGuest ? (
+            <GuestIntro
+              visible={introPhase === "visible"}
+              fading={introPhase === "fade"}
+              example={exampleSignature}
+            />
+          ) : null}
           <div className="writing-frame" data-writing-frame>
             <div ref={mirrorRef}>
               <WritingMirror
@@ -1584,7 +1696,9 @@ function FocusEditorBody({
             </div>
             {value.length === 0 && (mode === "guest" || hydrated) ? (
               <div className="writing-placeholder" aria-hidden="true">
-                {blankPlaceholder(mode)}
+                {introPhase === "visible" || introPhase === "fade"
+                  ? GUEST_INTRO_PLACEHOLDER
+                  : blankPlaceholder(mode)}
               </div>
             ) : null}
             <textarea
