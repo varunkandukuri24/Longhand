@@ -3,6 +3,8 @@
 export const ANALYTICS_EVENT_NAMES = [
   "guest_started",
   "guest_nudge_shown",
+  "intro_shown",
+  "intro_dismissed",
   "signin_opened",
   "signed_in",
   "guest_claimed",
@@ -19,6 +21,8 @@ export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 /** Events the browser may POST to /api/events. */
 export const CLIENT_ANALYTICS_EVENT_NAMES = [
   "guest_nudge_shown",
+  "intro_shown",
+  "intro_dismissed",
   "signin_opened",
   "limit_hit",
   "publish_opened",
@@ -65,6 +69,8 @@ export type AnalyticsPropValue = string | number | boolean;
 export type AnalyticsEventProps = {
   guest_started: Record<string, never>;
   guest_nudge_shown: Record<string, never>;
+  intro_shown: Record<string, never>;
+  intro_dismissed: Record<string, never>;
   signin_opened: { reason: SignInReasonProp };
   signed_in: { method: SignInMethodProp; new_account: boolean };
   guest_claimed: Record<string, never>;
@@ -85,6 +91,8 @@ const ALLOWED_KEYS: {
 } = {
   guest_started: new Set(),
   guest_nudge_shown: new Set(),
+  intro_shown: new Set(),
+  intro_dismissed: new Set(),
   signin_opened: new Set(["reason"]),
   signed_in: new Set(["method", "new_account"]),
   guest_claimed: new Set(),
